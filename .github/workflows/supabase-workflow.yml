@@ -1,22 +1,22 @@
-    name: Supabase Workflow
+    # name: Supabase Workflow
 
-    on:
-      push:
-        branches:
-          - main # Trigger on pushes to the main branch
+    # on:
+    #   push:
+    #     branches:
+    #       - main # Trigger on pushes to the main branch
 
-    jobs:
-      deploy-migrations: # Example job for deploying migrations
-        runs-on: ubuntu-latest
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v3
+    # jobs:
+    #   deploy-migrations:
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #       - name: Checkout code
+    #         uses: actions/checkout@v3
 
-          - name: Setup Supabase CLI
-            uses: supabase/setup-cli@v1 # Use the Supabase setup CLI action
+    #       - name: Setup Supabase CLI
+    #         uses: supabase/setup-cli@v1 # Use the Supabase setup CLI action
 
-          - name: Deploy Migrations
-            run: |
-              supabase db push --project-ref <ywsvmvudurjeaesaiphh>
-            env:
-              SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    #       - name: Deploy Migrations
+    #         run: |
+    #           supabase db push --project-ref ywsvmvudurjeaesaiphh
+    #         env:
+    #           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

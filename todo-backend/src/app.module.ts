@@ -10,6 +10,8 @@ import { ListSharesService } from './list-shares.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma.module';
+import { StepsController } from './steps.controller';
+import { StepsService } from './steps.service';
 
 @Module({
   imports: [PrismaModule, UsersModule, AuthModule],
@@ -18,12 +20,14 @@ import { PrismaModule } from './prisma.module';
     TodoListsController,
     TasksController,
     ListSharesController,
+    StepsController,
   ],
   providers: [
     AppService,
     TodoListsService,
     TasksService,
     ListSharesService,
+    StepsService,
   ],
 })
 export class AppModule {}

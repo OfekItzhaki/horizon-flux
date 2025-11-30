@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateStepDto } from './dto/create-step.dto';
 import { UpdateStepDto } from './dto/update-step.dto';
 
@@ -134,7 +134,9 @@ export class StepsService {
     });
 
     if (existingSteps.length !== stepIds.length) {
-      throw new BadRequestException('All steps must be included when reordering');
+      throw new BadRequestException(
+        'All steps must be included when reordering',
+      );
     }
 
     // Check for duplicate step IDs
@@ -146,7 +148,9 @@ export class StepsService {
     const validStepIds = new Set(existingSteps.map((step) => step.id));
     stepIds.forEach((id) => {
       if (!validStepIds.has(id)) {
-        throw new BadRequestException(`Step ID ${id} does not belong to task ${taskId}`);
+        throw new BadRequestException(
+          `Step ID ${id} does not belong to task ${taskId}`,
+        );
       }
     });
 
@@ -161,4 +165,3 @@ export class StepsService {
     return this.findAll(taskId, ownerId);
   }
 }
-

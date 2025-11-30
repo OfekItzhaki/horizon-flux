@@ -139,6 +139,12 @@ export class StepsService {
       );
     }
 
+    // Check for duplicate step IDs
+    const uniqueStepIds = new Set(stepIds);
+    if (uniqueStepIds.size !== stepIds.length) {
+      throw new BadRequestException('Duplicate step IDs are not allowed when reordering');
+    }
+
     const validStepIds = new Set(existingSteps.map((step) => step.id));
     stepIds.forEach((id) => {
       if (!validStepIds.has(id)) {

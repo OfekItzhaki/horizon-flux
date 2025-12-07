@@ -8,6 +8,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
+import { ListType } from '../todo-lists/dto/create-todo-list.dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -135,6 +136,23 @@ class UsersService {
     return result;
   }
 
+  private async createDefaultLists(userId: number) {
+    const defaultLists = [
+      { name: 'Daily', type: ListType.DAILY },
+      { name: 'Weekly', type: ListType.WEEKLY },
+      { name: 'Monthly', type: ListType.MONTHLY },
+      { name: 'Yearly', type: ListType.YEARLY },
+    ];
+
+    await this.prisma.toDoList.createMany({
+      data: defaultLists.map((list) => ({
+        name: list.name,
+        type: list.type,
+        ownerId: userId,
+      })),
+    });
+  }
+
   async createUser(data: CreateUserDto): Promise<SanitizedUser> {
     const passwordHash = await bcrypt.hash(data.password, 10);
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
@@ -149,6 +167,9 @@ class UsersService {
         emailVerificationSentAt: new Date(),
       } as Prisma.UserCreateInput,
     });
+
+    // Create default lists for the new user
+    await this.createDefaultLists(user.id);
 
     const sanitized = this.sanitizeUser(user);
     if (!sanitized) {

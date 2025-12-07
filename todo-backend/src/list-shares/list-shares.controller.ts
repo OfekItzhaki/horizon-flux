@@ -9,6 +9,12 @@ import {
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ListSharesService } from './list-shares.service';
 import { ShareListDto } from './dto/share-list.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -17,12 +23,17 @@ import {
   CurrentUserPayload,
 } from '../auth/current-user.decorator';
 
+@ApiTags('List Sharing')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('list-shares')
 export class ListSharesController {
   constructor(private readonly listSharesService: ListSharesService) {}
 
   @Post('todo-list/:todoListId')
+  @ApiOperation({ summary: 'Share a list with another user' })
+  @ApiResponse({ status: 201, description: 'List shared successfully' })
+  @ApiResponse({ status: 404, description: 'List or user not found' })
   shareList(
     @Param('todoListId', ParseIntPipe) todoListId: number,
     @Body() shareListDto: ShareListDto,
@@ -36,6 +47,9 @@ export class ListSharesController {
   }
 
   @Get('user/:userId')
+  @ApiOperation({ summary: 'Get all lists shared with a user' })
+  @ApiResponse({ status: 200, description: 'Returns shared lists' })
+  @ApiResponse({ status: 403, description: 'Forbidden - can only view own shares' })
   getSharedLists(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser() user: CurrentUserPayload,
@@ -47,6 +61,9 @@ export class ListSharesController {
   }
 
   @Get('todo-list/:todoListId')
+  @ApiOperation({ summary: 'Get all users a list is shared with' })
+  @ApiResponse({ status: 200, description: 'Returns list of users' })
+  @ApiResponse({ status: 404, description: 'List not found' })
   getListShares(
     @Param('todoListId', ParseIntPipe) todoListId: number,
     @CurrentUser() user: CurrentUserPayload,
@@ -55,6 +72,9 @@ export class ListSharesController {
   }
 
   @Delete('todo-list/:todoListId/user/:userId')
+  @ApiOperation({ summary: 'Unshare a list with a user' })
+  @ApiResponse({ status: 200, description: 'List unshared successfully' })
+  @ApiResponse({ status: 404, description: 'List or share not found' })
   unshareList(
     @Param('todoListId', ParseIntPipe) todoListId: number,
     @Param('userId', ParseIntPipe) userId: number,

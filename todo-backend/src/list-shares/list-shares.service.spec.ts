@@ -151,6 +151,13 @@ describe('ListSharesService', () => {
             id: 1,
             name: 'Shared List',
             deletedAt: null,
+            owner: {
+              id: 2,
+              email: 'owner@example.com',
+              name: 'Owner',
+              profilePicture: null,
+            },
+            tasks: [],
           },
         },
       ];
@@ -162,13 +169,28 @@ describe('ListSharesService', () => {
       expect(mockPrismaService.listShare.findMany).toHaveBeenCalledWith({
         where: {
           sharedWithId: userId,
+        },
+        include: {
           toDoList: {
-            deletedAt: null,
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                  profilePicture: true,
+                },
+              },
+              tasks: {
+                where: { deletedAt: null },
+                orderBy: { order: 'asc' },
+              },
+            },
           },
         },
-        include: expect.any(Object),
       });
-      expect(result).toEqual(mockShares);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Shared List');
     });
   });
 });

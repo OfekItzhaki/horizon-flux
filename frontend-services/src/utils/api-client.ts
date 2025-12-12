@@ -11,19 +11,25 @@ export class ApiClient {
     const url = getApiUrl(path);
     const token = TokenStorage.getToken();
 
+    // Extract headers and method from options to prevent them from overriding our defaults
+    const { headers: optionsHeaders, method: optionsMethod, ...restOptions } = options;
+
+    // Build headers: start with defaults, merge user-provided headers, then add auth
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
+      ...(optionsHeaders as Record<string, string>),
     };
 
+    // Authorization header should always be added if token exists (takes precedence)
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Build config: method parameter always takes precedence, then our headers, then rest of options
     const config: RequestInit = {
-      method,
-      headers,
-      ...options,
+      ...restOptions,
+      method, // Method parameter always takes precedence over options.method
+      headers, // Our carefully built headers take precedence over options.headers
     };
 
     try {

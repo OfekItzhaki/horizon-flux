@@ -102,34 +102,4 @@ export class TodoListsService {
       },
     });
   }
-
-  async getDefaultLists(ownerId: number) {
-    return this.prisma.toDoList.findMany({
-      where: {
-        type: {
-          in: [
-            ListType.DAILY,
-            ListType.WEEKLY,
-            ListType.MONTHLY,
-            ListType.YEARLY,
-          ],
-        },
-        ownerId,
-        deletedAt: null,
-      },
-      include: {
-        tasks: {
-          where: {
-            deletedAt: null,
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-      orderBy: {
-        type: 'asc',
-      },
-    });
-  }
 }

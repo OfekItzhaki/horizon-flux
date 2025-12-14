@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StepsController } from './steps/steps.controller';
 import { StepsService } from './steps/steps.service';
+import { MeController } from './me/me.controller';
 
 @Module({
   imports: [PrismaModule, UsersModule, AuthModule],
@@ -21,6 +22,7 @@ import { StepsService } from './steps/steps.service';
     TasksController,
     ListSharesController,
     StepsController,
+    MeController,
   ],
   providers: [
     AppService,

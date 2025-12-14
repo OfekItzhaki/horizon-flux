@@ -36,11 +36,6 @@ export class TodoListsController {
     return this.todoListsService.findAll(user.userId);
   }
 
-  @Get('defaults')
-  getDefaultLists(@CurrentUser() user: CurrentUserPayload) {
-    return this.todoListsService.getDefaultLists(user.userId);
-  }
-
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,

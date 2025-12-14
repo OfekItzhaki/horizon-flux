@@ -9,6 +9,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import UsersService from './users.service';
@@ -18,23 +24,38 @@ import {
   CurrentUserPayload,
 } from '../auth/current-user.decorator';
 
+@ApiTags('Users')
 @Controller('users')
 class UsersController {
   constructor(private userService: UsersService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({
+    status: 201,
+    description: 'User created successfully (default lists are auto-created)',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
   async createUser(@Body() data: CreateUserDto) {
     return this.userService.createUser(data);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get authenticated user' })
+  @ApiResponse({ status: 200, description: 'Returns current user' })
   async getUsers(@CurrentUser() user: CurrentUserPayload) {
     return this.userService.getAllUsers(user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'Returns user data' })
+  @ApiResponse({ status: 403, description: 'Forbidden - can only access own profile' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   async getUser(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: CurrentUserPayload,
@@ -44,6 +65,10 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - can only update own profile' })
   async updateUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: UpdateUserDto,
@@ -54,6 +79,10 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Soft delete user account' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - can only delete own account' })
   async deleteUser(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: CurrentUserPayload,

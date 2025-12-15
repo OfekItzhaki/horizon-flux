@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { tasksService } from '../services/tasks.service';
 import { stepsService } from '../services/steps.service';
-import { Task, Step, UpdateTaskDto, CreateStepDto, ReminderConfig } from '../types';
+import { Task, Step, UpdateTaskDto, CreateStepDto, ReminderConfig, ReminderTimeframe, ReminderSpecificDate } from '../types';
 import ReminderConfigComponent from '../components/ReminderConfig';
 import DatePicker from '../components/DatePicker';
 
@@ -48,6 +48,147 @@ export default function TaskDetailsScreen() {
     loadTaskData();
   }, [taskId]);
 
+  // Format reminder for display
+  const formatReminderDisplay = (reminder: ReminderConfig): string => {
+    const timeStr = reminder.time || '09:00';
+    let description = '';
+
+    if (reminder.daysBefore !== undefined && reminder.daysBefore > 0) {
+      description = `${reminder.daysBefore} day(s) before due date at ${timeStr}`;
+      return description;
+    }
+
+    switch (reminder.timeframe) {
+      case ReminderTimeframe.SPECIFIC_DATE:
+        if (reminder.specificDate === ReminderSpecificDate.START_OF_WEEK) {
+          description = `Every Monday at ${timeStr}`;
+        } else if (reminder.specificDate === ReminderSpecificDate.START_OF_MONTH) {
+          description = `1st of every month at ${timeStr}`;
+        } else if (reminder.specificDate === ReminderSpecificDate.START_OF_YEAR) {
+          description = `Jan 1st every year at ${timeStr}`;
+        } else if (reminder.customDate) {
+          const date = new Date(reminder.customDate);
+          description = `${date.toLocaleDateString()} at ${timeStr}`;
+        } else {
+          description = `Specific date at ${timeStr}`;
+        }
+        break;
+      case ReminderTimeframe.EVERY_DAY:
+        description = `Every day at ${timeStr}`;
+        break;
+      case ReminderTimeframe.EVERY_WEEK:
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = reminder.dayOfWeek !== undefined ? dayNames[reminder.dayOfWeek] : 'Monday';
+        description = `Every ${dayName} at ${timeStr}`;
+        break;
+      case ReminderTimeframe.EVERY_MONTH:
+        description = `1st of every month at ${timeStr}`;
+        break;
+      case ReminderTimeframe.EVERY_YEAR:
+        description = `Same date every year at ${timeStr}`;
+        break;
+    }
+
+    return description;
+  };
+
+  // Convert backend format to ReminderConfig format
+  const convertBackendToReminders = (
+    reminderDaysBefore: number[] | undefined,
+    specificDayOfWeek: number | null | undefined,
+    dueDate: string | null | undefined,
+  ): ReminderConfig[] => {
+    const reminders: ReminderConfig[] = [];
+
+    // Convert reminderDaysBefore array to ReminderConfig
+    // Only show these if there's a due date, since they're relative to due date
+    if (reminderDaysBefore && reminderDaysBefore.length > 0 && dueDate) {
+      reminderDaysBefore.forEach((days) => {
+        reminders.push({
+          id: `days-before-${days}`,
+          timeframe: ReminderTimeframe.SPECIFIC_DATE,
+          time: '09:00', // Default time, user can edit
+          daysBefore: days,
+        });
+      });
+    }
+
+    // Convert specificDayOfWeek to ReminderConfig
+    // These don't require a due date, so always show them
+    if (specificDayOfWeek !== null && specificDayOfWeek !== undefined) {
+      reminders.push({
+        id: `day-of-week-${specificDayOfWeek}`,
+        timeframe: ReminderTimeframe.EVERY_WEEK,
+        time: '09:00', // Default time, user can edit
+        dayOfWeek: specificDayOfWeek,
+      });
+    }
+
+    return reminders;
+  };
+
+  // Convert ReminderConfig format to backend format (reused from TasksScreen)
+  const convertRemindersToBackend = (
+    reminders: ReminderConfig[],
+    dueDate?: string,
+  ): { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number } => {
+    const result: { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number } = {};
+
+    if (dueDate) {
+      result.dueDate = new Date(dueDate).toISOString();
+    }
+
+    // Process reminders
+    const daysBefore: number[] = [];
+    let dayOfWeek: number | undefined;
+
+    reminders.forEach((reminder) => {
+      // For reminders with daysBefore (relative to due date) - this is the primary use case
+      if (reminder.daysBefore !== undefined && reminder.daysBefore > 0 && dueDate) {
+        daysBefore.push(reminder.daysBefore);
+      }
+
+      // For daily reminders - set to today's day of week (will remind on that day each week)
+      // Note: For true daily reminders, consider using a DAILY list type
+      if (reminder.timeframe === ReminderTimeframe.EVERY_DAY) {
+        // Use current day of week (0 = Sunday, 1 = Monday, etc.)
+        // This will remind on this day each week
+        const today = new Date().getDay();
+        dayOfWeek = today;
+        // Also set reminderDaysBefore to [0] if there's a due date, to remind on the due date itself
+        if (dueDate) {
+          daysBefore.push(0);
+        }
+      }
+
+      // For weekly reminders
+      if (reminder.timeframe === ReminderTimeframe.EVERY_WEEK && reminder.dayOfWeek !== undefined) {
+        dayOfWeek = reminder.dayOfWeek;
+      }
+
+      // For specific date reminders that are relative to due date
+      if (reminder.timeframe === ReminderTimeframe.SPECIFIC_DATE && dueDate && reminder.customDate) {
+        const reminderDate = new Date(reminder.customDate);
+        const due = new Date(dueDate);
+        const diffDays = Math.ceil((due.getTime() - reminderDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays > 0 && diffDays <= 365) { // Reasonable range
+          daysBefore.push(diffDays);
+        }
+      }
+    });
+
+    if (daysBefore.length > 0) {
+      // Remove duplicates and sort descending
+      result.reminderDaysBefore = [...new Set(daysBefore)].sort((a, b) => b - a);
+    }
+
+    if (dayOfWeek !== undefined) {
+      result.specificDayOfWeek = dayOfWeek;
+    }
+
+    return result;
+  };
+
   const loadTaskData = async () => {
     try {
       const [taskData, stepsData] = await Promise.all([
@@ -61,8 +202,13 @@ export default function TaskDetailsScreen() {
       // Initialize edit form
       setEditDescription(taskData.description);
       setEditDueDate(taskData.dueDate ? taskData.dueDate.split('T')[0] : '');
-      // TODO: Convert reminderDaysBefore to ReminderConfig format
-      setEditReminders([]);
+      // Convert reminderDaysBefore to ReminderConfig format
+      const convertedReminders = convertBackendToReminders(
+        taskData.reminderDaysBefore,
+        taskData.specificDayOfWeek,
+        taskData.dueDate || undefined,
+      );
+      setEditReminders(convertedReminders);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load task');
     } finally {
@@ -88,17 +234,38 @@ export default function TaskDetailsScreen() {
         description: editDescription.trim(),
       };
 
+      let dueDateStr: string | undefined;
       if (editDueDate.trim()) {
         const date = new Date(editDueDate);
         if (!isNaN(date.getTime())) {
-          updateData.dueDate = date.toISOString();
+          dueDateStr = date.toISOString();
+          updateData.dueDate = dueDateStr;
         }
       } else {
         updateData.dueDate = null;
       }
 
-      // Convert reminders (similar to TasksScreen)
-      // TODO: Implement reminder conversion
+      // Convert reminders to backend format
+      if (editReminders.length > 0) {
+        const reminderData = convertRemindersToBackend(editReminders, dueDateStr);
+        // Always set reminderDaysBefore - empty array if no valid reminders or no due date
+        updateData.reminderDaysBefore = (reminderData.reminderDaysBefore && reminderData.reminderDaysBefore.length > 0) 
+          ? reminderData.reminderDaysBefore 
+          : [];
+        // Set specificDayOfWeek if provided, otherwise null
+        updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
+          ? reminderData.specificDayOfWeek 
+          : null;
+      } else {
+        // If no reminders, clear them explicitly
+        updateData.reminderDaysBefore = [];
+        updateData.specificDayOfWeek = null;
+      }
+      
+      // Always clear reminders if there's no due date (reminderDaysBefore requires a due date)
+      if (!dueDateStr) {
+        updateData.reminderDaysBefore = [];
+      }
 
       await tasksService.update(taskId, updateData);
       setIsEditing(false);
@@ -115,7 +282,13 @@ export default function TaskDetailsScreen() {
     if (task) {
       setEditDescription(task.description);
       setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
-      setEditReminders([]);
+      // Reset reminders to original task reminders
+      const convertedReminders = convertBackendToReminders(
+        task.reminderDaysBefore,
+        task.specificDayOfWeek,
+        task.dueDate || undefined,
+      );
+      setEditReminders(convertedReminders);
     }
     setIsEditing(false);
   };
@@ -270,14 +443,32 @@ export default function TaskDetailsScreen() {
               )}
             </View>
 
-          {task.reminderDaysBefore && task.reminderDaysBefore.length > 0 && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Reminders:</Text>
-              <Text style={styles.infoValue}>
-                {task.reminderDaysBefore.join(', ')} day(s) before
-              </Text>
-            </View>
-          )}
+          {/* Display Reminders */}
+          {(() => {
+            const displayReminders = convertBackendToReminders(
+              task.reminderDaysBefore,
+              task.specificDayOfWeek,
+              task.dueDate || undefined,
+            );
+            if (displayReminders.length > 0) {
+              return (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Reminders:</Text>
+                  <View style={styles.remindersList}>
+                    {displayReminders.map((reminder) => (
+                      <View key={reminder.id} style={styles.reminderDisplayItem}>
+                        <Text style={styles.reminderDisplayText}>
+                          {formatReminderDisplay(reminder)}
+                          {reminder.hasAlarm && ' 🔔'}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            }
+            return null;
+          })()}
         </View>
 
         {/* Reminders Section (when editing) */}
@@ -666,6 +857,18 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#f44336',
+  },
+  remindersList: {
+    flex: 1,
+    marginTop: 4,
+  },
+  reminderDisplayItem: {
+    marginBottom: 6,
+  },
+  reminderDisplayText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
   },
 });
 

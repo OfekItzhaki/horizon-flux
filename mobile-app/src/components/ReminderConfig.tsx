@@ -7,12 +7,15 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import {
   ReminderConfig,
   ReminderTimeframe,
   ReminderSpecificDate,
 } from '../types';
+import DatePicker from './DatePicker';
 
 interface ReminderConfigProps {
   reminders: ReminderConfig[];
@@ -39,11 +42,18 @@ export default function ReminderConfigComponent({
 
   const saveReminder = (reminder: ReminderConfig) => {
     if (editingReminder) {
-      // Update existing
-      const updated = reminders.map((r) =>
-        r.id === editingReminder.id ? reminder : r,
-      );
-      onRemindersChange(updated);
+      // Check if this reminder already exists in the list
+      const existingIndex = reminders.findIndex((r) => r.id === editingReminder.id);
+      if (existingIndex >= 0) {
+        // Update existing
+        const updated = reminders.map((r) =>
+          r.id === editingReminder.id ? reminder : r,
+        );
+        onRemindersChange(updated);
+      } else {
+        // Add new (editingReminder was set but reminder doesn't exist in list yet)
+        onRemindersChange([...reminders, reminder]);
+      }
     } else {
       // Add new
       onRemindersChange([...reminders, reminder]);
@@ -169,19 +179,29 @@ export default function ReminderConfigComponent({
       )}
 
       {/* Reminder Configuration Modal */}
-      {showTimeframePicker && editingReminder && (
-        <ReminderEditor
-          reminder={editingReminder}
-          onSave={saveReminder}
-          onCancel={() => {
-            setEditingReminder(null);
-            setShowTimeframePicker(false);
-          }}
-          timeframes={timeframes}
-          specificDates={specificDates}
-          dayNames={dayNames}
-        />
-      )}
+      <Modal
+        visible={showTimeframePicker && editingReminder !== null}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setEditingReminder(null);
+          setShowTimeframePicker(false);
+        }}
+      >
+        {editingReminder && (
+          <ReminderEditor
+            reminder={editingReminder}
+            onSave={saveReminder}
+            onCancel={() => {
+              setEditingReminder(null);
+              setShowTimeframePicker(false);
+            }}
+            timeframes={timeframes}
+            specificDates={specificDates}
+            dayNames={dayNames}
+          />
+        )}
+      </Modal>
     </View>
   );
 }
@@ -227,18 +247,46 @@ function ReminderEditor({
   };
 
   const handleSave = () => {
-    if (!config.time || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(config.time)) {
-      return; // Invalid time
+    // Ensure time is valid (default to 09:00 if not set)
+    let timeToUse = config.time;
+    if (!timeToUse || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeToUse)) {
+      timeToUse = '09:00';
     }
-    onSave(config);
+    
+    // For SPECIFIC_DATE with CUSTOM_DATE, customDate is optional (user might use daysBefore instead)
+    // For EVERY_WEEK, dayOfWeek should be set, but we'll allow undefined for now
+    // For SPECIFIC_DATE with other options (START_OF_WEEK, etc.), no customDate needed
+    
+    onSave({
+      ...config,
+      time: timeToUse,
+    });
   };
 
   return (
     <View style={styles.modalOverlay}>
       <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>Configure Reminder</Text>
+        {/* Drag Handle */}
+        <View style={styles.dragHandle} />
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Configure Reminder</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onCancel}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
 
-        <ScrollView style={styles.editorContent}>
+        <ScrollView
+          style={styles.editorContent}
+          contentContainerStyle={styles.editorContentContainer}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={true}
+          bounces={false}
+        >
           {/* Timeframe Selection */}
           <Text style={styles.label}>Timeframe:</Text>
           <View style={styles.optionsGrid}>
@@ -250,6 +298,7 @@ function ReminderEditor({
                   config.timeframe === tf.value && styles.optionButtonSelected,
                 ]}
                 onPress={() => handleTimeframeChange(tf.value)}
+                activeOpacity={0.7}
               >
                 <Text
                   style={[
@@ -278,6 +327,7 @@ function ReminderEditor({
                     onPress={() =>
                       setConfig({ ...config, specificDate: sd.value })
                     }
+                    activeOpacity={0.7}
                   >
                     <Text
                       style={[
@@ -294,19 +344,20 @@ function ReminderEditor({
               {/* Custom Date Input */}
               {config.specificDate === ReminderSpecificDate.CUSTOM_DATE && (
                 <>
-                  <Text style={styles.label}>Date (YYYY-MM-DD):</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="2024-12-25"
+                  <Text style={styles.label}>Date:</Text>
+                  <DatePicker
                     value={config.customDate?.split('T')[0] || ''}
-                    onChangeText={(text) => {
-                      const date = new Date(text);
-                      if (!isNaN(date.getTime())) {
-                        setConfig({ ...config, customDate: date.toISOString() });
+                    onChange={(dateStr) => {
+                      if (dateStr) {
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) {
+                          setConfig({ ...config, customDate: date.toISOString() });
+                        }
                       } else {
-                        setConfig({ ...config, customDate: text });
+                        setConfig({ ...config, customDate: undefined });
                       }
                     }}
+                    placeholder="Select a date"
                   />
                 </>
               )}
@@ -326,6 +377,7 @@ function ReminderEditor({
                       config.dayOfWeek === index && styles.optionButtonSelected,
                     ]}
                     onPress={() => setConfig({ ...config, dayOfWeek: index })}
+                    activeOpacity={0.7}
                   >
                     <Text
                       style={[
@@ -341,25 +393,41 @@ function ReminderEditor({
             </>
           )}
 
-          {/* Days Before (for reminders relative to due date) */}
-          <Text style={styles.label}>Days Before Due Date (optional):</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 7 for 7 days before due date"
-            value={config.daysBefore?.toString() || ''}
-            onChangeText={(text) => {
-              const days = parseInt(text, 10);
-              if (!isNaN(days) && days > 0) {
-                setConfig({ ...config, daysBefore: days });
-              } else if (text === '') {
-                setConfig({ ...config, daysBefore: undefined });
-              }
-            }}
-            keyboardType="numeric"
-          />
-          <Text style={styles.helperText}>
-            Leave empty if this reminder is not relative to due date
-          </Text>
+          {/* Days Before (only show for reminders that can use due dates) */}
+          {(config.timeframe === ReminderTimeframe.SPECIFIC_DATE || 
+            config.timeframe === ReminderTimeframe.EVERY_DAY) && (
+            <>
+              <Text style={styles.label}>Days Before Due Date (optional):</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., 7 for 7 days before due date"
+                value={config.daysBefore?.toString() || ''}
+                onChangeText={(text) => {
+                  const days = parseInt(text, 10);
+                  if (!isNaN(days) && days > 0) {
+                    setConfig({ ...config, daysBefore: days });
+                  } else if (text === '') {
+                    setConfig({ ...config, daysBefore: undefined });
+                  }
+                }}
+                keyboardType="numeric"
+              />
+              <Text style={styles.helperText}>
+                {config.timeframe === ReminderTimeframe.EVERY_DAY 
+                  ? 'Note: Daily reminders will repeat on the same day each week. Leave empty to remind on the due date itself.'
+                  : 'Leave empty if this reminder is not relative to due date'}
+              </Text>
+            </>
+          )}
+
+          {/* Info for Every Day reminders */}
+          {config.timeframe === ReminderTimeframe.EVERY_DAY && (
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                ℹ️ Daily reminders will notify you on the same day each week. For true daily reminders, consider creating the task in a DAILY list.
+              </Text>
+            </View>
+          )}
 
           {/* Time Input */}
           <Text style={styles.label}>Time (HH:MM):</Text>
@@ -371,6 +439,30 @@ function ReminderEditor({
             keyboardType="numeric"
             maxLength={5}
           />
+
+          {/* Alarm Toggle */}
+          <View style={styles.alarmOption}>
+            <Text style={styles.label}>Sound & Vibration:</Text>
+            <TouchableOpacity
+              style={styles.alarmToggle}
+              onPress={() => setConfig({ ...config, hasAlarm: !config.hasAlarm })}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.toggleSwitch,
+                config.hasAlarm && styles.toggleSwitchActive,
+                { justifyContent: config.hasAlarm ? 'flex-end' : 'flex-start' }
+              ]}>
+                <View style={styles.toggleThumb} />
+              </View>
+              <Text style={styles.alarmLabel}>
+                {config.hasAlarm ? 'Alarm enabled' : 'Alarm disabled'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>
+              Play sound and vibration when reminder triggers
+            </Text>
+          </View>
         </ScrollView>
 
         <View style={styles.modalButtons}>
@@ -468,31 +560,64 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: Dimensions.get('window').height * 0.85,
+    maxHeight: Dimensions.get('window').height * 0.9,
+    padding: 0,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    width: '100%',
+    flexDirection: 'column',
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
-    width: '90%',
-    maxHeight: '80%',
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    flexShrink: 0,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
     color: '#333',
+    flex: 1,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 18,
+    color: '#666',
   },
   editorContent: {
-    maxHeight: 400,
+    flex: 1,
+  },
+  editorContentContainer: {
+    padding: 20,
+    paddingBottom: 20,
   },
   label: {
     fontSize: 14,
@@ -504,18 +629,22 @@ const styles = StyleSheet.create({
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 10,
+    marginRight: -8,
+    marginBottom: 15,
   },
   optionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#ddd',
     backgroundColor: '#f9f9f9',
     marginRight: 8,
     marginBottom: 8,
+    minHeight: 44,
+    minWidth: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   optionButtonSelected: {
     backgroundColor: '#007AFF',
@@ -524,6 +653,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '500',
   },
   optionTextSelected: {
     color: '#fff',
@@ -535,8 +665,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
     marginBottom: 10,
+    color: '#333',
   },
   helperText: {
     fontSize: 12,
@@ -547,7 +678,12 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    padding: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+    flexShrink: 0,
   },
   modalButton: {
     flex: 1,
@@ -571,6 +707,49 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  infoBox: {
+    backgroundColor: '#e3f2fd',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#1976d2',
+    lineHeight: 18,
+  },
+  alarmOption: {
+    marginTop: 15,
+  },
+  alarmToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ddd',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+    marginRight: 12,
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#007AFF',
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+  },
+  alarmLabel: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
   },
 });
 

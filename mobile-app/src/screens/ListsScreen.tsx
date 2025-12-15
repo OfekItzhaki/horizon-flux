@@ -68,6 +68,40 @@ export default function ListsScreen() {
     });
   };
 
+  const handleEditList = (list: ToDoList) => {
+    setEditingList(list);
+    setEditListName(list.name);
+    setEditListType(list.type);
+    setShowAddModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingList) return;
+
+    if (!editListName.trim()) {
+      Alert.alert('Error', 'Please enter a list name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await listsService.update(editingList.id, {
+        name: editListName.trim(),
+        type: editListType,
+      });
+      setEditingList(null);
+      setEditListName('');
+      setEditListType(ListType.CUSTOM);
+      setShowAddModal(false);
+      loadLists();
+      Alert.alert('Success', 'List updated successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update list');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAddList = async () => {
     if (editingList) {
       handleSaveEdit();

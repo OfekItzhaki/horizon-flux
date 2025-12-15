@@ -151,6 +151,19 @@ export default function TasksScreen() {
         daysBefore.push(reminder.daysBefore);
       }
 
+      // For daily reminders - set to today's day of week (will remind on that day each week)
+      // Note: For true daily reminders, consider using a DAILY list type
+      if (reminder.timeframe === ReminderTimeframe.EVERY_DAY) {
+        // Use current day of week (0 = Sunday, 1 = Monday, etc.)
+        // This will remind on this day each week
+        const today = new Date().getDay();
+        dayOfWeek = today;
+        // Also set reminderDaysBefore to [0] if there's a due date, to remind on the due date itself
+        if (dueDate) {
+          daysBefore.push(0);
+        }
+      }
+
       // For weekly reminders
       if (reminder.timeframe === ReminderTimeframe.EVERY_WEEK && reminder.dayOfWeek !== undefined) {
         dayOfWeek = reminder.dayOfWeek;
@@ -205,12 +218,17 @@ export default function TasksScreen() {
       // Convert reminders to backend format
       if (taskReminders.length > 0) {
         const reminderData = convertRemindersToBackend(taskReminders, dueDateStr);
-        if (reminderData.reminderDaysBefore) {
+        if (reminderData.reminderDaysBefore && reminderData.reminderDaysBefore.length > 0) {
           taskData.reminderDaysBefore = reminderData.reminderDaysBefore;
+        } else {
+          taskData.reminderDaysBefore = [];
         }
         if (reminderData.specificDayOfWeek !== undefined) {
           taskData.specificDayOfWeek = reminderData.specificDayOfWeek;
         }
+      } else {
+        // Explicitly set empty arrays to prevent backend defaults
+        taskData.reminderDaysBefore = [];
       }
 
       await tasksService.create(listId, taskData);
@@ -399,13 +417,14 @@ export default function TasksScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add New Task</Text>
+            
             <ScrollView
               style={styles.modalScrollView}
               contentContainerStyle={styles.modalScrollContent}
               keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
             >
-              <Text style={styles.modalTitle}>Add New Task</Text>
-
               <TextInput
                 style={styles.input}
                 placeholder="Task description"
@@ -413,6 +432,7 @@ export default function TasksScreen() {
                 onChangeText={setNewTaskDescription}
                 multiline
                 autoFocus
+                placeholderTextColor="#999"
               />
 
               <DatePicker
@@ -717,12 +737,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    maxHeight: '90%',
+    width: '100%',
     padding: 0,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    maxHeight: '90%',
   },
   modalScrollView: {
-    flex: 1,
+    maxHeight: 500,
   },
   modalScrollContent: {
     padding: 20,
@@ -731,7 +752,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+    padding: 20,
+    paddingBottom: 10,
     color: '#333',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   input: {
     borderWidth: 1,
@@ -740,13 +765,18 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
     minHeight: 50,
+    color: '#333',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    padding: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
   },
   modalButton: {
     flex: 1,

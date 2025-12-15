@@ -103,9 +103,9 @@ export interface CreateTaskDto {
 export interface UpdateTaskDto {
   description?: string;
   completed?: boolean;
-  dueDate?: string;
+  dueDate?: string | null;
   reminderDaysBefore?: number[];
-  specificDayOfWeek?: number;
+  specificDayOfWeek?: number | null;
 }
 
 export interface CreateStepDto {
@@ -150,6 +150,7 @@ export interface ReminderConfig {
   customDate?: string; // ISO date string for SPECIFIC_DATE with CUSTOM_DATE
   dayOfWeek?: number; // 0-6 for weekly reminders
   daysBefore?: number; // For reminders before due date
+  hasAlarm?: boolean; // Whether to play sound/vibration for this reminder
 }
 
 export interface TaskReminderConfig {

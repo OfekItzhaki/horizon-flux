@@ -47,6 +47,8 @@ export default function TaskDetailsScreen() {
   // Step management
   const [showAddStepModal, setShowAddStepModal] = useState(false);
   const [newStepDescription, setNewStepDescription] = useState('');
+  const [editingStepId, setEditingStepId] = useState<number | null>(null);
+  const [editingStepDescription, setEditingStepDescription] = useState('');
 
   useEffect(() => {
     loadTaskData();
@@ -321,7 +323,7 @@ export default function TaskDetailsScreen() {
       }
       
       loadTaskData();
-      Alert.alert('Success', 'Task has been updated.');
+      // Success feedback - UI update is visible, no alert needed
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to update task. Please try again.';
       Alert.alert('Update Failed', errorMessage);
@@ -436,6 +438,33 @@ export default function TaskDetailsScreen() {
     }
   };
 
+  const handleEditStep = (step: Step) => {
+    setEditingStepId(step.id);
+    setEditingStepDescription(step.description);
+  };
+
+  const handleSaveStepEdit = async () => {
+    if (!editingStepId || !editingStepDescription.trim()) {
+      setEditingStepId(null);
+      return;
+    }
+
+    try {
+      await stepsService.update(editingStepId, { description: editingStepDescription.trim() });
+      setEditingStepId(null);
+      setEditingStepDescription('');
+      loadTaskData();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Unable to update step. Please try again.';
+      Alert.alert('Update Failed', errorMessage);
+    }
+  };
+
+  const handleCancelStepEdit = () => {
+    setEditingStepId(null);
+    setEditingStepDescription('');
+  };
+
   const handleDeleteStep = (step: Step) => {
     Alert.alert(
       'Delete Step',
@@ -461,11 +490,26 @@ export default function TaskDetailsScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Reset time for comparison
+    today.setHours(0, 0, 0, 0);
+    tomorrow.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+
+    if (date.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (date.getTime() === tomorrow.getTime()) {
+      return 'Tomorrow';
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+      });
+    }
   };
 
   if (loading) {
@@ -639,32 +683,88 @@ export default function TaskDetailsScreen() {
           )}
 
           {steps.length === 0 ? (
-            <Text style={styles.emptyText}>No steps yet</Text>
+            <View style={styles.emptyStepsContainer}>
+              <Text style={styles.emptyStepsIcon}>✓</Text>
+              <Text style={styles.emptyStepsText}>No steps yet</Text>
+              <Text style={styles.emptyStepsSubtext}>
+                Break down your task into smaller steps
+              </Text>
+            </View>
           ) : (
             steps.map((step) => {
               const stepCompleted = Boolean(step.completed);
+              const isEditing = editingStepId === step.id;
+              
               return (
-                <TouchableOpacity
+                <View
                   key={step.id}
                   style={[
                     styles.stepItem,
                     stepCompleted && styles.stepItemCompleted,
                   ]}
-                  onPress={() => handleToggleStep(step)}
-                  onLongPress={() => handleDeleteStep(step)}
                 >
-                  <View style={styles.stepCheckbox}>
-                    {stepCompleted && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <Text
-                    style={[
-                      styles.stepText,
-                      stepCompleted && styles.stepTextCompleted,
-                    ]}
+                  <TouchableOpacity
+                    style={styles.stepCheckbox}
+                    onPress={() => handleToggleStep(step)}
                   >
-                    {step.description}
-                  </Text>
-                </TouchableOpacity>
+                    {stepCompleted && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                  
+                  {isEditing ? (
+                    <View style={styles.stepEditContainer}>
+                      <TextInput
+                        style={styles.stepEditInput}
+                        value={editingStepDescription}
+                        onChangeText={setEditingStepDescription}
+                        autoFocus
+                        onSubmitEditing={handleSaveStepEdit}
+                        blurOnSubmit={false}
+                      />
+                      <TouchableOpacity
+                        style={styles.stepEditSaveButton}
+                        onPress={handleSaveStepEdit}
+                      >
+                        <Text style={styles.stepEditSaveText}>✓</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.stepEditCancelButton}
+                        onPress={handleCancelStepEdit}
+                      >
+                        <Text style={styles.stepEditCancelText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={styles.stepContent}
+                        onPress={() => handleToggleStep(step)}
+                      >
+                        <Text
+                          style={[
+                            styles.stepText,
+                            stepCompleted && styles.stepTextCompleted,
+                          ]}
+                        >
+                          {step.description}
+                        </Text>
+                      </TouchableOpacity>
+                      <View style={styles.stepActions}>
+                        <TouchableOpacity
+                          style={styles.stepEditButton}
+                          onPress={() => handleEditStep(step)}
+                        >
+                          <Text style={styles.stepEditButtonText}>✏️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.stepDeleteButton}
+                          onPress={() => handleDeleteStep(step)}
+                        >
+                          <Text style={styles.stepDeleteButtonText}>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </View>
               );
             })
           )}
@@ -892,8 +992,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  stepText: {
+  stepContent: {
     flex: 1,
+  },
+  stepText: {
     fontSize: 16,
     color: '#333',
   },
@@ -901,12 +1003,93 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: '#999',
   },
+  stepActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+    gap: 8,
+  },
+  stepEditButton: {
+    padding: 6,
+  },
+  stepEditButtonText: {
+    fontSize: 16,
+  },
+  stepDeleteButton: {
+    padding: 6,
+  },
+  stepDeleteButtonText: {
+    fontSize: 16,
+  },
+  stepEditContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  stepEditInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 6,
+    padding: 8,
+    marginRight: 8,
+  },
+  stepEditSaveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  stepEditSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  stepEditCancelButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f44336',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepEditCancelText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   emptyText: {
     fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  emptyStepsContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyStepsIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+    opacity: 0.3,
+  },
+  emptyStepsText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  emptyStepsSubtext: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
   },
   addStepButton: {
     marginTop: 12,

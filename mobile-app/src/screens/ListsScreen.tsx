@@ -95,7 +95,7 @@ export default function ListsScreen() {
       setEditListType(ListType.CUSTOM);
       setShowAddModal(false);
       loadLists();
-      Alert.alert('Success', 'List updated successfully');
+      // Success feedback - UI update is visible, no alert needed
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update list');
     } finally {
@@ -126,7 +126,7 @@ export default function ListsScreen() {
       setSelectedListType(ListType.CUSTOM);
       setShowAddModal(false);
       loadLists();
-      Alert.alert('Success', 'List created successfully');
+      // Success feedback - UI update is visible, no alert needed
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to create list. Please try again.';
       Alert.alert('Create List Failed', errorMessage);
@@ -234,10 +234,11 @@ export default function ListsScreen() {
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>No lists found</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>📋</Text>
+            <Text style={styles.emptyText}>No lists yet</Text>
             <Text style={styles.emptySubtext}>
-              Tap the + button to create a list
+              Tap the + button below to create your first list
             </Text>
           </View>
         }
@@ -402,16 +403,26 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+    opacity: 0.5,
   },
   emptyText: {
-    fontSize: 18,
-    color: '#999',
+    fontSize: 20,
+    color: '#666',
     fontWeight: '600',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#bbb',
+    color: '#999',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
   fab: {
     position: 'absolute',

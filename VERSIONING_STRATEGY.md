@@ -104,3 +104,4 @@ When releasing a new version:
 4. Create release tag v1.1.0
 5. Push commits and tag to remote
 
+

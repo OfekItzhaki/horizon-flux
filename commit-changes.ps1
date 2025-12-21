@@ -59,3 +59,4 @@ if ($appJsonDiff) {
 
 Write-Host "`n✅ All commits created successfully!" -ForegroundColor Green
 Write-Host "`nReview commits with: git log --oneline -5" -ForegroundColor Cyan
+

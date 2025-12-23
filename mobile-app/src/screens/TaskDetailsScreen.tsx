@@ -21,6 +21,7 @@ import ReminderConfigComponent from '../components/ReminderConfig';
 import DatePicker from '../components/DatePicker';
 import { scheduleTaskReminders, cancelAllTaskNotifications } from '../services/notifications.service';
 import { EveryDayRemindersStorage, ReminderAlarmsStorage, ReminderTimesStorage } from '../utils/storage';
+import { convertRemindersToBackend, formatDate } from '../utils/helpers';
 
 type TaskDetailsRouteProp = RouteProp<RootStackParamList, 'TaskDetails'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -135,97 +136,6 @@ export default function TaskDetailsScreen() {
     // They're handled via the notification system but won't persist in task details
 
     return reminders;
-  };
-
-  // Convert ReminderConfig format to backend format (reused from TasksScreen)
-  const convertRemindersToBackend = (
-    reminders: ReminderConfig[],
-    dueDate?: string,
-  ): { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number } => {
-    const result: { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number } = {};
-
-    if (dueDate) {
-      result.dueDate = new Date(dueDate).toISOString();
-    }
-
-    const daysBefore: number[] = [];
-    let dayOfWeek: number | undefined;
-
-    reminders.forEach((reminder) => {
-      // Note: EVERY_DAY reminders are NOT saved to backend (backend only supports 0-6 for weekly)
-      // They're handled client-side via notifications only
-      // Skip EVERY_DAY reminders for backend storage
-      if (reminder.timeframe === ReminderTimeframe.EVERY_DAY) {
-        console.log(`Skipping EVERY_DAY reminder: ${reminder.id}`);
-        return; // Skip - handled by notification system only
-      }
-      
-      // For reminders with daysBefore (relative to due date) - this is the primary use case
-      // This handles ALL reminder types that have daysBefore set (SPECIFIC_DATE, etc.)
-      // Only save if we have a due date (either existing or being set in this update)
-      if (reminder.daysBefore !== undefined && reminder.daysBefore > 0) {
-        if (dueDate) {
-          daysBefore.push(reminder.daysBefore);
-          console.log(`Added daysBefore reminder: ${reminder.daysBefore} days (ID: ${reminder.id}, timeframe: ${reminder.timeframe})`);
-        } else {
-          console.log(`Skipping daysBefore reminder ${reminder.id}: no due date (daysBefore: ${reminder.daysBefore})`);
-        }
-      } else {
-        console.log(`Reminder ${reminder.id} has no daysBefore (timeframe: ${reminder.timeframe}, daysBefore: ${reminder.daysBefore})`);
-      }
-
-      // For weekly reminders (only one can be saved due to backend limitation)
-      if (reminder.timeframe === ReminderTimeframe.EVERY_WEEK) {
-        if (reminder.dayOfWeek !== undefined && reminder.dayOfWeek >= 0 && reminder.dayOfWeek <= 6) {
-          // If multiple weekly reminders exist, the last one will overwrite (backend limitation)
-          dayOfWeek = reminder.dayOfWeek;
-          console.log(`Set weekly reminder: day ${reminder.dayOfWeek} (reminder ID: ${reminder.id})`);
-        } else {
-          console.log(`WARNING: EVERY_WEEK reminder ${reminder.id} has invalid dayOfWeek: ${reminder.dayOfWeek}`);
-        }
-      }
-
-      // For SPECIFIC_DATE reminders with customDate (not daysBefore) that are relative to due date
-      // Convert the custom date to daysBefore if it's before the due date
-      // NOTE: This should only run if daysBefore is NOT already set (to avoid double-counting)
-      if (
-        reminder.timeframe === ReminderTimeframe.SPECIFIC_DATE && 
-        dueDate && 
-        reminder.customDate &&
-        (reminder.daysBefore === undefined || reminder.daysBefore === 0) // Only process if daysBefore wasn't already set
-      ) {
-        const reminderDate = new Date(reminder.customDate);
-        const due = new Date(dueDate);
-        const diffDays = Math.ceil((due.getTime() - reminderDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays > 0 && diffDays <= 365) { // Reasonable range
-          daysBefore.push(diffDays);
-        }
-      }
-    });
-
-    // Always set reminderDaysBefore if we have valid daysBefore values
-    if (daysBefore.length > 0) {
-      // Remove duplicates and sort descending
-      result.reminderDaysBefore = [...new Set(daysBefore)].sort((a, b) => b - a);
-      console.log(`Final reminderDaysBefore array: [${result.reminderDaysBefore.join(', ')}]`);
-    } else {
-      // Set empty array if no daysBefore reminders
-      result.reminderDaysBefore = [];
-      console.log('No daysBefore reminders to save (empty array)');
-    }
-
-    // Set specificDayOfWeek (0-6 for weekly reminders only, backend doesn't support "every day")
-    // Always set it explicitly (even if null) so we can distinguish between "no weekly reminder" and "clear existing"
-    if (dayOfWeek !== undefined && dayOfWeek >= 0 && dayOfWeek <= 6) {
-      result.specificDayOfWeek = dayOfWeek;
-      console.log(`Final specificDayOfWeek: ${dayOfWeek}`);
-    } else {
-      // Explicitly set to undefined (will be converted to null in update)
-      result.specificDayOfWeek = undefined;
-      console.log('No weekly reminder to save (specificDayOfWeek will be null)');
-    }
-
-    return result;
   };
 
   const loadTaskData = async () => {
@@ -574,30 +484,6 @@ export default function TaskDetailsScreen() {
         },
       ],
     );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Reset time for comparison
-    today.setHours(0, 0, 0, 0);
-    tomorrow.setHours(0, 0, 0, 0);
-    date.setHours(0, 0, 0, 0);
-
-    if (date.getTime() === today.getTime()) {
-      return 'Today';
-    } else if (date.getTime() === tomorrow.getTime()) {
-      return 'Tomorrow';
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
-      });
-    }
   };
 
   if (loading) {

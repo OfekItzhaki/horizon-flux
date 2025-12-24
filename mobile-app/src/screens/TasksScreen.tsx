@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 100, // Increased to clear bottom nav bar + safe area
     width: 56,
     height: 56,
     borderRadius: 28,

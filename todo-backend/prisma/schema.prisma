@@ -58,7 +58,9 @@ model Task {
   description        String    @db.VarChar(255)
   completed          Boolean   @default(false)
   completedAt        DateTime? // When the task was marked complete (for auto-archive timing)
+  completionCount    Int       @default(0) // How many times this repeating task has been completed
   todoListId         Int
+  originalListId     Int?      // Remember original list when archived (for restore)
   order              Int       @default(autoincrement())
   deletedAt          DateTime?
   dueDate            DateTime?

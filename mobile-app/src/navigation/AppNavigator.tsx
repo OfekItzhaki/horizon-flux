@@ -15,7 +15,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  Tasks: { listId: number; listName: string };
+  Tasks: { listId: number; listName: string; listType: string };
   TaskDetails: { taskId: number };
 };
 

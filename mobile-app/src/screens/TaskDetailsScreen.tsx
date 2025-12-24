@@ -565,6 +565,12 @@ export default function TaskDetailsScreen() {
                   {task.description}
                 </Text>
               )}
+              {/* Show completion count for repeating tasks */}
+              {!isEditing && task.completionCount > 0 && (
+                <Text style={styles.completionCountBadge}>
+                  🔄 Completed {task.completionCount} time{task.completionCount !== 1 ? 's' : ''}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -931,6 +937,17 @@ const styles = StyleSheet.create({
   titleCompleted: {
     textDecorationLine: 'line-through',
     color: '#999',
+  },
+  completionCountBadge: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '500',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
   editButton: {
     marginTop: 12,

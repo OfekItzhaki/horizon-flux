@@ -93,14 +93,16 @@ export class TaskSchedulerService {
     for (const [ownerId, tasks] of Object.entries(tasksByOwner)) {
       const finishedList = await this.getOrCreateFinishedList(Number(ownerId));
       
-      await this.prisma.task.updateMany({
-        where: {
-          id: { in: tasks.map(t => t.id) },
-        },
-        data: {
-          todoListId: finishedList.id,
-        },
-      });
+      // Update each task individually to preserve originalListId
+      for (const task of tasks) {
+        await this.prisma.task.update({
+          where: { id: task.id },
+          data: {
+            todoListId: finishedList.id,
+            originalListId: task.todoListId, // Remember where it came from for restore
+          },
+        });
+      }
 
       this.logger.log(`Archived ${tasks.length} tasks for user ${ownerId}`);
     }
@@ -111,6 +113,18 @@ export class TaskSchedulerService {
    */
   @Cron('0 0 * * *') // Every day at midnight
   async resetDailyTasks() {
+    // First, increment completion count for all completed daily tasks
+    await this.prisma.$executeRaw`
+      UPDATE "Task" 
+      SET "completionCount" = "completionCount" + 1
+      WHERE "completed" = true 
+      AND "deletedAt" IS NULL
+      AND "todoListId" IN (
+        SELECT "id" FROM "ToDoList" 
+        WHERE "type" = 'DAILY' AND "deletedAt" IS NULL
+      )
+    `;
+
     const result = await this.prisma.task.updateMany({
       where: {
         completed: true,
@@ -127,7 +141,7 @@ export class TaskSchedulerService {
     });
 
     if (result.count > 0) {
-      this.logger.log(`Reset ${result.count} daily tasks`);
+      this.logger.log(`Reset ${result.count} daily tasks (completion counts incremented)`);
     }
 
     // Also reset steps for these tasks
@@ -154,6 +168,18 @@ export class TaskSchedulerService {
    */
   @Cron('0 0 * * 1') // Every Monday at midnight
   async resetWeeklyTasks() {
+    // First, increment completion count for all completed weekly tasks
+    await this.prisma.$executeRaw`
+      UPDATE "Task" 
+      SET "completionCount" = "completionCount" + 1
+      WHERE "completed" = true 
+      AND "deletedAt" IS NULL
+      AND "todoListId" IN (
+        SELECT "id" FROM "ToDoList" 
+        WHERE "type" = 'WEEKLY' AND "deletedAt" IS NULL
+      )
+    `;
+
     const result = await this.prisma.task.updateMany({
       where: {
         completed: true,
@@ -170,7 +196,7 @@ export class TaskSchedulerService {
     });
 
     if (result.count > 0) {
-      this.logger.log(`Reset ${result.count} weekly tasks`);
+      this.logger.log(`Reset ${result.count} weekly tasks (completion counts incremented)`);
     }
 
     // Also reset steps for these tasks
@@ -197,6 +223,18 @@ export class TaskSchedulerService {
    */
   @Cron('0 0 1 * *') // 1st of every month at midnight
   async resetMonthlyTasks() {
+    // First, increment completion count for all completed monthly tasks
+    await this.prisma.$executeRaw`
+      UPDATE "Task" 
+      SET "completionCount" = "completionCount" + 1
+      WHERE "completed" = true 
+      AND "deletedAt" IS NULL
+      AND "todoListId" IN (
+        SELECT "id" FROM "ToDoList" 
+        WHERE "type" = 'MONTHLY' AND "deletedAt" IS NULL
+      )
+    `;
+
     const result = await this.prisma.task.updateMany({
       where: {
         completed: true,
@@ -213,7 +251,7 @@ export class TaskSchedulerService {
     });
 
     if (result.count > 0) {
-      this.logger.log(`Reset ${result.count} monthly tasks`);
+      this.logger.log(`Reset ${result.count} monthly tasks (completion counts incremented)`);
     }
 
     // Also reset steps for these tasks
@@ -240,6 +278,18 @@ export class TaskSchedulerService {
    */
   @Cron('0 0 1 1 *') // January 1st at midnight
   async resetYearlyTasks() {
+    // First, increment completion count for all completed yearly tasks
+    await this.prisma.$executeRaw`
+      UPDATE "Task" 
+      SET "completionCount" = "completionCount" + 1
+      WHERE "completed" = true 
+      AND "deletedAt" IS NULL
+      AND "todoListId" IN (
+        SELECT "id" FROM "ToDoList" 
+        WHERE "type" = 'YEARLY' AND "deletedAt" IS NULL
+      )
+    `;
+
     const result = await this.prisma.task.updateMany({
       where: {
         completed: true,
@@ -256,7 +306,7 @@ export class TaskSchedulerService {
     });
 
     if (result.count > 0) {
-      this.logger.log(`Reset ${result.count} yearly tasks`);
+      this.logger.log(`Reset ${result.count} yearly tasks (completion counts incremented)`);
     }
 
     // Also reset steps for these tasks

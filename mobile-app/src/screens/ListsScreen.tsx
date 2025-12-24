@@ -75,6 +75,7 @@ export default function ListsScreen() {
     navigation.navigate('Tasks', {
       listId: list.id,
       listName: list.name,
+      listType: list.type,
     });
   };
 

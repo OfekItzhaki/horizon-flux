@@ -8,6 +8,7 @@ export enum ListType {
   MONTHLY = 'MONTHLY',
   YEARLY = 'YEARLY',
   CUSTOM = 'CUSTOM',
+  FINISHED = 'FINISHED', // System list for archived completed tasks
 }
 
 export interface User {
@@ -26,6 +27,7 @@ export interface ToDoList {
   type: ListType;
   ownerId: number;
   order: number;
+  isSystem: boolean; // System lists (like "Finished Tasks") cannot be deleted
   createdAt: string;
   updatedAt: string;
 }

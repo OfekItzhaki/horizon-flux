@@ -177,6 +177,8 @@ export default function ListsScreen() {
         return '#FF9800';
       case ListType.YEARLY:
         return '#9C27B0';
+      case ListType.FINISHED:
+        return '#607D8B'; // Gray-blue for finished tasks
       default:
         return '#757575';
     }
@@ -216,6 +218,15 @@ export default function ListsScreen() {
             style={styles.listItem}
             onPress={() => handleListPress(item)}
             onLongPress={() => {
+              // System lists (like Finished Tasks) cannot be edited or deleted
+              if (item.isSystem) {
+                Alert.alert(
+                  item.name,
+                  'This is a system list and cannot be modified.',
+                  [{ text: 'OK' }],
+                );
+                return;
+              }
               Alert.alert(
                 item.name,
                 'Choose an action',

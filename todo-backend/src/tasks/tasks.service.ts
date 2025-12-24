@@ -105,7 +105,19 @@ export class TasksService {
   }
 
   async update(id: number, updateTaskDto: UpdateTaskDto, ownerId: number) {
-    await this.findTaskForUser(id, ownerId);
+    const existingTask = await this.findTaskForUser(id, ownerId);
+
+    // Track completedAt timestamp
+    let completedAt: Date | null | undefined = undefined;
+    if (updateTaskDto.completed !== undefined) {
+      if (updateTaskDto.completed && !existingTask.completed) {
+        // Task is being marked as completed
+        completedAt = new Date();
+      } else if (!updateTaskDto.completed && existingTask.completed) {
+        // Task is being unmarked as completed
+        completedAt = null;
+      }
+    }
 
     return this.prisma.task.update({
       where: { id },
@@ -115,6 +127,7 @@ export class TasksService {
         specificDayOfWeek: updateTaskDto.specificDayOfWeek,
         reminderDaysBefore: updateTaskDto.reminderDaysBefore,
         completed: updateTaskDto.completed,
+        ...(completedAt !== undefined && { completedAt }),
       },
     });
   }

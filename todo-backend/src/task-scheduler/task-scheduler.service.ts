@@ -1,0 +1,279 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { PrismaService } from '../prisma/prisma.service';
+import { ListType } from '@prisma/client';
+
+@Injectable()
+export class TaskSchedulerService {
+  private readonly logger = new Logger(TaskSchedulerService.name);
+  
+  // Archive delay in minutes - how long to wait after task completion before moving to Finished list
+  private readonly ARCHIVE_DELAY_MINUTES = 5;
+  
+  // System list name for finished tasks
+  private readonly FINISHED_LIST_NAME = 'Finished Tasks';
+
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Get or create the system "Finished Tasks" list for a user
+   */
+  private async getOrCreateFinishedList(ownerId: number) {
+    // Try to find existing finished list
+    let finishedList = await this.prisma.toDoList.findFirst({
+      where: {
+        ownerId,
+        type: ListType.FINISHED,
+        isSystem: true,
+        deletedAt: null,
+      },
+    });
+
+    // Create if not exists
+    if (!finishedList) {
+      finishedList = await this.prisma.toDoList.create({
+        data: {
+          name: this.FINISHED_LIST_NAME,
+          type: ListType.FINISHED,
+          isSystem: true,
+          ownerId,
+        },
+      });
+      this.logger.log(`Created Finished Tasks list for user ${ownerId}`);
+    }
+
+    return finishedList;
+  }
+
+  /**
+   * Runs every minute to check for completed tasks that need to be archived
+   * (moved from CUSTOM lists to the Finished Tasks list)
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async archiveCompletedTasks() {
+    const archiveThreshold = new Date();
+    archiveThreshold.setMinutes(archiveThreshold.getMinutes() - this.ARCHIVE_DELAY_MINUTES);
+
+    // Find all completed tasks in CUSTOM lists that have been completed for more than ARCHIVE_DELAY_MINUTES
+    const tasksToArchive = await this.prisma.task.findMany({
+      where: {
+        completed: true,
+        completedAt: {
+          lte: archiveThreshold,
+        },
+        deletedAt: null,
+        todoList: {
+          type: ListType.CUSTOM,
+          deletedAt: null,
+        },
+      },
+      include: {
+        todoList: true,
+      },
+    });
+
+    if (tasksToArchive.length === 0) {
+      return;
+    }
+
+    this.logger.log(`Found ${tasksToArchive.length} tasks to archive`);
+
+    // Group tasks by owner
+    const tasksByOwner = tasksToArchive.reduce((acc, task) => {
+      const ownerId = task.todoList.ownerId;
+      if (!acc[ownerId]) {
+        acc[ownerId] = [];
+      }
+      acc[ownerId].push(task);
+      return acc;
+    }, {} as Record<number, typeof tasksToArchive>);
+
+    // Move tasks to their owner's Finished list
+    for (const [ownerId, tasks] of Object.entries(tasksByOwner)) {
+      const finishedList = await this.getOrCreateFinishedList(Number(ownerId));
+      
+      await this.prisma.task.updateMany({
+        where: {
+          id: { in: tasks.map(t => t.id) },
+        },
+        data: {
+          todoListId: finishedList.id,
+        },
+      });
+
+      this.logger.log(`Archived ${tasks.length} tasks for user ${ownerId}`);
+    }
+  }
+
+  /**
+   * Runs at midnight every day to reset DAILY tasks
+   */
+  @Cron('0 0 * * *') // Every day at midnight
+  async resetDailyTasks() {
+    const result = await this.prisma.task.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        todoList: {
+          type: ListType.DAILY,
+          deletedAt: null,
+        },
+      },
+      data: {
+        completed: false,
+        completedAt: null,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`Reset ${result.count} daily tasks`);
+    }
+
+    // Also reset steps for these tasks
+    await this.prisma.step.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        task: {
+          deletedAt: null,
+          todoList: {
+            type: ListType.DAILY,
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        completed: false,
+      },
+    });
+  }
+
+  /**
+   * Runs at midnight on Monday to reset WEEKLY tasks
+   */
+  @Cron('0 0 * * 1') // Every Monday at midnight
+  async resetWeeklyTasks() {
+    const result = await this.prisma.task.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        todoList: {
+          type: ListType.WEEKLY,
+          deletedAt: null,
+        },
+      },
+      data: {
+        completed: false,
+        completedAt: null,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`Reset ${result.count} weekly tasks`);
+    }
+
+    // Also reset steps for these tasks
+    await this.prisma.step.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        task: {
+          deletedAt: null,
+          todoList: {
+            type: ListType.WEEKLY,
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        completed: false,
+      },
+    });
+  }
+
+  /**
+   * Runs at midnight on the 1st of each month to reset MONTHLY tasks
+   */
+  @Cron('0 0 1 * *') // 1st of every month at midnight
+  async resetMonthlyTasks() {
+    const result = await this.prisma.task.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        todoList: {
+          type: ListType.MONTHLY,
+          deletedAt: null,
+        },
+      },
+      data: {
+        completed: false,
+        completedAt: null,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`Reset ${result.count} monthly tasks`);
+    }
+
+    // Also reset steps for these tasks
+    await this.prisma.step.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        task: {
+          deletedAt: null,
+          todoList: {
+            type: ListType.MONTHLY,
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        completed: false,
+      },
+    });
+  }
+
+  /**
+   * Runs at midnight on January 1st to reset YEARLY tasks
+   */
+  @Cron('0 0 1 1 *') // January 1st at midnight
+  async resetYearlyTasks() {
+    const result = await this.prisma.task.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        todoList: {
+          type: ListType.YEARLY,
+          deletedAt: null,
+        },
+      },
+      data: {
+        completed: false,
+        completedAt: null,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`Reset ${result.count} yearly tasks`);
+    }
+
+    // Also reset steps for these tasks
+    await this.prisma.step.updateMany({
+      where: {
+        completed: true,
+        deletedAt: null,
+        task: {
+          deletedAt: null,
+          todoList: {
+            type: ListType.YEARLY,
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        completed: false,
+      },
+    });
+  }
+}

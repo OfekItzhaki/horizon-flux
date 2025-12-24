@@ -364,10 +364,17 @@ export default function TaskDetailsScreen() {
   const handleToggleTask = async () => {
     if (!task) return;
 
+    const newCompletedState = !task.completed;
+    
+    // Optimistic update - update UI immediately
+    setTask(prevTask => prevTask ? { ...prevTask, completed: newCompletedState } : null);
+
     try {
-      await tasksService.update(taskId, { completed: !task.completed });
-      loadTaskData();
+      await tasksService.update(taskId, { completed: newCompletedState });
+      // No need to reload - already updated
     } catch (error: any) {
+      // Revert on error
+      setTask(prevTask => prevTask ? { ...prevTask, completed: task.completed } : null);
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to toggle task completion. Please try again.';
       Alert.alert('Update Failed', errorMessage);
     }
@@ -379,18 +386,35 @@ export default function TaskDetailsScreen() {
       return;
     }
 
-    // Store description before clearing (in case of async issues)
+    // Store description before clearing
     const description = newStepDescription.trim();
     
-    // Close modal and clear input immediately for responsive UX
+    // Create optimistic step with temporary ID
+    const tempId = Date.now();
+    const optimisticStep: Step = {
+      id: tempId,
+      description,
+      completed: false,
+      taskId,
+      order: steps.length,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    // Close modal, clear input, and add step immediately
     setShowAddStepModal(false);
     setNewStepDescription('');
+    setSteps(prevSteps => [...prevSteps, optimisticStep]);
 
     try {
-      await stepsService.create(taskId, { description });
-      // Refresh steps list after successful creation
-      loadTaskData();
+      const createdStep = await stepsService.create(taskId, { description });
+      // Replace optimistic step with real one from server
+      setSteps(prevSteps => 
+        prevSteps.map(s => s.id === tempId ? createdStep : s)
+      );
     } catch (error: any) {
+      // Remove optimistic step on error
+      setSteps(prevSteps => prevSteps.filter(s => s.id !== tempId));
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to add step. Please try again.';
       Alert.alert('Add Step Failed', errorMessage);
       // Reload to ensure UI is in sync
@@ -399,10 +423,25 @@ export default function TaskDetailsScreen() {
   };
 
   const handleToggleStep = async (step: Step) => {
+    const newCompletedState = !step.completed;
+    
+    // Optimistic update - update UI immediately
+    setSteps(prevSteps => 
+      prevSteps.map(s => 
+        s.id === step.id ? { ...s, completed: newCompletedState } : s
+      )
+    );
+
     try {
-      await stepsService.update(step.id, { completed: !step.completed });
-      loadTaskData();
+      await stepsService.update(step.id, { completed: newCompletedState });
+      // No need to reload - already updated
     } catch (error: any) {
+      // Revert on error
+      setSteps(prevSteps => 
+        prevSteps.map(s => 
+          s.id === step.id ? { ...s, completed: step.completed } : s
+        )
+      );
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to update step. Please try again.';
       Alert.alert('Update Failed', errorMessage);
     }
@@ -476,12 +515,31 @@ export default function TaskDetailsScreen() {
       return;
     }
 
+    const stepId = editingStepId;
+    const newDescription = editingStepDescription.trim();
+    const oldStep = steps.find(s => s.id === stepId);
+    
+    // Optimistic update - update UI immediately
+    setSteps(prevSteps => 
+      prevSteps.map(s => 
+        s.id === stepId ? { ...s, description: newDescription } : s
+      )
+    );
+    setEditingStepId(null);
+    setEditingStepDescription('');
+
     try {
-      await stepsService.update(editingStepId, { description: editingStepDescription.trim() });
-      setEditingStepId(null);
-      setEditingStepDescription('');
-      loadTaskData();
+      await stepsService.update(stepId, { description: newDescription });
+      // No need to reload - already updated
     } catch (error: any) {
+      // Revert on error
+      if (oldStep) {
+        setSteps(prevSteps => 
+          prevSteps.map(s => 
+            s.id === stepId ? { ...s, description: oldStep.description } : s
+          )
+        );
+      }
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to update step. Please try again.';
       Alert.alert('Update Failed', errorMessage);
     }
@@ -513,10 +571,15 @@ export default function TaskDetailsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            // Optimistic update - remove immediately
+            setSteps(prevSteps => prevSteps.filter(s => s.id !== step.id));
+            
             try {
               await stepsService.delete(step.id);
-              loadTaskData();
+              // No need to reload - already removed
             } catch (error: any) {
+              // Revert on error - add step back
+              setSteps(prevSteps => [...prevSteps, step].sort((a, b) => a.order - b.order));
               const errorMessage = error?.response?.data?.message || error?.message || 'Unable to delete step. Please try again.';
               Alert.alert('Delete Failed', errorMessage);
             }

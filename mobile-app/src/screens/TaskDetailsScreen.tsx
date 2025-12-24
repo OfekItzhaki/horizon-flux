@@ -684,6 +684,28 @@ export default function TaskDetailsScreen() {
           })()}
         </View>
 
+        {/* Quick Complete Toggle Button - only show when NOT editing */}
+        {!isEditing && (
+          <TouchableOpacity
+            style={[
+              styles.completeButton,
+              isCompleted && styles.completeButtonDone
+            ]}
+            onPress={handleToggleTask}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.completeButtonIcon, { color: isCompleted ? '#fff' : '#007AFF' }]}>
+              {isCompleted ? '✓' : '○'}
+            </Text>
+            <Text style={[
+              styles.completeButtonText,
+              isCompleted && styles.completeButtonTextDone
+            ]}>
+              {isCompleted ? 'Completed' : 'Mark as Complete'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Reminders Section (when editing) */}
         {isEditing && (
           <View style={styles.section}>
@@ -967,6 +989,40 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    marginVertical: 10,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  completeButtonDone: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  completeButtonIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  completeButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  completeButtonTextDone: {
+    color: '#fff',
     fontWeight: '600',
   },
   editInput: {

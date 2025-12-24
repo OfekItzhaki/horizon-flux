@@ -419,6 +419,11 @@ export default function TaskDetailsScreen() {
         [reminderId]: newAlarmState,
       }));
 
+      // Also update editReminders to keep it in sync for when user enters edit mode
+      setEditReminders(prev => prev.map(r => 
+        r.id === reminderId ? { ...r, hasAlarm: newAlarmState } : r
+      ));
+
       // Get all reminders to update notifications
       const backendReminders = convertBackendToReminders(
         task.reminderDaysBefore,
@@ -477,6 +482,17 @@ export default function TaskDetailsScreen() {
   const handleCancelStepEdit = () => {
     setEditingStepId(null);
     setEditingStepDescription('');
+  };
+
+  const handleStartEditing = () => {
+    // Update editReminders with the current alarm states before entering edit mode
+    // This ensures the edit modal shows the correct alarm toggle state
+    const updatedReminders = editReminders.map(r => ({
+      ...r,
+      hasAlarm: reminderAlarmStates[r.id] !== undefined ? reminderAlarmStates[r.id] : (r.hasAlarm || false),
+    }));
+    setEditReminders(updatedReminders);
+    setIsEditing(true);
   };
 
   const handleDeleteStep = (step: Step) => {
@@ -571,7 +587,7 @@ export default function TaskDetailsScreen() {
           {!isEditing && (
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => setIsEditing(true)}
+              onPress={handleStartEditing}
             >
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>

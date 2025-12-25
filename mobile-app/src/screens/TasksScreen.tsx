@@ -43,11 +43,6 @@ export default function TasksScreen() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-
-  useEffect(() => {
-    loadTasks();
-  }, [listId]);
-
   const [allTasks, setAllTasks] = useState<Task[]>([]);
 
   const loadTasks = async () => {

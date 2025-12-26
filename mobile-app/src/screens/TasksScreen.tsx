@@ -84,7 +84,9 @@ export default function TasksScreen() {
   };
 
   const applySorting = (tasksToSort: Task[]) => {
-    let sorted = [...tasksToSort];
+    const sorted = [...tasksToSort];
+
+    console.log('Sorting tasks by:', sortBy, 'Count:', sorted.length);
 
     switch (sortBy) {
       case 'dueDate':
@@ -128,12 +130,26 @@ export default function TasksScreen() {
   };
 
   const toggleTask = async (task: Task) => {
+    const currentCompleted = Boolean(task.completed);
+    const newCompleted = !currentCompleted;
+    
+    // Optimistic update - update UI immediately
+    setAllTasks(prevTasks => 
+      prevTasks.map(t => 
+        t.id === task.id ? { ...t, completed: newCompleted } : t
+      )
+    );
+    
     try {
-      // Ensure we're working with a proper boolean
-      const currentCompleted = Boolean(task.completed);
-      await tasksService.update(task.id, { completed: !currentCompleted });
-      loadTasks(); // Reload tasks
+      await tasksService.update(task.id, { completed: newCompleted });
+      // No need to reload - optimistic update already applied
     } catch (error: any) {
+      // Revert on error
+      setAllTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === task.id ? { ...t, completed: currentCompleted } : t
+        )
+      );
       const errorMessage = error?.response?.data?.message || error?.message || 'Unable to update task. Please try again.';
       Alert.alert('Update Failed', errorMessage);
     }

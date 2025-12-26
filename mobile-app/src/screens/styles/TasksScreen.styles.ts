@@ -141,8 +141,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+  taskCheckboxCompleted: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
   checkmark: {
-    color: '#007AFF',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },

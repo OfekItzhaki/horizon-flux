@@ -364,6 +364,7 @@ export default function TasksScreen() {
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id.toString()}
+        showsVerticalScrollIndicator={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -390,9 +391,16 @@ export default function TasksScreen() {
               onLongPress={() => isArchivedList ? handleArchivedTaskOptions(item) : handleDeleteTask(item)}
             >
               <View style={styles.taskContent}>
-                <View style={styles.taskCheckbox}>
+                <TouchableOpacity
+                  style={[styles.taskCheckbox, isCompleted && styles.taskCheckboxCompleted]}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    toggleTask(item);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   {isCompleted && <Text style={styles.checkmark}>✓</Text>}
-                </View>
+                </TouchableOpacity>
                 <View style={styles.taskTextContainer}>
                   <Text
                     style={[

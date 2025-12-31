@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { tasksService } from '../services/tasks.service';
-import { Task } from '@tasks-management/frontend-services';
+import { Task, ApiError } from '@tasks-management/frontend-services';
 
 export default function TaskDetailsPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -23,8 +23,12 @@ export default function TaskDetailsPage() {
       const data = await tasksService.getTaskById(parseInt(taskId));
       setTask(data);
       setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load task');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      const errorMessage = Array.isArray(error.message)
+        ? error.message.join(', ')
+        : error.message || 'Failed to load task';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

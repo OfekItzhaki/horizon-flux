@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listsService } from '../services/lists.service';
-import { ToDoList } from '@tasks-management/frontend-services';
+import { ToDoList, ApiError } from '@tasks-management/frontend-services';
 
 export default function ListsPage() {
   const [lists, setLists] = useState<ToDoList[]>([]);
@@ -18,8 +18,12 @@ export default function ListsPage() {
       const data = await listsService.getAllLists();
       setLists(data);
       setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load lists');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      const errorMessage = Array.isArray(error.message)
+        ? error.message.join(', ')
+        : error.message || 'Failed to load lists';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

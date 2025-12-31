@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LoginDto } from '@tasks-management/frontend-services';
+import { LoginDto, ApiError } from '@tasks-management/frontend-services';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,8 +20,12 @@ export default function LoginPage() {
       const credentials: LoginDto = { email, password };
       await login(credentials);
       navigate('/lists');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      const errorMessage = Array.isArray(error.message)
+        ? error.message.join(', ')
+        : error.message || 'Login failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

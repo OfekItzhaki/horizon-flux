@@ -25,7 +25,22 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
-
-# TypeScript
 *.tsbuildinfo
+
+# Prisma generated files
+**/generated/
+**/prisma/generated/
+
+# Package manager locks (keep package-lock.json but ignore others if needed)
+# package-lock.json  # Keep this for consistency
+pnpm-lock.yaml  # Optional: remove if not using pnpm
+
+# EAS build artifacts
+*.aab
+*.apk
+*.ipa
+
+# Expo
+.expo/
+.expo-shared/
 

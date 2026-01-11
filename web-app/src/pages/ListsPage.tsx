@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listsService } from '../services/lists.service';
+import { tasksService } from '../services/tasks.service';
 import { ToDoList, ApiError, ListType } from '@tasks-management/frontend-services';
 import { formatApiError } from '../utils/formatApiError';
 import FloatingActionButton from '../components/FloatingActionButton';
@@ -147,6 +148,17 @@ export default function ListsPage() {
           <Link
             key={list.id}
             to={`/lists/${list.id}/tasks`}
+            onMouseEnter={() => {
+              // Prefetch tasks + list details for snappy navigation.
+              void queryClient.prefetchQuery({
+                queryKey: ['tasks', list.id],
+                queryFn: () => tasksService.getTasksByList(list.id),
+              });
+              void queryClient.prefetchQuery({
+                queryKey: ['list', list.id],
+                queryFn: () => listsService.getListById(list.id),
+              });
+            }}
             className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
           >
             <h3 className="text-lg font-semibold text-gray-900">{list.name}</h3>

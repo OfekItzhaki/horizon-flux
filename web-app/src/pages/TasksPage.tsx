@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -33,6 +33,15 @@ export default function TasksPage() {
   const { data: list } = useQuery<ListWithSystemFlag, ApiError>({
     queryKey: ['list', numericListId],
     enabled: typeof numericListId === 'number' && !Number.isNaN(numericListId),
+    initialData: () => {
+      if (typeof numericListId !== 'number' || Number.isNaN(numericListId)) {
+        return undefined;
+      }
+      const cachedLists = queryClient.getQueryData<ListWithSystemFlag[]>([
+        'lists',
+      ]);
+      return cachedLists?.find((l) => l.id === numericListId);
+    },
     queryFn: () => listsService.getListById(numericListId as number),
   });
 
@@ -44,6 +53,7 @@ export default function TasksPage() {
   } = useQuery<Task[], ApiError>({
     queryKey: ['tasks', numericListId],
     enabled: typeof numericListId === 'number' && !Number.isNaN(numericListId),
+    placeholderData: keepPreviousData,
     queryFn: () => tasksService.getTasksByList(numericListId as number),
   });
 
@@ -431,6 +441,13 @@ export default function TasksPage() {
             key={task.id}
             role="button"
             tabIndex={0}
+            onMouseEnter={() => {
+              // Prefetch details for instant TaskDetailsPage.
+              void queryClient.prefetchQuery({
+                queryKey: ['task', task.id],
+                queryFn: () => tasksService.getTaskById(task.id),
+              });
+            }}
             onClick={() => navigate(`/tasks/${task.id}`)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {

@@ -29,6 +29,27 @@ export default function TaskDetailsPage() {
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
   const [stepDescriptionDraft, setStepDescriptionDraft] = useState('');
 
+  // Speed-up + consistency:
+  // If the user just toggled completion in the list view and immediately navigates here,
+  // the network fetch may still return stale data. Use cached task from React Query first.
+  const getCachedTaskById = (): Task | undefined => {
+    if (typeof numericTaskId !== 'number' || Number.isNaN(numericTaskId)) {
+      return undefined;
+    }
+
+    const direct = queryClient.getQueryData<Task>(['task', numericTaskId]);
+    if (direct) return direct;
+
+    const candidates = queryClient.getQueriesData<Task[]>({
+      queryKey: ['tasks'],
+    });
+    for (const [, tasks] of candidates) {
+      const found = tasks?.find((t) => t.id === numericTaskId);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
   const {
     data: task,
     isLoading,
@@ -37,6 +58,7 @@ export default function TaskDetailsPage() {
   } = useQuery<Task, ApiError>({
     queryKey: ['task', numericTaskId],
     enabled: typeof numericTaskId === 'number' && !Number.isNaN(numericTaskId),
+    initialData: () => getCachedTaskById(),
     queryFn: () => tasksService.getTaskById(numericTaskId as number),
   });
 

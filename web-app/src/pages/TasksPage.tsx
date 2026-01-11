@@ -9,6 +9,7 @@ import { formatApiError } from '../utils/formatApiError';
 export default function TasksPage() {
   const { listId } = useParams<{ listId: string }>();
   const queryClient = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
   const [newTaskDescription, setNewTaskDescription] = useState('');
 
   const numericListId = listId ? Number(listId) : null;
@@ -29,6 +30,7 @@ export default function TasksPage() {
       tasksService.createTask(numericListId as number, data),
     onSuccess: async () => {
       setNewTaskDescription('');
+      setShowCreate(false);
       await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
     },
     onError: (err) => {
@@ -61,46 +63,64 @@ export default function TasksPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Tasks</h1>
-
-      <form
-        className="bg-white rounded-lg shadow p-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-end"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!newTaskDescription.trim() || !numericListId) return;
-          createTaskMutation.mutate({ description: newTaskDescription.trim() });
-        }}
-      >
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700">
-            New task
-          </label>
-          <input
-            value={newTaskDescription}
-            onChange={(e) => setNewTaskDescription(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="e.g. Buy milk"
-          />
-        </div>
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
         <button
-          type="submit"
-          disabled={
-            createTaskMutation.isPending ||
-            !numericListId ||
-            !newTaskDescription.trim()
-          }
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          disabled={!numericListId}
           className="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {createTaskMutation.isPending ? 'Adding...' : 'Add task'}
+          {showCreate ? 'Close' : 'New task'}
         </button>
-      </form>
+      </div>
 
-      {createTaskMutation.isError && (
-        <div className="rounded-md bg-red-50 p-4 mb-6">
-          <div className="text-sm text-red-800">
-            {formatApiError(createTaskMutation.error, 'Failed to create task')}
+      {showCreate && (
+        <form
+          className="bg-white rounded-lg border p-4 mb-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newTaskDescription.trim() || !numericListId) return;
+            createTaskMutation.mutate({ description: newTaskDescription.trim() });
+          }}
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-end">
+            <div className="sm:col-span-10">
+              <label className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <input
+                value={newTaskDescription}
+                onChange={(e) => setNewTaskDescription(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="e.g. Buy milk"
+              />
+            </div>
+            <div className="sm:col-span-2 flex gap-2">
+              <button
+                type="submit"
+                disabled={
+                  createTaskMutation.isPending ||
+                  !numericListId ||
+                  !newTaskDescription.trim()
+                }
+                className="inline-flex flex-1 justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {createTaskMutation.isPending ? 'Adding...' : 'Create'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreate(false);
+                  setNewTaskDescription('');
+                }}
+                className="inline-flex justify-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
+        </form>
       )}
 
       <div className="space-y-4">

@@ -34,16 +34,48 @@ export default function ListsPage() {
   const createListMutation = useMutation<
     ToDoList,
     ApiError,
-    { name: string; type: ListType }
+    { name: string; type: ListType },
+    { previousLists?: ToDoList[] }
   >({
     mutationFn: (data) => listsService.createList(data),
-    onSuccess: async () => {
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: ['lists'] });
+
+      const previousLists = queryClient.getQueryData<ToDoList[]>(['lists']);
+      const now = new Date().toISOString();
+      const tempId = -Date.now();
+
+      const optimistic: ToDoList = {
+        id: tempId,
+        name: data.name,
+        ownerId: 0,
+        order: Date.now(),
+        type: data.type,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        tasks: [],
+      };
+
+      queryClient.setQueryData<ToDoList[]>(['lists'], (old = []) => [
+        optimistic,
+        ...old,
+      ]);
+
+      return { previousLists };
+    },
+    onError: (err, _data, ctx) => {
+      if (ctx?.previousLists) {
+        queryClient.setQueryData(['lists'], ctx.previousLists);
+      }
+      toast.error(formatApiError(err, 'Failed to create list'));
+    },
+    onSuccess: () => {
       setNewListName('');
       setShowCreate(false);
-      await queryClient.invalidateQueries({ queryKey: ['lists'] });
     },
-    onError: (err) => {
-      toast.error(formatApiError(err, 'Failed to create list'));
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['lists'] });
     },
   });
 

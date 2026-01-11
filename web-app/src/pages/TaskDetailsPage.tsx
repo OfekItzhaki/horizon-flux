@@ -50,57 +50,193 @@ export default function TaskDetailsPage() {
   const updateTaskMutation = useMutation<
     Task,
     ApiError,
-    { id: number; data: UpdateTaskDto }
+    { id: number; data: UpdateTaskDto },
+    { previousTask?: Task; previousTasks?: Task[]; todoListId?: number }
   >({
     mutationFn: ({ id, data }) =>
       tasksService.updateTask(id, data),
-    onSuccess: async (updated) => {
-      await invalidateTask(updated);
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['task', id] });
+
+      const previousTask = queryClient.getQueryData<Task>(['task', id]);
+      const todoListId = previousTask?.todoListId;
+
+      const previousTasks =
+        typeof todoListId === 'number'
+          ? queryClient.getQueryData<Task[]>(['tasks', todoListId])
+          : undefined;
+
+      if (previousTask) {
+        queryClient.setQueryData<Task>(['task', id], {
+          ...previousTask,
+          ...data,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      if (typeof todoListId === 'number' && previousTasks) {
+        queryClient.setQueryData<Task[]>(['tasks', todoListId], (old = []) =>
+          old.map((t) =>
+            t.id === id
+              ? { ...t, ...data, updatedAt: new Date().toISOString() }
+              : t,
+          ),
+        );
+      }
+
+      return { previousTask, previousTasks, todoListId };
     },
-    onError: (err) => {
+    onError: (err, vars, ctx) => {
+      if (ctx?.previousTask) {
+        queryClient.setQueryData(['task', vars.id], ctx.previousTask);
+      }
+      if (typeof ctx?.todoListId === 'number' && ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', ctx.todoListId], ctx.previousTasks);
+      }
       toast.error(formatApiError(err, 'Failed to update task'));
+    },
+    onSettled: async (_data, _err, vars) => {
+      await queryClient.invalidateQueries({ queryKey: ['task', vars.id] });
+      const current = queryClient.getQueryData<Task>(['task', vars.id]);
+      if (current?.todoListId) {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', current.todoListId] });
+      }
     },
   });
 
   const updateStepMutation = useMutation<
     Step,
     ApiError,
-    { task: Task; stepId: number; data: UpdateStepDto }
+    { task: Task; stepId: number; data: UpdateStepDto },
+    { previousTask?: Task; previousTasks?: Task[] }
   >({
     mutationFn: ({ stepId, data }) => stepsService.updateStep(stepId, data),
-    onSuccess: async (_updatedStep, vars) => {
-      await invalidateTask(vars.task);
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ['task', vars.task.id] });
+
+      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        'tasks',
+        vars.task.todoListId,
+      ]);
+
+      const patchTaskSteps = (t: Task): Task => ({
+        ...t,
+        steps: (t.steps ?? []).map((s) =>
+          s.id === vars.stepId ? { ...s, ...vars.data } : s,
+        ),
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (previousTask) {
+        queryClient.setQueryData<Task>(['task', vars.task.id], patchTaskSteps(previousTask));
+      }
+
+      queryClient.setQueryData<Task[]>(['tasks', vars.task.todoListId], (old = []) =>
+        old.map((t) => (t.id === vars.task.id ? patchTaskSteps(t) : t)),
+      );
+
+      return { previousTask, previousTasks };
     },
-    onError: (err) => {
+    onError: (err, vars, ctx) => {
+      if (ctx?.previousTask) {
+        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
+      }
+      if (ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', vars.task.todoListId], ctx.previousTasks);
+      }
       toast.error(formatApiError(err, 'Failed to update step'));
+    },
+    onSettled: async (_data, _err, vars) => {
+      await invalidateTask(vars.task);
     },
   });
 
   const createStepMutation = useMutation<
     Step,
     ApiError,
-    { task: Task; data: CreateStepDto }
+    { task: Task; data: CreateStepDto },
+    { previousTask?: Task }
   >({
     mutationFn: ({ task, data }) => stepsService.createStep(task.id, data),
-    onSuccess: async (_created, vars) => {
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ['task', vars.task.id] });
+
+      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
+
+      const now = new Date().toISOString();
+      const tempId = -Date.now();
+      const optimistic: Step = {
+        id: tempId,
+        description: vars.data.description,
+        completed: Boolean(vars.data.completed ?? false),
+        taskId: vars.task.id,
+        order: Date.now(),
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      };
+
+      if (previousTask) {
+        queryClient.setQueryData<Task>(['task', vars.task.id], {
+          ...previousTask,
+          steps: [...(previousTask.steps ?? []), optimistic],
+          updatedAt: now,
+        });
+      }
+
+      return { previousTask };
+    },
+    onError: (err, vars, ctx) => {
+      if (ctx?.previousTask) {
+        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
+      }
+      toast.error(formatApiError(err, 'Failed to add step'));
+    },
+    onSuccess: (_created, vars) => {
       setNewStepDescription('');
       setShowAddStep(false);
-      await invalidateTask(vars.task);
       toast.success('Step added');
+      // ensure list view reflects steps count if needed
+      queryClient.invalidateQueries({ queryKey: ['tasks', vars.task.todoListId] });
     },
-    onError: (err) => {
-      toast.error(formatApiError(err, 'Failed to add step'));
+    onSettled: async (_data, _err, vars) => {
+      await invalidateTask(vars.task);
     },
   });
 
-  const deleteStepMutation = useMutation<Step, ApiError, { task: Task; id: number }>({
+  const deleteStepMutation = useMutation<
+    Step,
+    ApiError,
+    { task: Task; id: number },
+    { previousTask?: Task }
+  >({
     mutationFn: ({ id }) => stepsService.deleteStep(id),
-    onSuccess: async (_deleted, vars) => {
-      await invalidateTask(vars.task);
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ['task', vars.task.id] });
+      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
+
+      if (previousTask) {
+        queryClient.setQueryData<Task>(['task', vars.task.id], {
+          ...previousTask,
+          steps: (previousTask.steps ?? []).filter((s) => s.id !== vars.id),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return { previousTask };
+    },
+    onError: (err, vars, ctx) => {
+      if (ctx?.previousTask) {
+        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
+      }
+      toast.error(formatApiError(err, 'Failed to delete step'));
+    },
+    onSuccess: () => {
       toast.success('Step deleted');
     },
-    onError: (err) => {
-      toast.error(formatApiError(err, 'Failed to delete step'));
+    onSettled: async (_data, _err, vars) => {
+      await invalidateTask(vars.task);
     },
   });
 

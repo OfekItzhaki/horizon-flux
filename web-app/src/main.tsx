@@ -8,7 +8,20 @@ import App from './App.tsx';
 import ErrorFallback from './components/ErrorFallback';
 import './index.css';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Make UI feel faster by reusing cached data briefly
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

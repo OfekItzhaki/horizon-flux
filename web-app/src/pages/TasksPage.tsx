@@ -51,51 +51,163 @@ export default function TasksPage() {
   const updateListMutation = useMutation<
     ListWithSystemFlag,
     ApiError,
-    { id: number; data: UpdateToDoListDto }
+    { id: number; data: UpdateToDoListDto },
+    { previousList?: ListWithSystemFlag; previousLists?: ListWithSystemFlag[] }
   >({
     mutationFn: ({ id, data }) => listsService.updateList(id, data),
-    onSuccess: async (updated) => {
-      await queryClient.invalidateQueries({ queryKey: ['list', updated.id] });
-      await queryClient.invalidateQueries({ queryKey: ['lists'] });
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['list', id] });
+      await queryClient.cancelQueries({ queryKey: ['lists'] });
+
+      const previousList = queryClient.getQueryData<ListWithSystemFlag>([
+        'list',
+        id,
+      ]);
+      const previousLists = queryClient.getQueryData<ListWithSystemFlag[]>([
+        'lists',
+      ]);
+
+      queryClient.setQueryData<ListWithSystemFlag>(['list', id], (old) =>
+        old ? { ...old, ...data, updatedAt: new Date().toISOString() } : old,
+      );
+      queryClient.setQueryData<ListWithSystemFlag[]>(['lists'], (old = []) =>
+        old.map((l) =>
+          l.id === id ? { ...l, ...data, updatedAt: new Date().toISOString() } : l,
+        ),
+      );
+
+      return { previousList, previousLists };
     },
-    onError: (err) => {
+    onError: (err, _vars, ctx) => {
+      if (ctx?.previousList) {
+        queryClient.setQueryData(['list', ctx.previousList.id], ctx.previousList);
+      }
+      if (ctx?.previousLists) {
+        queryClient.setQueryData(['lists'], ctx.previousLists);
+      }
       toast.error(formatApiError(err, 'Failed to update list'));
+    },
+    onSettled: async (_data, _err, vars) => {
+      await queryClient.invalidateQueries({ queryKey: ['list', vars.id] });
+      await queryClient.invalidateQueries({ queryKey: ['lists'] });
     },
   });
 
-  const deleteListMutation = useMutation<ListWithSystemFlag, ApiError, { id: number }>({
+  const deleteListMutation = useMutation<
+    ListWithSystemFlag,
+    ApiError,
+    { id: number },
+    { previousLists?: ListWithSystemFlag[] }
+  >({
     mutationFn: ({ id }) => listsService.deleteList(id),
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: ['lists'] });
+      const previousLists = queryClient.getQueryData<ListWithSystemFlag[]>([
+        'lists',
+      ]);
+      queryClient.setQueryData<ListWithSystemFlag[]>(['lists'], (old = []) =>
+        old.filter((l) => l.id !== id),
+      );
+      return { previousLists };
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['lists'] });
       toast.success('List deleted');
       navigate('/lists');
     },
-    onError: (err) => {
+    onError: (err, _vars, ctx) => {
+      if (ctx?.previousLists) {
+        queryClient.setQueryData(['lists'], ctx.previousLists);
+      }
       toast.error(formatApiError(err, 'Failed to delete list'));
     },
   });
 
-  const createTaskMutation = useMutation<Task, ApiError, CreateTaskDto>({
+  const createTaskMutation = useMutation<Task, ApiError, CreateTaskDto, { previousTasks?: Task[] }>({
     mutationFn: (data) =>
       tasksService.createTask(numericListId as number, data),
-    onSuccess: async () => {
+    onMutate: async (data) => {
+      if (!numericListId) return { previousTasks: undefined };
+      await queryClient.cancelQueries({ queryKey: ['tasks', numericListId] });
+
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        'tasks',
+        numericListId,
+      ]);
+
+      const now = new Date().toISOString();
+      const tempId = -Date.now();
+      const optimistic: Task = {
+        id: tempId,
+        description: data.description,
+        completed: false,
+        todoListId: numericListId,
+        order: Date.now(),
+        dueDate: null,
+        reminderDaysBefore: [],
+        specificDayOfWeek: null,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        steps: [],
+      };
+
+      queryClient.setQueryData<Task[]>(['tasks', numericListId], (old = []) => [
+        optimistic,
+        ...old,
+      ]);
+
+      return { previousTasks };
+    },
+    onError: (err, _data, ctx) => {
+      if (numericListId && ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', numericListId], ctx.previousTasks);
+      }
+      toast.error(formatApiError(err, 'Failed to create task'));
+    },
+    onSuccess: () => {
       setNewTaskDescription('');
       setShowCreate(false);
-      await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
     },
-    onError: (err) => {
-      toast.error(formatApiError(err, 'Failed to create task'));
+    onSettled: async () => {
+      if (numericListId) {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+      }
     },
   });
 
-  const deleteTaskMutation = useMutation<Task, ApiError, { id: number }>({
+  const deleteTaskMutation = useMutation<
+    Task,
+    ApiError,
+    { id: number },
+    { previousTasks?: Task[] }
+  >({
     mutationFn: ({ id }) => tasksService.deleteTask(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+    onMutate: async ({ id }) => {
+      if (!numericListId) return { previousTasks: undefined };
+      await queryClient.cancelQueries({ queryKey: ['tasks', numericListId] });
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        'tasks',
+        numericListId,
+      ]);
+      queryClient.setQueryData<Task[]>(['tasks', numericListId], (old = []) =>
+        old.filter((t) => t.id !== id),
+      );
+      return { previousTasks };
+    },
+    onError: (err, _vars, ctx) => {
+      if (numericListId && ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', numericListId], ctx.previousTasks);
+      }
+      toast.error(formatApiError(err, 'Failed to delete task'));
+    },
+    onSuccess: () => {
       toast.success('Task deleted');
     },
-    onError: (err) => {
-      toast.error(formatApiError(err, 'Failed to delete task'));
+    onSettled: async () => {
+      if (numericListId) {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+      }
     },
   });
 

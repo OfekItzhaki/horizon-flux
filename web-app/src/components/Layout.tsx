@@ -1,6 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { supportedLanguages } from '../i18n';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -26,12 +27,15 @@ export default function Layout() {
             <div className="flex items-center space-x-4">
               <select
                 aria-label={t('nav.language')}
-                value={i18n.language?.startsWith('he') ? 'he' : 'en'}
+                value={(i18n.resolvedLanguage ?? i18n.language).split('-')[0]}
                 onChange={(e) => void i18n.changeLanguage(e.target.value)}
                 className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <option value="en">EN</option>
-                <option value="he">HE</option>
+                {supportedLanguages.map((lng) => (
+                  <option key={lng} value={lng}>
+                    {t(`languageNames.${lng}`, { defaultValue: String(lng).toUpperCase() })}
+                  </option>
+                ))}
               </select>
               <span className="text-sm text-gray-700">{user?.email}</span>
               <Link

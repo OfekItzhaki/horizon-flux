@@ -5,6 +5,10 @@
     "logout": "Logout",
     "language": "Language"
   },
+  "languageNames": {
+    "en": "English",
+    "he": "Hebrew"
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",

@@ -5,6 +5,10 @@
     "logout": "התנתקות",
     "language": "שפה"
   },
+  "languageNames": {
+    "en": "English",
+    "he": "עברית"
+  },
   "common": {
     "cancel": "ביטול",
     "save": "שמירה",

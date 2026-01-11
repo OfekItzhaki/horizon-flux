@@ -10,10 +10,14 @@ const resources = {
   he: { translation: he },
 } as const;
 
+export const supportedLanguages = Object.keys(resources) as Array<
+  keyof typeof resources
+>;
+
 function applyDocumentDirection(language: string) {
   if (typeof document === 'undefined') return;
   document.documentElement.lang = language;
-  document.documentElement.dir = language === 'he' ? 'rtl' : 'ltr';
+  document.documentElement.dir = language.startsWith('he') ? 'rtl' : 'ltr';
 }
 
 void i18n

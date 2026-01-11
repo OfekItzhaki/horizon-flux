@@ -85,6 +85,17 @@ export default function TasksPage() {
     },
   });
 
+  const deleteTaskMutation = useMutation<Task, ApiError, { id: number }>({
+    mutationFn: ({ id }) => tasksService.deleteTask(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+      toast.success('Task deleted');
+    },
+    onError: (err) => {
+      toast.error(formatApiError(err, 'Failed to delete task'));
+    },
+  });
+
   if (isLoading) {
     return <div className="text-center py-8">Loading tasks...</div>;
   }
@@ -250,13 +261,21 @@ export default function TasksPage() {
 
       <div className="space-y-4">
         {tasks.map((task) => (
-          <Link
+          <div
             key={task.id}
-            to={`/tasks/${task.id}`}
-            className="block p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/tasks/${task.id}`)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/tasks/${task.id}`);
+              }
+            }}
+            className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-3 min-w-0 flex-1">
                 <input
                   type="checkbox"
                   checked={task.completed}
@@ -264,18 +283,37 @@ export default function TasksPage() {
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
                 <span
-                  className={task.completed ? 'line-through text-gray-500' : 'text-gray-900'}
+                  className={
+                    task.completed
+                      ? 'line-through text-gray-500 truncate'
+                      : 'text-gray-900 truncate'
+                  }
                 >
                   {task.description}
                 </span>
               </div>
-              {task.dueDate && (
-                <span className="text-sm text-gray-500">
-                  {new Date(task.dueDate).toLocaleDateString()}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {task.dueDate && (
+                  <span className="text-sm text-gray-500">
+                    {new Date(task.dueDate).toLocaleDateString()}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const ok = window.confirm(`Delete task "${task.description}"?`);
+                    if (!ok) return;
+                    deleteTaskMutation.mutate({ id: task.id });
+                  }}
+                  disabled={deleteTaskMutation.isPending}
+                  className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 

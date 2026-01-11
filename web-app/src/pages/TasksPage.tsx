@@ -12,6 +12,7 @@ import {
   CreateTaskDto,
   ToDoList,
   UpdateToDoListDto,
+  UpdateTaskDto,
 } from '@tasks-management/frontend-services';
 import { formatApiError } from '../utils/formatApiError';
 
@@ -213,6 +214,57 @@ export default function TasksPage() {
     },
   });
 
+  const updateTaskMutation = useMutation<
+    Task,
+    ApiError,
+    { id: number; data: UpdateTaskDto },
+    { previousTasks?: Task[]; previousTask?: Task }
+  >({
+    mutationFn: ({ id, data }) => tasksService.updateTask(id, data),
+    onMutate: async ({ id, data }) => {
+      const previousTasks =
+        typeof numericListId === 'number'
+          ? queryClient.getQueryData<Task[]>(['tasks', numericListId])
+          : undefined;
+      const previousTask = queryClient.getQueryData<Task>(['task', id]);
+
+      if (typeof numericListId === 'number') {
+        await queryClient.cancelQueries({ queryKey: ['tasks', numericListId] });
+        queryClient.setQueryData<Task[]>(['tasks', numericListId], (old = []) =>
+          old.map((t) =>
+            t.id === id ? { ...t, ...data, updatedAt: new Date().toISOString() } : t,
+          ),
+        );
+      }
+
+      if (previousTask) {
+        await queryClient.cancelQueries({ queryKey: ['task', id] });
+        queryClient.setQueryData<Task>(['task', id], {
+          ...previousTask,
+          ...data,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return { previousTasks, previousTask };
+    },
+    onError: (err, vars, ctx) => {
+      if (typeof numericListId === 'number' && ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', numericListId], ctx.previousTasks);
+      }
+      if (ctx?.previousTask) {
+        queryClient.setQueryData(['task', vars.id], ctx.previousTask);
+      }
+      toast.error(formatApiError(err, t('taskDetails.updateTaskFailed')));
+    },
+    onSettled: async (_data, _err, vars) => {
+      if (typeof numericListId === 'number') {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+      }
+      await queryClient.invalidateQueries({ queryKey: ['task', vars.id] });
+    },
+  });
+
   if (isLoading) {
     return <div className="text-center py-8">{t('common.loading')}</div>;
   }
@@ -385,7 +437,21 @@ export default function TasksPage() {
                 <input
                   type="checkbox"
                   checked={task.completed}
-                  readOnly
+                  disabled={
+                    updateTaskMutation.isPending &&
+                    updateTaskMutation.variables?.id === task.id
+                  }
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    updateTaskMutation.mutate({
+                      id: task.id,
+                      data: { completed: !task.completed },
+                    });
+                  }}
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
                 <span

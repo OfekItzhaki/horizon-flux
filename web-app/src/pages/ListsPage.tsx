@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { listsService } from '../services/lists.service';
 import { ToDoList, ApiError, ListType } from '@tasks-management/frontend-services';
 import { formatApiError } from '../utils/formatApiError';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 export default function ListsPage() {
   const queryClient = useQueryClient();
@@ -64,13 +65,6 @@ export default function ListsPage() {
     <div>
       <div className="flex justify-between items-center mb-6 gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Todo Lists</h1>
-        <button
-          type="button"
-          onClick={() => setShowCreate((v) => !v)}
-          className="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
-          {showCreate ? 'Close' : 'New list'}
-        </button>
       </div>
 
       {showCreate && (
@@ -158,6 +152,11 @@ export default function ListsPage() {
           <p className="text-gray-500">No lists found. Create your first list!</p>
         </div>
       )}
+
+      <FloatingActionButton
+        ariaLabel="Create new list"
+        onClick={() => setShowCreate(true)}
+      />
     </div>
   );
 }

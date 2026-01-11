@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { tasksService } from '../services/tasks.service';
 import { stepsService } from '../services/steps.service';
+import FloatingActionButton from '../components/FloatingActionButton';
 import {
   Task,
   ApiError,
@@ -216,13 +217,6 @@ export default function TaskDetailsPage() {
         <div className="mt-6">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-lg font-semibold text-gray-900">Steps</h2>
-            <button
-              type="button"
-              onClick={() => setShowAddStep((v) => !v)}
-              className="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              {showAddStep ? 'Close' : 'Add step'}
-            </button>
           </div>
 
           {showAddStep && (
@@ -374,6 +368,8 @@ export default function TaskDetailsPage() {
           )}
         </div>
       </div>
+
+      <FloatingActionButton ariaLabel="Add step" onClick={() => setShowAddStep(true)} />
     </div>
   );
 }

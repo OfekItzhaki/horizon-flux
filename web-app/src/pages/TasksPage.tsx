@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { tasksService } from '../services/tasks.service';
 import { listsService } from '../services/lists.service';
+import FloatingActionButton from '../components/FloatingActionButton';
 import {
   Task,
   ApiError,
@@ -12,6 +13,8 @@ import {
   UpdateToDoListDto,
 } from '@tasks-management/frontend-services';
 import { formatApiError } from '../utils/formatApiError';
+
+type ListWithSystemFlag = ToDoList & { isSystem?: boolean };
 
 export default function TasksPage() {
   const { listId } = useParams<{ listId: string }>();
@@ -24,7 +27,7 @@ export default function TasksPage() {
 
   const numericListId = listId ? Number(listId) : null;
 
-  const { data: list } = useQuery<ToDoList, ApiError>({
+  const { data: list } = useQuery<ListWithSystemFlag, ApiError>({
     queryKey: ['list', numericListId],
     enabled: typeof numericListId === 'number' && !Number.isNaN(numericListId),
     queryFn: () => listsService.getListById(numericListId as number),
@@ -46,7 +49,7 @@ export default function TasksPage() {
   }, [list]);
 
   const updateListMutation = useMutation<
-    ToDoList,
+    ListWithSystemFlag,
     ApiError,
     { id: number; data: UpdateToDoListDto }
   >({
@@ -60,7 +63,7 @@ export default function TasksPage() {
     },
   });
 
-  const deleteListMutation = useMutation<ToDoList, ApiError, { id: number }>({
+  const deleteListMutation = useMutation<ListWithSystemFlag, ApiError, { id: number }>({
     mutationFn: ({ id }) => listsService.deleteList(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['lists'] });
@@ -200,14 +203,6 @@ export default function TasksPage() {
               Delete list
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setShowCreate((v) => !v)}
-            disabled={!numericListId}
-            className="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {showCreate ? 'Close' : 'New task'}
-          </button>
         </div>
       </div>
 
@@ -322,6 +317,12 @@ export default function TasksPage() {
           <p className="text-gray-500">No tasks found.</p>
         </div>
       )}
+
+      <FloatingActionButton
+        ariaLabel="Create new task"
+        disabled={!numericListId}
+        onClick={() => setShowCreate(true)}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listsService } from '../services/lists.service';
@@ -13,15 +13,6 @@ export default function ListsPage() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [newListName, setNewListName] = useState('');
-  const [newListType, setNewListType] = useState<ListType>(ListType.CUSTOM);
-
-  const listTypeOptions = useMemo(
-    () =>
-      (Object.values(ListType) as ListType[]).filter(
-        (t) => t !== ListType.FINISHED,
-      ),
-    [],
-  );
 
   const {
     data: lists = [],
@@ -36,7 +27,7 @@ export default function ListsPage() {
   const createListMutation = useMutation<
     ToDoList,
     ApiError,
-    { name: string; type: ListType },
+    { name: string },
     { previousLists?: ToDoList[] }
   >({
     mutationFn: (data) => listsService.createList(data),
@@ -52,7 +43,8 @@ export default function ListsPage() {
         name: data.name,
         ownerId: 0,
         order: Date.now(),
-        type: data.type,
+        // User-created lists are always CUSTOM (type is an internal backend detail).
+        type: ListType.CUSTOM,
         createdAt: now,
         updatedAt: now,
         deletedAt: null,
@@ -109,12 +101,11 @@ export default function ListsPage() {
             if (!newListName.trim()) return;
             createListMutation.mutate({
               name: newListName.trim(),
-              type: newListType,
             });
           }}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-end">
-            <div className="sm:col-span-7">
+            <div className="sm:col-span-10">
               <label className="block text-sm font-medium text-gray-700">
                 {t('lists.form.nameLabel')}
               </label>
@@ -124,22 +115,6 @@ export default function ListsPage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder={t('lists.form.namePlaceholder')}
               />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="block text-sm font-medium text-gray-700">
-                {t('lists.form.typeLabel')}
-              </label>
-              <select
-                value={newListType}
-                onChange={(e) => setNewListType(e.target.value as ListType)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                {listTypeOptions.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="sm:col-span-2 flex gap-2">
               <button
@@ -154,7 +129,6 @@ export default function ListsPage() {
                 onClick={() => {
                   setShowCreate(false);
                   setNewListName('');
-                  setNewListType(ListType.CUSTOM);
                 }}
                 className="inline-flex justify-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200"
               >

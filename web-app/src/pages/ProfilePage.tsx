@@ -1,10 +1,14 @@
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   if (!user) {
-    return <div>Loading...</div>;
+    return <div className="text-sm text-gray-600">Not authenticated.</div>;
   }
 
   return (

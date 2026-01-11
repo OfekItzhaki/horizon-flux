@@ -20,16 +20,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        console.log('AuthContext: Checking authentication...');
         const currentUser = await authService.getCurrentUser();
-        console.log('AuthContext: User found:', currentUser);
         setUser(currentUser);
       } catch (error) {
-        console.log('AuthContext: Auth check failed:', error);
         // User is not authenticated
         setUser(null);
       } finally {
-        console.log('AuthContext: Setting loading to false');
         setLoading(false);
       }
     };
@@ -43,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await authService.logout();
+    authService.logout();
     setUser(null);
   };
 

@@ -11,4 +11,3 @@ import { TaskSchedulerModule } from '../task-scheduler/task-scheduler.module';
   exports: [TasksService],
 })
 export class TasksModule {}
-

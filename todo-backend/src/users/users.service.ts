@@ -136,7 +136,11 @@ class UsersService {
   }
 
   private async createDefaultLists(userId: number) {
-    const defaultLists = [
+    const defaultLists: Array<{
+      name: string;
+      type: ListType;
+      isSystem?: boolean;
+    }> = [
       { name: 'Daily', type: ListType.DAILY },
       { name: 'Weekly', type: ListType.WEEKLY },
       { name: 'Monthly', type: ListType.MONTHLY },
@@ -149,7 +153,7 @@ class UsersService {
       data: defaultLists.map((list) => ({
         name: list.name,
         type: list.type,
-        isSystem: Boolean((list as any).isSystem ?? false),
+        isSystem: Boolean(list.isSystem ?? false),
         ownerId: userId,
       })),
     });

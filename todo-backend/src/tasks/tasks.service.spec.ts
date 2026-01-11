@@ -7,7 +7,6 @@ import { TaskSchedulerService } from '../task-scheduler/task-scheduler.service';
 
 describe('TasksService', () => {
   let service: TasksService;
-  let prisma: PrismaService;
 
   const mockPrismaService = {
     task: {
@@ -42,7 +41,6 @@ describe('TasksService', () => {
     }).compile();
 
     service = module.get<TasksService>(TasksService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -354,4 +352,3 @@ describe('TasksService', () => {
     });
   });
 });
-

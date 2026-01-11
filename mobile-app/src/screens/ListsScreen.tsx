@@ -16,7 +16,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { listsService } from '../services/lists.service';
-import { ToDoList, ListType, CreateTodoListDto } from '../types';
+import { ToDoList, CreateTodoListDto } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,11 +27,9 @@ export default function ListsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newListName, setNewListName] = useState('');
-  const [selectedListType, setSelectedListType] = useState<ListType>(ListType.CUSTOM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingList, setEditingList] = useState<ToDoList | null>(null);
   const [editListName, setEditListName] = useState('');
-  const [editListType, setEditListType] = useState<ListType>(ListType.CUSTOM);
 
   useEffect(() => {
     loadLists();
@@ -88,7 +86,6 @@ export default function ListsScreen() {
   const handleEditList = (list: ToDoList) => {
     setEditingList(list);
     setEditListName(list.name);
-    setEditListType(list.type);
     setShowAddModal(true);
   };
 
@@ -104,11 +101,9 @@ export default function ListsScreen() {
     try {
       await listsService.update(editingList.id, {
         name: editListName.trim(),
-        type: editListType,
       });
       setEditingList(null);
       setEditListName('');
-      setEditListType(ListType.CUSTOM);
       setShowAddModal(false);
       loadLists();
       // Success feedback - UI update is visible, no alert needed
@@ -134,12 +129,10 @@ export default function ListsScreen() {
     try {
       const listData: CreateTodoListDto = {
         name: newListName.trim(),
-        type: selectedListType,
       };
 
       await listsService.create(listData);
       setNewListName('');
-      setSelectedListType(ListType.CUSTOM);
       setShowAddModal(false);
       loadLists();
       // Success feedback - UI update is visible, no alert needed
@@ -173,31 +166,6 @@ export default function ListsScreen() {
       ],
     );
   };
-
-  const getListTypeColor = (type: ListType) => {
-    switch (type) {
-      case ListType.DAILY:
-        return '#4CAF50';
-      case ListType.WEEKLY:
-        return '#2196F3';
-      case ListType.MONTHLY:
-        return '#FF9800';
-      case ListType.YEARLY:
-        return '#9C27B0';
-      case ListType.FINISHED:
-        return '#607D8B'; // Gray-blue for finished tasks
-      default:
-        return '#757575';
-    }
-  };
-
-  const listTypes = [
-    ListType.DAILY,
-    ListType.WEEKLY,
-    ListType.MONTHLY,
-    ListType.YEARLY,
-    ListType.CUSTOM,
-  ];
 
   if (loading) {
     return (
@@ -249,14 +217,6 @@ export default function ListsScreen() {
             <View style={styles.listContent}>
               <View style={styles.listInfo}>
                 <Text style={styles.listName}>{item.name}</Text>
-                <View
-                  style={[
-                    styles.typeBadge,
-                    { backgroundColor: getListTypeColor(item.type) },
-                  ]}
-                >
-                  <Text style={styles.typeText}>{item.type}</Text>
-                </View>
               </View>
             </View>
           </TouchableOpacity>
@@ -303,41 +263,14 @@ export default function ListsScreen() {
               autoFocus
             />
 
-            <Text style={styles.typeLabel}>List Type:</Text>
-            <View style={styles.typeSelector}>
-              {listTypes.map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.typeOption,
-                    (editingList ? editListType : selectedListType) === type && {
-                      backgroundColor: getListTypeColor(type),
-                    },
-                  ]}
-                  onPress={() => editingList ? setEditListType(type) : setSelectedListType(type)}
-                >
-                  <Text
-                    style={[
-                      styles.typeOptionText,
-                      (editingList ? editListType : selectedListType) === type && styles.typeOptionTextSelected,
-                    ]}
-                  >
-                    {type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowAddModal(false);
                   setNewListName('');
-                  setSelectedListType(ListType.CUSTOM);
                   setEditingList(null);
                   setEditListName('');
-                  setEditListType(ListType.CUSTOM);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>

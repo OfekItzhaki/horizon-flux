@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { tasksService } from '../services/tasks.service';
 import { stepsService } from '../services/steps.service';
@@ -13,6 +13,7 @@ import {
   CreateStepDto,
   UpdateTaskDto,
   UpdateStepDto,
+  ListType,
 } from '@tasks-management/frontend-services';
 import { formatApiError } from '../utils/formatApiError';
 
@@ -20,6 +21,7 @@ export default function TaskDetailsPage() {
   const { t } = useTranslation();
   const { taskId } = useParams<{ taskId: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const numericTaskId = taskId ? Number(taskId) : null;
   const [isEditingTask, setIsEditingTask] = useState(false);
@@ -286,6 +288,37 @@ export default function TaskDetailsPage() {
     );
   }
 
+  const isArchivedTask = task.todoList?.type === ListType.FINISHED;
+
+  const restoreTaskMutation = useMutation<Task, ApiError, { id: number }>({
+    mutationFn: ({ id }) => tasksService.restoreTask(id),
+    onError: (err) => {
+      toast.error(formatApiError(err, t('tasks.restoreFailed')));
+    },
+    onSuccess: async (restored) => {
+      toast.success(t('tasks.restored'));
+      await queryClient.invalidateQueries({ queryKey: ['task', task.id] });
+      // Navigate to the list the task returned to.
+      if (typeof restored.todoListId === 'number') {
+        navigate(`/lists/${restored.todoListId}/tasks`);
+      } else {
+        navigate('/lists');
+      }
+    },
+  });
+
+  const permanentDeleteTaskMutation = useMutation<Task, ApiError, { id: number }>({
+    mutationFn: ({ id }) => tasksService.permanentDeleteTask(id),
+    onError: (err) => {
+      toast.error(formatApiError(err, t('tasks.deleteForeverFailed')));
+    },
+    onSuccess: async () => {
+      toast.success(t('tasks.deletedForever'));
+      await queryClient.invalidateQueries({ queryKey: ['task', task.id] });
+      navigate('/lists');
+    },
+  });
+
   return (
     <div>
       <div className="mb-6">
@@ -357,6 +390,7 @@ export default function TaskDetailsPage() {
                 className="text-2xl font-bold text-gray-900 cursor-text"
                 title={t('taskDetails.clickToEdit')}
                 onClick={() => {
+                  if (isArchivedTask) return;
                   setIsEditingTask(true);
                   setTaskDescriptionDraft(task.description);
                 }}
@@ -365,6 +399,38 @@ export default function TaskDetailsPage() {
               </h1>
             )}
           </div>
+          {isArchivedTask && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={restoreTaskMutation.isPending}
+                onClick={() => {
+                  const ok = window.confirm(
+                    t('tasks.restoreConfirm', { description: task.description }),
+                  );
+                  if (!ok) return;
+                  restoreTaskMutation.mutate({ id: task.id });
+                }}
+                className="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('tasks.restore')}
+              </button>
+              <button
+                type="button"
+                disabled={permanentDeleteTaskMutation.isPending}
+                onClick={() => {
+                  const ok = window.confirm(
+                    t('tasks.deleteForeverConfirm', { description: task.description }),
+                  );
+                  if (!ok) return;
+                  permanentDeleteTaskMutation.mutate({ id: task.id });
+                }}
+                className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('tasks.deleteForever')}
+              </button>
+            </div>
+          )}
         </div>
 
         {task.dueDate && (

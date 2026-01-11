@@ -11,6 +11,7 @@ import {
   ApiError,
   CreateTaskDto,
   ToDoList,
+  ListType,
   UpdateToDoListDto,
   UpdateTaskDto,
 } from '@tasks-management/frontend-services';
@@ -60,6 +61,8 @@ export default function TasksPage() {
   useEffect(() => {
     if (list) setListNameDraft(list.name);
   }, [list]);
+
+  const isFinishedList = list?.type === ListType.FINISHED;
 
   const updateListMutation = useMutation<
     ListWithSystemFlag,
@@ -216,6 +219,80 @@ export default function TasksPage() {
     },
     onSuccess: () => {
       toast.success(t('tasks.taskDeleted'));
+    },
+    onSettled: async () => {
+      if (numericListId) {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+      }
+    },
+  });
+
+  const restoreTaskMutation = useMutation<
+    Task,
+    ApiError,
+    { id: number },
+    { previousTasks?: Task[] }
+  >({
+    mutationFn: ({ id }) => tasksService.restoreTask(id),
+    onMutate: async ({ id }) => {
+      if (!numericListId) return { previousTasks: undefined };
+      await queryClient.cancelQueries({ queryKey: ['tasks', numericListId] });
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        'tasks',
+        numericListId,
+      ]);
+      queryClient.setQueryData<Task[]>(['tasks', numericListId], (old = []) =>
+        old.filter((t) => t.id !== id),
+      );
+      return { previousTasks };
+    },
+    onError: (err, _vars, ctx) => {
+      if (numericListId && ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', numericListId], ctx.previousTasks);
+      }
+      toast.error(formatApiError(err, t('tasks.restoreFailed')));
+    },
+    onSuccess: async (restored) => {
+      toast.success(t('tasks.restored'));
+      // Task moved to original list; refresh that list if we know it.
+      if (typeof restored.todoListId === 'number') {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', restored.todoListId] });
+      }
+    },
+    onSettled: async () => {
+      if (numericListId) {
+        await queryClient.invalidateQueries({ queryKey: ['tasks', numericListId] });
+      }
+    },
+  });
+
+  const permanentDeleteTaskMutation = useMutation<
+    Task,
+    ApiError,
+    { id: number },
+    { previousTasks?: Task[] }
+  >({
+    mutationFn: ({ id }) => tasksService.permanentDeleteTask(id),
+    onMutate: async ({ id }) => {
+      if (!numericListId) return { previousTasks: undefined };
+      await queryClient.cancelQueries({ queryKey: ['tasks', numericListId] });
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        'tasks',
+        numericListId,
+      ]);
+      queryClient.setQueryData<Task[]>(['tasks', numericListId], (old = []) =>
+        old.filter((t) => t.id !== id),
+      );
+      return { previousTasks };
+    },
+    onError: (err, _vars, ctx) => {
+      if (numericListId && ctx?.previousTasks) {
+        queryClient.setQueryData(['tasks', numericListId], ctx.previousTasks);
+      }
+      toast.error(formatApiError(err, t('tasks.deleteForeverFailed')));
+    },
+    onSuccess: () => {
+      toast.success(t('tasks.deletedForever'));
     },
     onSettled: async () => {
       if (numericListId) {
@@ -392,7 +469,7 @@ export default function TasksPage() {
           className="bg-white rounded-lg border p-4 mb-6"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!newTaskDescription.trim() || !numericListId) return;
+            if (!newTaskDescription.trim() || !numericListId || isFinishedList) return;
             createTaskMutation.mutate({ description: newTaskDescription.trim() });
           }}
         >
@@ -414,6 +491,7 @@ export default function TasksPage() {
                 disabled={
                   createTaskMutation.isPending ||
                   !numericListId ||
+                  isFinishedList ||
                   !newTaskDescription.trim()
                 }
                 className="inline-flex flex-1 justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -495,21 +573,56 @@ export default function TasksPage() {
                     {new Date(task.dueDate).toLocaleDateString()}
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const ok = window.confirm(
-                      t('tasks.deleteTaskConfirm', { description: task.description }),
-                    );
-                    if (!ok) return;
-                    deleteTaskMutation.mutate({ id: task.id });
-                  }}
-                  disabled={deleteTaskMutation.isPending}
-                  className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {t('common.delete')}
-                </button>
+                {isFinishedList ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const ok = window.confirm(
+                          t('tasks.restoreConfirm', { description: task.description }),
+                        );
+                        if (!ok) return;
+                        restoreTaskMutation.mutate({ id: task.id });
+                      }}
+                      disabled={restoreTaskMutation.isPending}
+                      className="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('tasks.restore')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const ok = window.confirm(
+                          t('tasks.deleteForeverConfirm', { description: task.description }),
+                        );
+                        if (!ok) return;
+                        permanentDeleteTaskMutation.mutate({ id: task.id });
+                      }}
+                      disabled={permanentDeleteTaskMutation.isPending}
+                      className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('tasks.deleteForever')}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const ok = window.confirm(
+                        t('tasks.deleteTaskConfirm', { description: task.description }),
+                      );
+                      if (!ok) return;
+                      deleteTaskMutation.mutate({ id: task.id });
+                    }}
+                    disabled={deleteTaskMutation.isPending}
+                    className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('common.delete')}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -524,7 +637,7 @@ export default function TasksPage() {
 
       <FloatingActionButton
         ariaLabel={t('tasks.createFab')}
-        disabled={!numericListId}
+        disabled={!numericListId || isFinishedList}
         onClick={() => setShowCreate(true)}
       />
     </div>

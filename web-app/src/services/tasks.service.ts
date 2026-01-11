@@ -1,4 +1,5 @@
 import {
+  apiClient,
   tasksService as frontendTasksService,
   Task,
   CreateTaskDto,
@@ -32,6 +33,14 @@ class TasksService {
 
   async deleteTask(id: number): Promise<Task> {
     return frontendTasksService.delete(id);
+  }
+
+  async restoreTask(id: number): Promise<Task> {
+    return apiClient.post<Task>(`/tasks/${id}/restore`);
+  }
+
+  async permanentDeleteTask(id: number): Promise<Task> {
+    return apiClient.delete<Task>(`/tasks/${id}/permanent`);
   }
 }
 

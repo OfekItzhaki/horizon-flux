@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TodoListsService } from './todo-lists.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ListType } from './dto/create-todo-list.dto';
+import { ListType } from '@prisma/client';
 
 describe('TodoListsService', () => {
   let service: TodoListsService;
@@ -225,13 +225,12 @@ describe('TodoListsService', () => {
         where: { id: listId },
         data: {
           name: 'New Name',
-          type: ListType.CUSTOM,
         },
       });
       expect(result.name).toBe('New Name');
     });
 
-    it('should update list type', async () => {
+    it('should not allow changing list type via update DTO', async () => {
       const mockList = {
         id: listId,
         name: 'Test List',
@@ -241,17 +240,16 @@ describe('TodoListsService', () => {
         tasks: [],
       };
 
-      const updateDto = { type: ListType.DAILY };
+      const updateDto = { name: 'Test List' };
 
       mockPrismaService.toDoList.findFirst.mockResolvedValue(mockList);
       mockPrismaService.toDoList.update.mockResolvedValue({
         ...mockList,
-        type: ListType.DAILY,
       });
 
       const result = await service.update(listId, updateDto, ownerId);
 
-      expect(result.type).toBe(ListType.DAILY);
+      expect(result.type).toBe(ListType.CUSTOM);
     });
 
     it('should preserve existing values if not provided', async () => {

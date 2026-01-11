@@ -8,8 +8,9 @@ import UsersService from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ListType } from '../todo-lists/dto/create-todo-list.dto';
+import { ListType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 jest.mock('bcrypt');
 jest.mock('crypto');
@@ -45,7 +46,8 @@ describe('UsersService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // Reset mock implementations between tests (clearAllMocks leaves mockResolvedValueOnce queues).
+    jest.resetAllMocks();
   });
 
   describe('createUser', () => {
@@ -71,18 +73,27 @@ describe('UsersService', () => {
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      (crypto.randomBytes as unknown as jest.Mock).mockReturnValue(
+        Buffer.from('mock-token-bytes'),
+      );
       mockPrismaService.user.create.mockResolvedValue(mockUser);
-      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 4 });
+      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 5 });
 
       const result = await service.createUser(createUserDto);
 
       expect(mockPrismaService.user.create).toHaveBeenCalled();
       expect(mockPrismaService.toDoList.createMany).toHaveBeenCalledWith({
         data: expect.arrayContaining([
-          { name: 'Daily', type: ListType.DAILY, ownerId: 1 },
-          { name: 'Weekly', type: ListType.WEEKLY, ownerId: 1 },
-          { name: 'Monthly', type: ListType.MONTHLY, ownerId: 1 },
-          { name: 'Yearly', type: ListType.YEARLY, ownerId: 1 },
+          expect.objectContaining({ name: 'Daily', type: ListType.DAILY, ownerId: 1 }),
+          expect.objectContaining({ name: 'Weekly', type: ListType.WEEKLY, ownerId: 1 }),
+          expect.objectContaining({ name: 'Monthly', type: ListType.MONTHLY, ownerId: 1 }),
+          expect.objectContaining({ name: 'Yearly', type: ListType.YEARLY, ownerId: 1 }),
+          expect.objectContaining({
+            name: 'Finished Tasks',
+            type: ListType.FINISHED,
+            ownerId: 1,
+            isSystem: true,
+          }),
         ]),
       });
       expect(result).not.toHaveProperty('passwordHash');
@@ -104,8 +115,11 @@ describe('UsersService', () => {
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      (crypto.randomBytes as unknown as jest.Mock).mockReturnValue(
+        Buffer.from('mock-token-bytes'),
+      );
       mockPrismaService.user.create.mockResolvedValue(mockUser);
-      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 4 });
+      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 5 });
 
       await service.createUser(createUserDto);
 

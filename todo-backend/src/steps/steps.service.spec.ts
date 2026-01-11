@@ -36,7 +36,8 @@ describe('StepsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // Reset mock implementations between tests (clearAllMocks leaves mockResolvedValueOnce queues).
+    jest.resetAllMocks();
   });
 
   describe('reorder', () => {

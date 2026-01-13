@@ -10,9 +10,11 @@ import FloatingActionButton from '../components/FloatingActionButton';
 import Skeleton from '../components/Skeleton';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardShortcuts } from '../utils/useKeyboardShortcuts';
+import { isRtlLanguage } from '@tasks-management/frontend-services/i18n';
 
 export default function ListsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [newListName, setNewListName] = useState('');
@@ -103,7 +105,7 @@ export default function ListsPage() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-6 gap-3">
+        <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} justify-between items-center mb-6 gap-3`}>
           <Skeleton className="h-8 w-48" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

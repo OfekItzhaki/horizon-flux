@@ -8,6 +8,7 @@ import FloatingActionButton from '../components/FloatingActionButton';
 import Skeleton from '../components/Skeleton';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardShortcuts } from '../utils/useKeyboardShortcuts';
+import { isRtlLanguage } from '@tasks-management/frontend-services/i18n';
 import {
   Task,
   ApiError,
@@ -20,7 +21,8 @@ import {
 import { formatApiError } from '../utils/formatApiError';
 
 export default function TaskDetailsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
   const { taskId } = useParams<{ taskId: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

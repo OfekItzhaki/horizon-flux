@@ -8,6 +8,7 @@ import FloatingActionButton from '../components/FloatingActionButton';
 import Skeleton from '../components/Skeleton';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardShortcuts } from '../utils/useKeyboardShortcuts';
+import { isRtlLanguage } from '@tasks-management/frontend-services/i18n';
 import {
   DndContext,
   closestCenter,
@@ -39,7 +40,8 @@ import { formatApiError } from '../utils/formatApiError';
 type ListWithSystemFlag = ToDoList & { isSystem?: boolean };
 
 export default function TasksPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
   const { listId } = useParams<{ listId: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -560,14 +562,14 @@ export default function TasksPage() {
         </Link>
       </div>
 
-      <div className="flex items-center justify-between mb-6 gap-3">
+      <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center justify-between mb-6 gap-3`}>
         <div className="min-w-0 flex-1">
           {isBulkMode && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+            <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center gap-3 mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg`}>
               <span className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
                 {selectedTasks.size} task{selectedTasks.size !== 1 ? 's' : ''} selected
               </span>
-              <div className="flex gap-2">
+              <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} gap-2`}>
                 <button
                   type="button"
                   onClick={() => {
@@ -719,7 +721,7 @@ export default function TasksPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center gap-2`}>
           {!isBulkMode && (
             <button
               type="button"
@@ -903,8 +905,8 @@ export default function TasksPage() {
                     });
                   }}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center justify-between gap-3`}>
+                    <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-3' : 'space-x-3'} min-w-0 flex-1`}>
                       {isBulkMode ? (
                         <input
                           type="checkbox"
@@ -955,7 +957,7 @@ export default function TasksPage() {
                         {task.description}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center gap-3`}>
                       {task.dueDate && (
                         <span className="text-sm text-gray-500 dark:text-gray-400">
                           {new Date(task.dueDate).toLocaleDateString()}

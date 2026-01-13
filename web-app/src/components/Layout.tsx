@@ -3,11 +3,13 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { supportedLanguages } from '../i18n';
+import { isRtlLanguage } from '@tasks-management/frontend-services/i18n';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const { themeMode, setThemeMode } = useTheme();
   const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
 
   const handleLogout = async () => {
     await logout();
@@ -17,8 +19,8 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] transition-colors">
       <nav className="bg-white dark:bg-[#1a1a1a] shadow-sm border-b border-gray-200 dark:border-[#2a2a2a] transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className={`flex justify-between h-16 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
               <Link
                 to="/lists"
                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
@@ -32,9 +34,9 @@ export default function Layout() {
                 Analysis
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
               {/* Theme Toggle */}
-              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#1f1f1f] rounded-lg p-1">
+              <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-1' : 'space-x-1'} bg-gray-100 dark:bg-[#1f1f1f] rounded-lg p-1`}>
                 <button
                   onClick={() => setThemeMode('light')}
                   className={`px-3 py-1 text-xs font-medium rounded ${

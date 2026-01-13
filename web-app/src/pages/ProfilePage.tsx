@@ -1,10 +1,12 @@
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { BUILD_INFO } from '../utils/buildInfo';
+import { isRtlLanguage } from '@tasks-management/frontend-services/i18n';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
 
   if (loading) {
     return <div className="text-gray-900 dark:text-white">{t('common.loading')}</div>;

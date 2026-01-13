@@ -85,6 +85,30 @@ export default function AnalysisPage() {
     return acc;
   }, {} as Record<string, { total: number; completed: number; pending: number }>);
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-48" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-[#1f1f1f] p-6 rounded-lg shadow">
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-8 w-16" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white dark:bg-[#1f1f1f] p-6 rounded-lg shadow">
+          <Skeleton className="h-6 w-32 mb-4" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Task Analysis</h1>

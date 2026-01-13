@@ -114,6 +114,8 @@ export default {
     changePicture: 'שנה תמונה',
     resendVerification: 'שלח שוב אימייל אימות',
     verificationEmailSent: 'אימייל אימות נשלח. אנא בדוק את תיבת הדואר הנכנס.',
+    pictureUpdated: 'תמונת פרופיל עודכנה',
+    pictureUpdateFailed: 'עדכון תמונת פרופיל נכשל',
   },
 } as const;
 

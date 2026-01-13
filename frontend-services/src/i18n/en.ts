@@ -114,6 +114,8 @@ export default {
     changePicture: 'Change Picture',
     resendVerification: 'Resend Verification Email',
     verificationEmailSent: 'Verification email sent. Please check your inbox.',
+    pictureUpdated: 'Profile picture updated',
+    pictureUpdateFailed: 'Failed to update profile picture',
   },
 } as const;
 

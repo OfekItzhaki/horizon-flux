@@ -29,13 +29,13 @@ export default function ProfilePage() {
       return usersService.update(user.id, { profilePicture: url || null });
     },
     onSuccess: async (updatedUser) => {
-      toast.success(t('profile.pictureUpdated') || 'Profile picture updated');
+      toast.success(t('profile.pictureUpdated'));
       setIsEditingPicture(false);
       // Refresh the page to update AuthContext user
       setTimeout(() => window.location.reload(), 500);
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('profile.pictureUpdateFailed') || 'Failed to update profile picture');
+      toast.error(error.message || t('profile.pictureUpdateFailed'));
     },
   });
 

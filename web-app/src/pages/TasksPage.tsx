@@ -50,6 +50,8 @@ export default function TasksPage() {
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [tasksOrder, setTasksOrder] = useState<Task[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const numericListId = listId ? Number(listId) : null;
 

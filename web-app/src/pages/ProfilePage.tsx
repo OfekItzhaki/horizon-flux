@@ -1,12 +1,42 @@
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { BUILD_INFO } from '../utils/buildInfo';
 import { isRtlLanguage } from '@tasks-management/frontend-services/i18n';
+import { usersService } from '@tasks-management/frontend-services';
+import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const { t, i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
+  const [isEditingPicture, setIsEditingPicture] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState(user?.profilePicture || '');
+  const queryClient = useQueryClient();
+
+  // Update profilePictureUrl when user changes
+  useEffect(() => {
+    if (user?.profilePicture !== profilePictureUrl && !isEditingPicture) {
+      setProfilePictureUrl(user?.profilePicture || '');
+    }
+  }, [user?.profilePicture, isEditingPicture]);
+
+  const updateProfilePictureMutation = useMutation({
+    mutationFn: async (url: string) => {
+      if (!user) throw new Error('User not found');
+      return usersService.update(user.id, { profilePicture: url || null });
+    },
+    onSuccess: async (updatedUser) => {
+      toast.success(t('profile.pictureUpdated') || 'Profile picture updated');
+      setIsEditingPicture(false);
+      // Refresh the page to update AuthContext user
+      setTimeout(() => window.location.reload(), 500);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || t('profile.pictureUpdateFailed') || 'Failed to update profile picture');
+    },
+  });
 
   if (loading) {
     return <div className="text-gray-900 dark:text-white">{t('common.loading')}</div>;
@@ -16,12 +46,85 @@ export default function ProfilePage() {
     return <div className="text-sm text-gray-600 dark:text-gray-400">{t('profile.notAuthenticated')}</div>;
   }
 
+  const handleSavePicture = () => {
+    updateProfilePictureMutation.mutate(profilePictureUrl);
+  };
+
+  const handleCancelPicture = () => {
+    setProfilePictureUrl(user?.profilePicture || '');
+    setIsEditingPicture(false);
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('profile.title')}</h1>
 
       <div className="bg-white dark:bg-[#1f1f1f] rounded-lg shadow p-6">
         <div className="space-y-4">
+          {/* Profile Picture */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('profile.profilePicture') || 'Profile Picture'}
+            </label>
+            <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center gap-4`}>
+              {user.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={t('profile.profilePicture') || 'Profile picture'}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-gray-300 dark:border-[#2a2a2a]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-[#2a2a2a] flex items-center justify-center border-2 border-gray-300 dark:border-[#2a2a2a]">
+                  <span className="text-2xl text-gray-400 dark:text-gray-500">
+                    {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                  </span>
+                </div>
+              )}
+              {isEditingPicture ? (
+                <div className="flex-1 space-y-2">
+                  <input
+                    type="url"
+                    value={profilePictureUrl}
+                    onChange={(e) => setProfilePictureUrl(e.target.value)}
+                    placeholder="https://example.com/avatar.jpg"
+                    className="w-full rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} gap-2`}>
+                    <button
+                      type="button"
+                      onClick={handleSavePicture}
+                      disabled={updateProfilePictureMutation.isPending}
+                      className="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('common.save')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelPicture}
+                      className="inline-flex justify-center rounded-md bg-gray-100 dark:bg-[#2a2a2a] px-3 py-2 text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#333333]"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingPicture(true);
+                    setProfilePictureUrl(user.profilePicture || '');
+                  }}
+                  className="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  {user.profilePicture ? (t('profile.changePicture') || 'Change Picture') : (t('profile.addPicture') || 'Add Picture')}
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('profile.email')}</label>
             <p className="mt-1 text-sm text-gray-900 dark:text-white">{user.email}</p>

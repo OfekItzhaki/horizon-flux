@@ -12,10 +12,168 @@ import {
 import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../utils/useThemedStyles';
 
 export default function ProfileScreen() {
   const { user, logout, isLoading } = useAuth();
   const { t } = useTranslation();
+  const { colors, themeMode, setThemeMode, isDark } = useTheme();
+  const styles = useThemedStyles((colors) => ({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    header: {
+      backgroundColor: colors.card,
+      padding: 20,
+      paddingTop: Platform.OS === 'ios' ? 60 : 45,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    content: {
+      flex: 1,
+      padding: 20,
+    },
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+    },
+    profileCard: {
+      backgroundColor: colors.card,
+      padding: 30,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginBottom: 20,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    avatarText: {
+      color: '#fff',
+      fontSize: 32,
+      fontWeight: 'bold',
+    },
+    name: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 5,
+      color: colors.text,
+    },
+    email: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginBottom: 10,
+    },
+    verified: {
+      fontSize: 14,
+      color: colors.success,
+    },
+    logoutButton: {
+      backgroundColor: colors.error,
+      padding: 15,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    logoutText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    aboutCard: {
+      backgroundColor: colors.card,
+      padding: 20,
+      borderRadius: 12,
+      marginBottom: 20,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    aboutTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 16,
+    },
+    aboutRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    aboutLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    aboutValue: {
+      fontSize: 14,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      color: colors.text,
+      fontWeight: '500',
+    },
+    aboutLink: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '500',
+    },
+    themeRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      marginTop: 8,
+    },
+    themeLabel: {
+      fontSize: 16,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    themeToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      padding: 2,
+    },
+    themeOption: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    themeOptionActive: {
+      backgroundColor: colors.primary,
+    },
+    themeOptionText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    themeOptionTextActive: {
+      color: '#fff',
+      fontWeight: '600',
+    },
+  }));
 
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -41,7 +199,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -49,7 +207,7 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <View style={styles.center}>
-        <Text>{t('profile.notAuthenticated')}</Text>
+        <Text style={{ color: colors.text }}>{t('profile.notAuthenticated')}</Text>
       </View>
     );
   }
@@ -87,6 +245,61 @@ export default function ProfileScreen() {
             <Text style={styles.aboutLabel}>{t('profile.sourceCode')}</Text>
             <Text style={styles.aboutLink}>{t('profile.openRepo')}</Text>
           </TouchableOpacity>
+          
+          {/* Dark Mode Toggle */}
+          <View style={styles.themeRow}>
+            <Text style={styles.themeLabel}>Theme</Text>
+            <View style={styles.themeToggle}>
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  themeMode === 'light' && styles.themeOptionActive,
+                ]}
+                onPress={() => setThemeMode('light')}
+              >
+                <Text
+                  style={[
+                    styles.themeOptionText,
+                    themeMode === 'light' && styles.themeOptionTextActive,
+                  ]}
+                >
+                  Light
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  themeMode === 'dark' && styles.themeOptionActive,
+                ]}
+                onPress={() => setThemeMode('dark')}
+              >
+                <Text
+                  style={[
+                    styles.themeOptionText,
+                    themeMode === 'dark' && styles.themeOptionTextActive,
+                  ]}
+                >
+                  Dark
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  themeMode === 'auto' && styles.themeOptionActive,
+                ]}
+                onPress={() => setThemeMode('auto')}
+              >
+                <Text
+                  style={[
+                    styles.themeOptionText,
+                    themeMode === 'auto' && styles.themeOptionTextActive,
+                  ]}
+                >
+                  Auto
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -97,119 +310,3 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 45, // Account for status bar
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileCard: {
-    backgroundColor: '#fff',
-    padding: 30,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  email: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
-  },
-  verified: {
-    fontSize: 14,
-    color: '#4CAF50',
-  },
-  logoutButton: {
-    backgroundColor: '#FF3B30',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  aboutCard: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  aboutTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-  },
-  aboutRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  aboutLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  aboutValue: {
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    color: '#333',
-    fontWeight: '500',
-  },
-  aboutLink: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-});

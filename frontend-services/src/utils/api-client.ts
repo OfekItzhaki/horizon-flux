@@ -37,7 +37,7 @@ export class ApiClient {
 
       // Handle empty responses (204 No Content)
       if (response.status === 204) {
-        return null as T;
+        return undefined as unknown as T;
       }
 
       let data;

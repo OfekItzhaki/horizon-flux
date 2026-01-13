@@ -373,7 +373,7 @@ export default function TasksPage() {
         </div>
         <div className="space-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="p-4 bg-white rounded-lg shadow">
+            <div key={i} className="p-4 bg-white dark:bg-[#1f1f1f] rounded-lg shadow">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 min-w-0 flex-1">
                   <Skeleton className="h-4 w-4 rounded" />
@@ -390,8 +390,8 @@ export default function TasksPage() {
 
   if (isError) {
     return (
-      <div className="rounded-md bg-red-50 p-4">
-        <div className="text-sm text-red-800">
+      <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+        <div className="text-sm text-red-800 dark:text-red-200">
           {formatApiError(error, t('tasks.loadFailed'))}
         </div>
       </div>
@@ -403,7 +403,7 @@ export default function TasksPage() {
       <div className="mb-6">
         <Link
           to="/lists"
-          className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
         >
           {t('tasks.backToLists')}
         </Link>
@@ -416,7 +416,7 @@ export default function TasksPage() {
               <input
                 value={listNameDraft}
                 onChange={(e) => setListNameDraft(e.target.value)}
-                className="w-full max-w-xl rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full max-w-xl rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
               <div className="flex gap-2">
                 <button
@@ -454,7 +454,7 @@ export default function TasksPage() {
             </div>
           ) : (
             <h1
-              className="text-2xl font-bold text-gray-900 truncate cursor-text"
+              className="text-2xl font-bold text-gray-900 dark:text-white truncate cursor-text"
               title={t('tasks.renameTitle')}
               onClick={() => {
                 if (!list) return;
@@ -490,7 +490,7 @@ export default function TasksPage() {
 
       {showCreate && (
         <form
-          className="bg-white rounded-lg border p-4 mb-6"
+          className="bg-white dark:bg-[#1f1f1f] rounded-lg border border-gray-200 dark:border-[#2a2a2a] p-4 mb-6"
           onSubmit={(e) => {
             e.preventDefault();
             if (!newTaskDescription.trim() || !numericListId || isFinishedList) return;
@@ -499,13 +499,13 @@ export default function TasksPage() {
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-end">
             <div className="sm:col-span-10">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('tasks.form.descriptionLabel')}
               </label>
               <input
                 value={newTaskDescription}
                 onChange={(e) => setNewTaskDescription(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder={t('tasks.form.descriptionPlaceholder')}
               />
             </div>
@@ -528,7 +528,7 @@ export default function TasksPage() {
                   setShowCreate(false);
                   setNewTaskDescription('');
                 }}
-                className="inline-flex justify-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200"
+                className="inline-flex justify-center rounded-md bg-gray-100 dark:bg-[#2a2a2a] px-4 py-2 text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#333333]"
               >
                 {t('common.cancel')}
               </button>
@@ -569,7 +569,7 @@ export default function TasksPage() {
                 navigate(`/tasks/${task.id}`);
               }
             }}
-            className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+            className="p-4 bg-white dark:bg-[#1f1f1f] rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -596,8 +596,8 @@ export default function TasksPage() {
                 <span
                   className={
                     task.completed
-                      ? 'line-through text-gray-500 truncate'
-                      : 'text-gray-900 truncate'
+                      ? 'line-through text-gray-500 dark:text-gray-400 truncate'
+                      : 'text-gray-900 dark:text-white truncate'
                   }
                 >
                   {task.description}
@@ -605,7 +605,7 @@ export default function TasksPage() {
               </div>
               <div className="flex items-center gap-3">
                 {task.dueDate && (
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {new Date(task.dueDate).toLocaleDateString()}
                   </span>
                 )}
@@ -667,7 +667,7 @@ export default function TasksPage() {
 
       {tasks.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500">{t('tasks.empty')}</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('tasks.empty')}</p>
         </div>
       )}
 

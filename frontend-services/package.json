@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepare": "npm run build",
+    "postinstall": "node build-if-needed.js",
     "watch": "tsc --watch"
   },
   "keywords": ["tasks", "todo", "api", "client"],

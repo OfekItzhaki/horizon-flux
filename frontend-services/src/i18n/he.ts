@@ -1,9 +1,15 @@
 export default {
   nav: {
     lists: 'רשימות',
+    analysis: 'ניתוח',
     profile: 'פרופיל',
     logout: 'התנתקות',
     language: 'שפה',
+    theme: {
+      light: 'בהיר',
+      dark: 'כהה',
+      auto: 'אוטומטי',
+    },
   },
   languageNames: {
     en: 'English',
@@ -57,6 +63,9 @@ export default {
     listUpdateFailed: 'עדכון הרשימה נכשל',
     listDeleted: 'הרשימה נמחקה',
     listDeleteFailed: 'מחיקת הרשימה נכשלה',
+    selectMultiple: 'בחר מספר',
+    deleteSelected: 'מחק',
+    deleteSelectedConfirm: 'למחוק {{count}} משימה{{plural}}?',
     form: {
       descriptionLabel: 'תיאור',
       descriptionPlaceholder: 'לדוגמה: לקנות חלב',

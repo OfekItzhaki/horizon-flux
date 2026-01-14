@@ -31,7 +31,7 @@ export default function Layout() {
                 to="/analysis"
                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
               >
-                Analysis
+                {t('nav.analysis')}
               </Link>
             </div>
             <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
@@ -45,7 +45,7 @@ export default function Layout() {
                       : 'text-gray-600 dark:text-gray-300'
                   }`}
                 >
-                  Light
+                  {t('nav.theme.light')}
                 </button>
                 <button
                   onClick={() => setThemeMode('dark')}
@@ -55,7 +55,7 @@ export default function Layout() {
                       : 'text-gray-600 dark:text-gray-300'
                   }`}
                 >
-                  Dark
+                  {t('nav.theme.dark')}
                 </button>
                 <button
                   onClick={() => setThemeMode('auto')}
@@ -65,7 +65,7 @@ export default function Layout() {
                       : 'text-gray-600 dark:text-gray-300'
                   }`}
                 >
-                  Auto
+                  {t('nav.theme.auto')}
                 </button>
               </div>
               <select

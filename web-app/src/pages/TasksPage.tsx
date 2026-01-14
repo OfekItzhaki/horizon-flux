@@ -556,9 +556,10 @@ export default function TasksPage() {
       <div className="mb-6">
         <Link
           to="/lists"
-          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+          className={`text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium flex items-center gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}
         >
-          {t('tasks.backToLists')}
+          <span className={isRtl ? 'transform rotate-180' : ''}>←</span>
+          <span>{t('tasks.backToLists').replace('← ', '')}</span>
         </Link>
       </div>
 
@@ -626,7 +627,10 @@ export default function TasksPage() {
                   type="button"
                   onClick={() => {
                     const ok = window.confirm(
-                      `Delete ${selectedTasks.size} task${selectedTasks.size !== 1 ? 's' : ''}?`,
+                      t('tasks.deleteSelectedConfirm', {
+                        count: selectedTasks.size,
+                        plural: selectedTasks.size !== 1 ? 's' : '',
+                      }),
                     );
                     if (!ok) return;
                     selectedTasks.forEach((taskId) => {
@@ -637,7 +641,7 @@ export default function TasksPage() {
                   disabled={selectedTasks.size === 0 || deleteTaskMutation.isPending || isFinishedList}
                   className="px-3 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded"
                 >
-                  Delete
+                  {t('tasks.deleteSelected')}
                 </button>
                 <button
                   type="button"
@@ -647,7 +651,7 @@ export default function TasksPage() {
                   }}
                   className="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -729,7 +733,7 @@ export default function TasksPage() {
               aria-label="Select multiple tasks for bulk operations"
               className="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
-              Select Multiple
+              {t('tasks.selectMultiple')}
             </button>
           )}
           {list && !list.isSystem && (
@@ -773,7 +777,7 @@ export default function TasksPage() {
                 placeholder={t('tasks.form.descriptionPlaceholder')}
               />
             </div>
-            <div className="sm:col-span-2 flex gap-2">
+            <div className={`sm:col-span-2 flex ${isRtl ? 'flex-row-reverse' : ''} gap-2`}>
               <button
                 type="submit"
                 disabled={

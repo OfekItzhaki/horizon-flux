@@ -1,9 +1,15 @@
 export default {
   nav: {
     lists: 'Lists',
+    analysis: 'Analysis',
     profile: 'Profile',
     logout: 'Logout',
     language: 'Language',
+    theme: {
+      light: 'Light',
+      dark: 'Dark',
+      auto: 'Auto',
+    },
   },
   languageNames: {
     en: 'English',
@@ -57,6 +63,9 @@ export default {
     listUpdateFailed: 'Failed to update list',
     listDeleted: 'List deleted',
     listDeleteFailed: 'Failed to delete list',
+    selectMultiple: 'Select Multiple',
+    deleteSelected: 'Delete',
+    deleteSelectedConfirm: 'Delete {{count}} task{{plural}}?',
     form: {
       descriptionLabel: 'Description',
       descriptionPlaceholder: 'e.g. Buy milk',

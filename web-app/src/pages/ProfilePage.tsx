@@ -161,11 +161,11 @@ export default function ProfilePage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('profile.emailVerified')}
+              {t('profile.emailVerified')}{' '}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {user.emailVerified ? t('profile.yes') : t('profile.no')}
+              </span>
             </label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-white">
-              {user.emailVerified ? t('profile.yes') : t('profile.no')}
-            </p>
             {!user.emailVerified && (
               <button
                 type="button"

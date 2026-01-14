@@ -430,17 +430,17 @@ export default function ProfileScreen() {
 
           {/* Email Verification */}
           <View style={styles.profileSection}>
-            <Text style={styles.profileLabel}>{t('profile.emailVerified')}</Text>
-            <View style={{ flexDirection: isRtl ? 'column' : 'column', alignItems: isRtl ? 'flex-end' : 'flex-start' }}>
-              <Text style={styles.profileValue}>
+            <Text style={styles.profileLabel}>
+              {t('profile.emailVerified')}{' '}
+              <Text style={styles.verificationStatus}>
                 {user.emailVerified ? t('profile.yes') : t('profile.no')}
               </Text>
-              {!user.emailVerified && (
-                <TouchableOpacity onPress={handleResendVerification} style={styles.resendButton}>
-                  <Text style={styles.resendButtonText}>{t('profile.resendVerification')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            </Text>
+            {!user.emailVerified && (
+              <TouchableOpacity onPress={handleResendVerification} style={styles.resendButton}>
+                <Text style={styles.resendButtonText}>{t('profile.resendVerification')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Member Since */}

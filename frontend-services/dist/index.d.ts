@@ -7,5 +7,6 @@ export { remindersService, RemindersService } from './services/reminders.service
 export { sharingService, SharingService } from './services/sharing.service';
 export { apiClient, ApiClient } from './utils/api-client';
 export * from './types';
+export * from './i18n';
 export { API_CONFIG, getApiUrl } from './config';
 export { TokenStorage } from './utils/storage';

@@ -10,6 +10,8 @@ export { sharingService, SharingService } from './services/sharing.service';
 export { apiClient, ApiClient } from './utils/api-client';
 // Export types
 export * from './types';
+// Re-export i18n utilities for easier importing (Metro compatibility)
+export * from './i18n';
 // Export config
 export { API_CONFIG, getApiUrl } from './config';
 // Export storage utilities

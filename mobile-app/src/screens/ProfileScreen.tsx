@@ -19,7 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { usersService } from '../services/users.service';
 import { authService } from '../services/auth.service';
-import { isRtlLanguage } from '@tasks-management/frontend-services/dist/i18n';
+import { isRtlLanguage } from '@tasks-management/frontend-services';
 
 export default function ProfileScreen() {
   const { user, logout, isLoading, refreshUser } = useAuth();

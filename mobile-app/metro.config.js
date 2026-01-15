@@ -45,25 +45,39 @@ if (frontendServicesPath) {
   config.resolver.resolveRequest = (context, moduleName, platform) => {
     // Handle @tasks-management/frontend-services/i18n subpath export
     if (moduleName === '@tasks-management/frontend-services/i18n') {
-      // Try multiple possible paths
+      // In EAS builds, the package is in node_modules
+      // Try node_modules path first (for EAS builds)
+      const nodeModulesI18nPath = path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/i18n/index.js');
+      
+      // Try relative path (for local development)
+      const relativeI18nPath = path.resolve(__dirname, '../frontend-services/dist/i18n/index.js');
+      
+      // Try calculated path from found frontend-services location
+      const calculatedPath = frontendServicesPath ? path.resolve(frontendServicesPath, 'dist/i18n/index.js') : null;
+      
       const possiblePaths = [
-        i18nPath,
-        path.resolve(frontendServicesPath, 'dist/i18n/index.js'),
-        path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/i18n/index.js'),
-        path.resolve(__dirname, '../frontend-services/dist/i18n/index.js'),
-      ];
+        nodeModulesI18nPath,  // EAS build path
+        relativeI18nPath,     // Local development path
+        calculatedPath,       // Calculated from found location
+        i18nPath,             // Original calculated path
+      ].filter(Boolean); // Remove null/undefined values
       
       for (const possiblePath of possiblePaths) {
-        if (fs.existsSync(possiblePath)) {
-          return {
-            type: 'sourceFile',
-            filePath: possiblePath,
-          };
+        try {
+          if (fs.existsSync(possiblePath)) {
+            return {
+              type: 'sourceFile',
+              filePath: possiblePath,
+            };
+          }
+        } catch (e) {
+          // Continue to next path
         }
       }
       
-      // If file doesn't exist, log error but continue with default resolution
-      console.warn(`Warning: Could not find @tasks-management/frontend-services/i18n at any of: ${possiblePaths.join(', ')}`);
+      // If file doesn't exist, fall back to node_modules resolution
+      // This allows Metro to try its default resolution which should work
+      // since the package.json has the exports field
     }
     
     // Use default resolver for everything else

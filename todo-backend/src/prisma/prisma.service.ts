@@ -17,21 +17,39 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    try {
-      await this.$connect();
-      console.log('[Prisma] Successfully connected to database');
-    } catch (err) {
-      // In dev, allow the server to boot even if DB is misconfigured/unreachable.
-      // This prevents "ERR_CONNECTION_REFUSED" for the frontend and makes the
-      // underlying DB error visible in logs / responses.
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('[Prisma] Failed to connect on startup (dev mode):', err);
-        return;
-      }
+    const maxRetries = 5;
+    const retryDelay = 2000; // 2 seconds
 
-      // In production, fail fast.
-      console.error('[Prisma] Failed to connect to database:', err);
-      throw err;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.$connect();
+        console.log('[Prisma] Successfully connected to database');
+        return;
+      } catch (err) {
+        const isLastAttempt = attempt === maxRetries;
+        
+        console.error(
+          `[Prisma] Connection attempt ${attempt}/${maxRetries} failed:`,
+          err instanceof Error ? err.message : err,
+        );
+
+        // In dev, allow the server to boot even if DB is misconfigured/unreachable.
+        // This prevents "ERR_CONNECTION_REFUSED" for the frontend and makes the
+        // underlying DB error visible in logs / responses.
+        if (process.env.NODE_ENV !== 'production' && isLastAttempt) {
+          console.error('[Prisma] Failed to connect on startup (dev mode):', err);
+          return;
+        }
+
+        if (isLastAttempt) {
+          // In production, fail fast after all retries.
+          console.error('[Prisma] Failed to connect to database after all retries:', err);
+          throw err;
+        }
+
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
     }
   }
 

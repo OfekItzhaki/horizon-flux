@@ -35,28 +35,40 @@ function findFrontendServicesPath() {
 const frontendServicesPath = findFrontendServicesPath();
 
 // Add support for resolving @tasks-management/frontend-services package
-// Always set up the resolver, even if path not found (for EAS builds)
 const nodeModulesPath = path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services');
 const relativePath = path.resolve(__dirname, '../frontend-services');
 
-// Map the package in extraNodeModules
+// Determine which path exists
+let frontendServicesPath = null;
+if (fs.existsSync(nodeModulesPath)) {
+  try {
+    const stats = fs.lstatSync(nodeModulesPath);
+    frontendServicesPath = stats.isSymbolicLink() ? fs.realpathSync(nodeModulesPath) : nodeModulesPath;
+  } catch (e) {
+    // Fall through
+  }
+}
+if (!frontendServicesPath && fs.existsSync(relativePath)) {
+  frontendServicesPath = relativePath;
+}
+
+// Map the package in extraNodeModules (use node_modules path for EAS, relative for local)
 config.resolver.extraNodeModules = {
   ...config.resolver.extraNodeModules,
-  '@tasks-management/frontend-services': nodeModulesPath,
+  '@tasks-management/frontend-services': frontendServicesPath || nodeModulesPath,
 };
 
-// Custom resolver to handle the package
+// Custom resolver to handle the package - MUST be called before default resolver
 const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Handle @tasks-management/frontend-services (main package)
+  // Handle @tasks-management/frontend-services (main package) - check FIRST
   if (moduleName === '@tasks-management/frontend-services') {
-    // Try multiple possible paths for the main entry point
+    // Try all possible paths
     const possibleMainPaths = [
+      frontendServicesPath ? path.resolve(frontendServicesPath, 'dist/index.js') : null,
       path.resolve(nodeModulesPath, 'dist/index.js'),
       path.resolve(relativePath, 'dist/index.js'),
-      path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/index.js'),
-      path.resolve(__dirname, '../frontend-services/dist/index.js'),
-    ];
+    ].filter(Boolean);
     
     for (const mainPath of possibleMainPaths) {
       try {
@@ -67,20 +79,21 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
           };
         }
       } catch (e) {
-        // Continue to next path
+        // Continue
       }
     }
   }
   
-  // Handle subpath exports (legacy support)
+  // Handle subpath exports
   if (
     moduleName === '@tasks-management/frontend-services/i18n' ||
     moduleName === '@tasks-management/frontend-services/dist/i18n'
   ) {
     const possibleI18nPaths = [
+      frontendServicesPath ? path.resolve(frontendServicesPath, 'dist/i18n/index.js') : null,
       path.resolve(nodeModulesPath, 'dist/i18n/index.js'),
       path.resolve(relativePath, 'dist/i18n/index.js'),
-    ];
+    ].filter(Boolean);
     
     for (const i18nPath of possibleI18nPaths) {
       try {
@@ -91,7 +104,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
           };
         }
       } catch (e) {
-        // Continue to next path
+        // Continue
       }
     }
   }

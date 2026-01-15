@@ -35,58 +35,72 @@ function findFrontendServicesPath() {
 const frontendServicesPath = findFrontendServicesPath();
 
 // Add support for resolving @tasks-management/frontend-services package
-if (frontendServicesPath) {
-  // Map the entire package to ensure Metro can find it
-  config.resolver.extraNodeModules = {
-    ...config.resolver.extraNodeModules,
-    '@tasks-management/frontend-services': frontendServicesPath,
-  };
-  
-  // Custom resolver to handle the package and its exports
-  const originalResolveRequest = config.resolver.resolveRequest;
-  config.resolver.resolveRequest = (context, moduleName, platform) => {
-    // Handle @tasks-management/frontend-services (main package)
-    if (moduleName === '@tasks-management/frontend-services') {
-      // Try multiple possible paths for the main entry point
-      const possibleMainPaths = [
-        path.resolve(frontendServicesPath, 'dist/index.js'),
-        path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/index.js'),
-        path.resolve(__dirname, '../frontend-services/dist/index.js'),
-      ];
-      
-      for (const mainPath of possibleMainPaths) {
+// Always set up the resolver, even if path not found (for EAS builds)
+const nodeModulesPath = path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services');
+const relativePath = path.resolve(__dirname, '../frontend-services');
+
+// Map the package in extraNodeModules
+config.resolver.extraNodeModules = {
+  ...config.resolver.extraNodeModules,
+  '@tasks-management/frontend-services': nodeModulesPath,
+};
+
+// Custom resolver to handle the package
+const originalResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Handle @tasks-management/frontend-services (main package)
+  if (moduleName === '@tasks-management/frontend-services') {
+    // Try multiple possible paths for the main entry point
+    const possibleMainPaths = [
+      path.resolve(nodeModulesPath, 'dist/index.js'),
+      path.resolve(relativePath, 'dist/index.js'),
+      path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/index.js'),
+      path.resolve(__dirname, '../frontend-services/dist/index.js'),
+    ];
+    
+    for (const mainPath of possibleMainPaths) {
+      try {
         if (fs.existsSync(mainPath)) {
           return {
             type: 'sourceFile',
             filePath: mainPath,
           };
         }
-      }
-      
-      // If file doesn't exist, log for debugging but continue
-      console.warn(`Warning: Could not find @tasks-management/frontend-services at: ${possibleMainPaths.join(', ')}`);
-    }
-    
-    // Handle subpath exports (legacy support)
-    if (
-      moduleName === '@tasks-management/frontend-services/i18n' ||
-      moduleName === '@tasks-management/frontend-services/dist/i18n'
-    ) {
-      const i18nPath = path.resolve(frontendServicesPath, 'dist/i18n/index.js');
-      if (fs.existsSync(i18nPath)) {
-        return {
-          type: 'sourceFile',
-          filePath: i18nPath,
-        };
+      } catch (e) {
+        // Continue to next path
       }
     }
+  }
+  
+  // Handle subpath exports (legacy support)
+  if (
+    moduleName === '@tasks-management/frontend-services/i18n' ||
+    moduleName === '@tasks-management/frontend-services/dist/i18n'
+  ) {
+    const possibleI18nPaths = [
+      path.resolve(nodeModulesPath, 'dist/i18n/index.js'),
+      path.resolve(relativePath, 'dist/i18n/index.js'),
+    ];
     
-    // Use default resolver for everything else
-    if (originalResolveRequest) {
-      return originalResolveRequest(context, moduleName, platform);
+    for (const i18nPath of possibleI18nPaths) {
+      try {
+        if (fs.existsSync(i18nPath)) {
+          return {
+            type: 'sourceFile',
+            filePath: i18nPath,
+          };
+        }
+      } catch (e) {
+        // Continue to next path
+      }
     }
-    return context.resolveRequest(context, moduleName, platform);
-  };
-}
+  }
+  
+  // Use default resolver for everything else
+  if (originalResolveRequest) {
+    return originalResolveRequest(context, moduleName, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
 
 module.exports = config;

@@ -34,21 +34,24 @@ function findFrontendServicesPath() {
 
 const frontendServicesPath = findFrontendServicesPath();
 
-// Add support for resolving subpath exports from frontend-services
+// Add support for resolving subpath exports and direct dist paths from frontend-services
 if (frontendServicesPath) {
   const i18nDirPath = path.resolve(frontendServicesPath, 'dist/i18n');
   
-  // Use extraNodeModules to map the subpath export to the directory
+  // Use extraNodeModules to map module paths
   config.resolver.extraNodeModules = {
     ...config.resolver.extraNodeModules,
     '@tasks-management/frontend-services/i18n': i18nDirPath,
   };
   
-  // Also add a custom resolver as fallback
+  // Custom resolver for subpath exports and direct dist paths
   const originalResolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {
-    // Handle @tasks-management/frontend-services/i18n subpath export
-    if (moduleName === '@tasks-management/frontend-services/i18n') {
+    // Handle both @tasks-management/frontend-services/i18n and @tasks-management/frontend-services/dist/i18n
+    if (
+      moduleName === '@tasks-management/frontend-services/i18n' ||
+      moduleName === '@tasks-management/frontend-services/dist/i18n'
+    ) {
       const possiblePaths = [
         path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/i18n/index.js'),
         path.resolve(__dirname, '../frontend-services/dist/i18n/index.js'),

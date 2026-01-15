@@ -47,13 +47,24 @@ if (frontendServicesPath) {
   config.resolver.resolveRequest = (context, moduleName, platform) => {
     // Handle @tasks-management/frontend-services (main package)
     if (moduleName === '@tasks-management/frontend-services') {
-      const mainPath = path.resolve(frontendServicesPath, 'dist/index.js');
-      if (fs.existsSync(mainPath)) {
-        return {
-          type: 'sourceFile',
-          filePath: mainPath,
-        };
+      // Try multiple possible paths for the main entry point
+      const possibleMainPaths = [
+        path.resolve(frontendServicesPath, 'dist/index.js'),
+        path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services/dist/index.js'),
+        path.resolve(__dirname, '../frontend-services/dist/index.js'),
+      ];
+      
+      for (const mainPath of possibleMainPaths) {
+        if (fs.existsSync(mainPath)) {
+          return {
+            type: 'sourceFile',
+            filePath: mainPath,
+          };
+        }
       }
+      
+      // If file doesn't exist, log for debugging but continue
+      console.warn(`Warning: Could not find @tasks-management/frontend-services at: ${possibleMainPaths.join(', ')}`);
     }
     
     // Handle subpath exports (legacy support)

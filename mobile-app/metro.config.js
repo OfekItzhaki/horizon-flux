@@ -13,34 +13,6 @@ config.resolver.nodeModulesPaths = [
 ];
 
 // Find the frontend-services package location
-function findFrontendServicesPath() {
-  const nodeModulesPath = path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services');
-  const relativePath = path.resolve(__dirname, '../frontend-services');
-  
-  // First check node_modules (EAS build environment)
-  if (fs.existsSync(nodeModulesPath)) {
-    try {
-      const stats = fs.lstatSync(nodeModulesPath);
-      if (stats.isSymbolicLink()) {
-        return fs.realpathSync(nodeModulesPath);
-      }
-      return nodeModulesPath;
-    } catch (e) {
-      // Continue to check relative path
-    }
-  }
-  
-  // Check relative path (local development)
-  if (fs.existsSync(relativePath)) {
-    return relativePath;
-  }
-  
-  return null;
-}
-
-const frontendServicesPath = findFrontendServicesPath();
-
-// Add support for resolving @tasks-management/frontend-services package
 const nodeModulesPath = path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services');
 const relativePath = path.resolve(__dirname, '../frontend-services');
 

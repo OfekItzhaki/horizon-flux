@@ -33,36 +33,41 @@ if (frontendServicesPath) {
   };
 }
 
-// Custom resolver as fallback (shouldn't be needed if extraNodeModules works)
+// Custom resolver - MUST handle the package before default resolution
 const originalResolveRequest = config.resolver.resolveRequest;
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Handle @tasks-management/frontend-services
-  if (moduleName === '@tasks-management/frontend-services') {
-    const possiblePaths = [
-      frontendServicesPath ? path.resolve(frontendServicesPath, 'dist/index.js') : null,
-      path.resolve(nodeModulesPath, 'dist/index.js'),
-      path.resolve(relativePath, 'dist/index.js'),
+config.resolver.resolveRequest = (context, realModuleName, platform, moduleName) => {
+  // Handle @tasks-management/frontend-services - intercept FIRST
+  if (realModuleName === '@tasks-management/frontend-services' || moduleName === '@tasks-management/frontend-services') {
+    // Check all possible locations
+    const checkPaths = [
+      frontendServicesPath,
+      nodeModulesPath,
+      relativePath,
     ].filter(Boolean);
     
-    for (const mainPath of possiblePaths) {
+    for (const basePath of checkPaths) {
+      const mainPath = path.resolve(basePath, 'dist/index.js');
+      const packageJsonPath = path.resolve(basePath, 'package.json');
+      
       try {
-        if (fs.existsSync(mainPath)) {
+        // Check if both package.json and dist/index.js exist
+        if (fs.existsSync(packageJsonPath) && fs.existsSync(mainPath)) {
           return {
             type: 'sourceFile',
             filePath: mainPath,
           };
         }
       } catch (e) {
-        // Continue
+        // Continue to next path
       }
     }
   }
   
-  // Use default resolver
+  // Use default resolver for everything else
   if (originalResolveRequest) {
-    return originalResolveRequest(context, moduleName, platform);
+    return originalResolveRequest(context, realModuleName, platform, moduleName);
   }
-  return context.resolveRequest(context, moduleName, platform);
+  return context.resolveRequest(context, realModuleName, platform, moduleName);
 };
 
 module.exports = config;

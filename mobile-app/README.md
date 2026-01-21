@@ -160,11 +160,11 @@ npx expo build:ios
 
 ### Store Submission
 
-See [STORE_SUBMISSION.md](./STORE_SUBMISSION.md) for detailed instructions on submitting to Google Play Store and Apple App Store.
+See [STORE_SUBMISSION.md](../instructions/MOBILE_APP_STORE_SUBMISSION.md) for detailed instructions on submitting to Google Play Store and Apple App Store.
 
 ### App Store Assets
 
-See [STORE_LISTING.md](./STORE_LISTING.md) for app description, keywords, and screenshot requirements.
+See [STORE_LISTING.md](../instructions/MOBILE_APP_STORE_LISTING.md) for app description, keywords, and screenshot requirements.
 
 ## Privacy Policy
 

@@ -24,6 +24,11 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  // Serve privacy policy from public root
+  app.useStaticAssets(join(process.cwd(), 'public'), {
+    prefix: '/',
+  });
+
   app.useGlobalPipes(new ValidationPipe());
 
   // Swagger configuration

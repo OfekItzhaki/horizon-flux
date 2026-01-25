@@ -11,6 +11,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -456,11 +457,17 @@ export default function TasksScreen() {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={styles.fab}
         onPress={() => setShowAddModal(true)}
         activeOpacity={0.8}
       >
-        <Text style={styles.fabText}>+</Text>
+        <LinearGradient
+          colors={['#6366f1', '#a855f7']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fab}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </LinearGradient>
       </TouchableOpacity>
 
       {/* Add Task Modal */}

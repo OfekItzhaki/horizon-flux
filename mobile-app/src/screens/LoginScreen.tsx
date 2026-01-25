@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
 
@@ -23,43 +25,53 @@ export default function LoginScreen() {
     container: {
       flex: 1,
       justifyContent: 'center',
-      padding: 20,
+      padding: 24,
       backgroundColor: colors.background,
     },
     title: {
-      fontSize: 32,
+      fontSize: 36,
       fontWeight: 'bold',
-      marginBottom: 40,
+      marginBottom: 48,
       textAlign: 'center',
-      color: colors.text,
+      color: colors.primary,
     },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 8,
-      padding: 15,
-      marginBottom: 15,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 16,
       fontSize: 16,
-      backgroundColor: colors.card,
+      backgroundColor: colors.cardGlass,
       color: colors.text,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 2,
     },
     passwordContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 8,
-      marginBottom: 15,
-      backgroundColor: colors.card,
+      borderRadius: 16,
+      marginBottom: 16,
+      backgroundColor: colors.cardGlass,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 2,
     },
     passwordInput: {
       flex: 1,
-      padding: 15,
+      padding: 16,
       fontSize: 16,
       color: colors.text,
     },
     eyeButton: {
-      padding: 15,
+      padding: 16,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -67,24 +79,29 @@ export default function LoginScreen() {
       fontSize: 20,
     },
     button: {
-      backgroundColor: colors.primary,
-      padding: 15,
-      borderRadius: 8,
+      padding: 16,
+      borderRadius: 16,
       alignItems: 'center',
-      marginTop: 10,
+      marginTop: 12,
+      shadowColor: colors.shadowStrong,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
     },
     buttonText: {
       color: '#fff',
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 18,
+      fontWeight: '700',
     },
     switchButton: {
-      marginTop: 20,
+      marginTop: 24,
       alignItems: 'center',
     },
     switchText: {
       color: colors.primary,
-      fontSize: 14,
+      fontSize: 15,
+      fontWeight: '600',
     },
   }));
 
@@ -210,15 +227,22 @@ export default function LoginScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={styles.button.backgroundColor as string} />
+        <ActivityIndicator size="large" color="#6366f1" />
       ) : (
         <TouchableOpacity
-          style={styles.button}
           onPress={isLogin ? handleLogin : handleRegister}
+          activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>
-            {isLogin ? 'Login' : 'Register'}
-          </Text>
+          <LinearGradient
+            colors={['#6366f1', '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>
+              {isLogin ? 'Login' : 'Register'}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       )}
 

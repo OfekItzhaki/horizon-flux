@@ -92,33 +92,45 @@ export function useTheme() {
   return context;
 }
 
-// Theme colors
+// Premium theme colors matching web app
 export const lightColors = {
-  background: '#ffffff',
-  surface: '#f5f5f5',
-  text: '#333333',
-  textSecondary: '#666666',
-  border: '#e0e0e0',
-  primary: '#007AFF',
-  primaryDark: '#0051D5',
-  error: '#FF3B30',
-  success: '#4CAF50',
-  warning: '#FF9800',
-  card: '#ffffff',
-  shadow: 'rgba(0, 0, 0, 0.1)',
+  background: '#f8fafc',
+  surface: '#ffffff',
+  text: '#1e293b',
+  textSecondary: '#64748b',
+  border: 'rgba(148, 163, 184, 0.2)',
+  primary: '#6366f1', // indigo-500
+  primaryDark: '#4f46e5', // indigo-600
+  primaryLight: '#818cf8', // indigo-400
+  purple: '#a855f7', // purple-500
+  error: '#ef4444',
+  success: '#10b981',
+  warning: '#f59e0b',
+  card: 'rgba(255, 255, 255, 0.7)',
+  cardGlass: 'rgba(255, 255, 255, 0.8)',
+  shadow: 'rgba(99, 102, 241, 0.15)',
+  shadowStrong: 'rgba(99, 102, 241, 0.3)',
+  gradientStart: '#6366f1',
+  gradientEnd: '#a855f7',
 };
 
 export const darkColors = {
-  background: '#0a0a0a',
-  surface: '#1a1a1a',
-  text: '#ffffff',
-  textSecondary: '#b0b0b0',
-  border: '#2a2a2a',
-  primary: '#0A84FF',
-  primaryDark: '#0051D5',
-  error: '#FF453A',
-  success: '#32D74B',
-  warning: '#FF9F0A',
-  card: '#1f1f1f',
-  shadow: 'rgba(0, 0, 0, 0.5)',
+  background: '#0f172a',
+  surface: '#1e293b',
+  text: '#f1f5f9',
+  textSecondary: '#cbd5e1',
+  border: 'rgba(148, 163, 184, 0.2)',
+  primary: '#6366f1', // indigo-500
+  primaryDark: '#4f46e5', // indigo-600
+  primaryLight: '#818cf8', // indigo-400
+  purple: '#a855f7', // purple-500
+  error: '#ef4444',
+  success: '#10b981',
+  warning: '#f59e0b',
+  card: 'rgba(30, 41, 59, 0.7)',
+  cardGlass: 'rgba(30, 41, 59, 0.8)',
+  shadow: 'rgba(99, 102, 241, 0.25)',
+  shadowStrong: 'rgba(99, 102, 241, 0.4)',
+  gradientStart: '#6366f1',
+  gradientEnd: '#a855f7',
 };

@@ -744,19 +744,6 @@ export default function TasksPage() {
             </h1>
           )}
         </div>
-
-        {!isBulkMode && (
-          <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center justify-center gap-3 mt-4`}>
-            <button
-              type="button"
-              onClick={() => setIsBulkMode(true)}
-              aria-label="Select multiple tasks for bulk operations"
-              className="inline-flex justify-center rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:from-primary-700 hover:to-purple-700 shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transition-all duration-200"
-            >
-              {t('tasks.selectMultiple')}
-            </button>
-          </div>
-        )}
       </div>
 
       {showCreate && (
@@ -819,7 +806,30 @@ export default function TasksPage() {
           items={paginatedTasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-4">
+          <div className="space-y-4 relative">
+            {/* Floating Edit Button - positioned above first task */}
+            {!isBulkMode && paginatedTasks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsBulkMode(true)}
+                aria-label="Select multiple tasks for bulk operations"
+                className={`absolute ${isRtl ? 'right-0' : 'left-0'} -top-12 z-10 inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-glow hover:shadow-glow-lg hover:from-primary-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-300 hover:scale-110 active:scale-95`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-5 h-5"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+            )}
             {paginatedTasks.map((task) => (
               <SortableTaskItem
                 key={task.id}

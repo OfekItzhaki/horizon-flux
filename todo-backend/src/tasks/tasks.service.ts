@@ -157,6 +157,16 @@ export class TasksService {
       }
     }
 
+    // Reset completionCount if task has weekly reminder (specificDayOfWeek)
+    // completionCount should only be tracked for daily tasks, not weekly ones
+    const finalSpecificDayOfWeek = updateTaskDto.specificDayOfWeek !== undefined 
+      ? updateTaskDto.specificDayOfWeek 
+      : existingTask.specificDayOfWeek;
+    
+    const shouldResetCompletionCount = finalSpecificDayOfWeek !== null && 
+                                      finalSpecificDayOfWeek !== undefined &&
+                                      existingTask.completionCount > 0;
+
     return this.prisma.task.update({
       where: { id },
       data: {
@@ -166,6 +176,7 @@ export class TasksService {
         reminderDaysBefore: updateTaskDto.reminderDaysBefore,
         completed: updateTaskDto.completed,
         ...(completedAt !== undefined && { completedAt }),
+        ...(shouldResetCompletionCount && { completionCount: 0 }),
       },
     });
   }

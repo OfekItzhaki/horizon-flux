@@ -37,6 +37,7 @@ import {
   UpdateTaskDto,
 } from '@tasks-management/frontend-services';
 import { handleApiError, extractErrorMessage } from '../utils/errorHandler';
+import { cancelAllTaskNotifications } from '../services/notifications.service';
 
 type ListWithSystemFlag = ToDoList & { isSystem?: boolean };
 
@@ -320,7 +321,9 @@ export default function TasksPage() {
       }
       handleApiError(err, t('tasks.deleteFailed', { defaultValue: 'Failed to delete task. Please try again.' }));
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
+      // Cancel notifications for deleted task
+      cancelAllTaskNotifications(vars.id);
       toast.success(t('tasks.taskDeleted'));
     },
     onSettled: () => {
@@ -398,7 +401,9 @@ export default function TasksPage() {
       }
       handleApiError(err, t('tasks.deleteForeverFailed', { defaultValue: 'Failed to permanently delete task. Please try again.' }));
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
+      // Cancel notifications for permanently deleted task
+      cancelAllTaskNotifications(vars.id);
       toast.success(t('tasks.deletedForever'));
     },
     onSettled: () => {

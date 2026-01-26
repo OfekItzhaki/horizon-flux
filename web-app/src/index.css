@@ -3,9 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply transition-colors duration-200;
-  }
+  /* Remove global transition-colors - it's too expensive and causes lag */
+  /* Only apply transitions where specifically needed */
 
   body {
     margin: 0;
@@ -30,19 +29,16 @@
     @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
     @apply shadow-glass dark:shadow-glass-dark;
     @apply rounded-2xl;
+    /* No transitions on glass-card itself - let children handle their own transitions */
   }
 
   /* Premium Card */
   .premium-card {
-    @apply glass-card;
-    @apply hover:shadow-premium-lg hover:scale-[1.02] transition-all duration-300;
+    @apply bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/30;
+    @apply shadow-glass dark:shadow-glass-dark;
+    @apply rounded-2xl;
     @apply relative overflow-hidden;
-  }
-
-  .premium-card::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300;
-    pointer-events: none;
+    /* Remove all hover effects and transitions - they cause lag on mouse movement */
   }
 
   /* Glass Button */
@@ -59,6 +55,7 @@
     @apply px-4 py-3;
     @apply focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500;
     @apply placeholder:text-gray-400 dark:placeholder:text-gray-500;
+    /* Remove transitions - they cause lag on mouse movement */
   }
 
   /* Gradient Text */
@@ -84,12 +81,13 @@
   /* Premium Header - Section Title */
   .premium-header-section {
     @apply text-2xl font-bold;
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-gray-100 dark:via-gray-200 dark:to-gray-100;
-    @apply drop-shadow-md;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+    @apply text-gray-900 dark:text-gray-100;
     @apply tracking-tight;
     letter-spacing: -0.01em;
     @apply relative pb-2;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .premium-header-section::after {

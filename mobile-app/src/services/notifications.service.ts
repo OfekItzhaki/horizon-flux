@@ -139,7 +139,9 @@ async function openAndroidNotificationSettings(): Promise<void> {
 export async function requestNotificationPermissions(showGuidance = false): Promise<boolean> {
   // Skip in Expo Go
   if (isExpoGo()) {
-    console.log('Skipping notification permissions - running in Expo Go');
+    if (__DEV__) {
+      console.log('Skipping notification permissions - running in Expo Go');
+    }
     return false;
   }
 
@@ -221,7 +223,9 @@ export async function requestNotificationPermissions(showGuidance = false): Prom
     }
     
     const granted = finalStatus === 'granted';
-    console.log(`Notification permissions: ${granted ? 'GRANTED' : 'DENIED'} (status: ${finalStatus})`);
+    if (__DEV__) {
+      console.log(`Notification permissions: ${granted ? 'GRANTED' : 'DENIED'} (status: ${finalStatus})`);
+    }
     return granted;
   } catch (error) {
     console.error('Error requesting notification permissions:', error);
@@ -265,7 +269,9 @@ export async function scheduleReminderNotification(
         hour: hours,
         minute: minutes,
       } as Notifications.DailyTriggerInput;
-      console.log(`Scheduling daily reminder at ${hours}:${minutes.toString().padStart(2, '0')} (repeats: true)`);
+      if (__DEV__) {
+        console.log(`Scheduling daily reminder at ${hours}:${minutes.toString().padStart(2, '0')} (repeats: true)`);
+      }
     } 
     // For recurring weekly reminders, use weekly trigger
     else if (reminder.timeframe === ReminderTimeframe.EVERY_WEEK && reminder.dayOfWeek !== undefined) {
@@ -278,7 +284,9 @@ export async function scheduleReminderNotification(
         hour: hours,
         minute: minutes,
       } as Notifications.WeeklyTriggerInput;
-      console.log(`Scheduling weekly reminder: weekday ${reminder.dayOfWeek + 1} at ${hours}:${minutes.toString().padStart(2, '0')} (repeats: true)`);
+      if (__DEV__) {
+        console.log(`Scheduling weekly reminder: weekday ${reminder.dayOfWeek + 1} at ${hours}:${minutes.toString().padStart(2, '0')} (repeats: true)`);
+      }
     } 
     // For other reminders, calculate the date first
     else {
@@ -316,7 +324,9 @@ export async function scheduleReminderNotification(
       trigger,
     });
 
-    console.log(`Scheduled notification ${notificationId} for task ${taskId}, reminder ${reminder.id} (${reminder.timeframe})`);
+    if (__DEV__) {
+      console.log(`Scheduled notification ${notificationId} for task ${taskId}, reminder ${reminder.id} (${reminder.timeframe})`);
+    }
     
     return notificationId;
   } catch (error) {
@@ -520,7 +530,7 @@ async function getTodayTasks(): Promise<Array<{ description: string; isRepeating
   try {
     // Import here to avoid circular dependencies
     const { tasksService } = await import('./tasks.service');
-    const { EveryDayRemindersStorage } = await import('../utils/storage');
+    const { ReminderTimeframe } = await import('../types');
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -552,11 +562,13 @@ async function getTodayTasks(): Promise<Array<{ description: string; isRepeating
         }
       }
       
-      // Check if task has daily reminder
-      const dailyReminders = await EveryDayRemindersStorage.getRemindersForTask(task.id);
-      if (dailyReminders && dailyReminders.length > 0) {
-        isToday = true;
-        isRepeating = true;
+      // Check if task has daily reminder from reminderConfig
+      if (task.reminderConfig && Array.isArray(task.reminderConfig)) {
+        const hasDailyReminder = task.reminderConfig.some((r: any) => r.timeframe === ReminderTimeframe.EVERY_DAY);
+        if (hasDailyReminder) {
+          isToday = true;
+          isRepeating = true;
+        }
       }
       
       // Check if task has weekly reminder for today
@@ -669,7 +681,9 @@ export async function updateDailyTasksNotification(): Promise<void> {
       trigger: null, // Immediate notification
     });
     
-    console.log(`Updated daily tasks notification with ${todayTasks.length} tasks`);
+    if (__DEV__) {
+      console.log(`Updated daily tasks notification with ${todayTasks.length} tasks`);
+    }
   } catch (error) {
     console.error('Error updating daily tasks notification:', error);
   }
@@ -731,57 +745,39 @@ export async function scheduleDailyTasksNotificationUpdate(): Promise<void> {
 export async function rescheduleAllReminders(): Promise<void> {
   // Skip in Expo Go
   if (isExpoGo()) {
-    console.log('Skipping reminder rescheduling - running in Expo Go');
+    if (__DEV__) {
+      console.log('Skipping reminder rescheduling - running in Expo Go');
+    }
     return;
   }
 
   try {
     // Import here to avoid circular dependencies
     const { tasksService } = await import('./tasks.service');
-    const { EveryDayRemindersStorage } = await import('../utils/storage');
     const { ReminderTimeframe } = await import('../types');
+    const { convertBackendToReminders } = await import('../utils/helpers');
 
     // Get all tasks
     const allTasks = await tasksService.getAll();
-    console.log(`Rescheduling reminders for ${allTasks.length} tasks`);
+    if (__DEV__) {
+      console.log(`Rescheduling reminders for ${allTasks.length} tasks`);
+    }
 
     let scheduledCount = 0;
 
     for (const task of allTasks) {
-      if (!task.dueDate && !task.specificDayOfWeek) {
-        // Skip tasks without due date or weekly reminder
+      if (!task.dueDate && !task.specificDayOfWeek && !task.reminderConfig) {
+        // Skip tasks without any reminders
         continue;
       }
 
-      // Convert backend reminders to ReminderConfig format
-      const reminders: ReminderConfig[] = [];
-
-      // Add backend reminders (daysBefore and weekly)
-      if (task.reminderDaysBefore && task.reminderDaysBefore.length > 0 && task.dueDate) {
-        task.reminderDaysBefore.forEach((days) => {
-          reminders.push({
-            id: `days-before-${days}`,
-            timeframe: ReminderTimeframe.SPECIFIC_DATE,
-            time: '09:00',
-            daysBefore: days,
-          });
-        });
-      }
-
-      if (task.specificDayOfWeek !== null && task.specificDayOfWeek !== undefined) {
-        reminders.push({
-          id: `day-of-week-${task.specificDayOfWeek}`,
-          timeframe: ReminderTimeframe.EVERY_WEEK,
-          time: '09:00',
-          dayOfWeek: task.specificDayOfWeek,
-        });
-      }
-
-      // Add client-side EVERY_DAY reminders
-      const everyDayReminders = await EveryDayRemindersStorage.getRemindersForTask(task.id);
-      if (everyDayReminders && everyDayReminders.length > 0) {
-        reminders.push(...everyDayReminders);
-      }
+      // Convert backend reminders to ReminderConfig format (includes reminderConfig)
+      const reminders = convertBackendToReminders(
+        task.reminderDaysBefore,
+        task.specificDayOfWeek,
+        task.dueDate || undefined,
+        task.reminderConfig,
+      );
 
       // Schedule all reminders for this task
       if (reminders.length > 0) {
@@ -795,7 +791,9 @@ export async function rescheduleAllReminders(): Promise<void> {
       }
     }
 
-    console.log(`Rescheduled ${scheduledCount} reminders across ${allTasks.length} tasks`);
+    if (__DEV__) {
+      console.log(`Rescheduled ${scheduledCount} reminders across ${allTasks.length} tasks`);
+    }
     
     // Also update daily tasks notification
     await updateDailyTasksNotification();

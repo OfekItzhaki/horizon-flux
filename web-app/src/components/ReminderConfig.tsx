@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,14 +31,14 @@ const SPECIFIC_DATES = [
   { value: ReminderSpecificDate.CUSTOM_DATE, label: 'Custom Date' },
 ];
 
-export default function ReminderConfigComponent({ reminders, onRemindersChange }: ReminderConfigProps) {
+const ReminderConfigComponent = memo(function ReminderConfigComponent({ reminders, onRemindersChange }: ReminderConfigProps) {
   const { t, i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
   const { isDark } = useTheme();
   const [editingReminder, setEditingReminder] = useState<ReminderConfig | null>(null);
   const [showEditor, setShowEditor] = useState(false);
 
-  const addReminder = () => {
+  const addReminder = useCallback(() => {
     const newReminder: ReminderConfig = {
       id: Date.now().toString(),
       timeframe: ReminderTimeframe.SPECIFIC_DATE,
@@ -47,9 +47,9 @@ export default function ReminderConfigComponent({ reminders, onRemindersChange }
     };
     setEditingReminder(newReminder);
     setShowEditor(true);
-  };
+  }, []);
 
-  const saveReminder = (reminder: ReminderConfig) => {
+  const saveReminder = useCallback((reminder: ReminderConfig) => {
     // Save the editing reminder ID before closing modal
     const editingId = editingReminder?.id;
     
@@ -80,16 +80,37 @@ export default function ReminderConfigComponent({ reminders, onRemindersChange }
       // Add new reminder
       onRemindersChange([...reminders, reminder]);
     }
-  };
+  }, [editingReminder, reminders, onRemindersChange]);
 
-  const removeReminder = (id: string) => {
+  const removeReminder = useCallback((id: string) => {
     onRemindersChange(reminders.filter((r) => r.id !== id));
-  };
+  }, [reminders, onRemindersChange]);
 
-  const editReminder = (reminder: ReminderConfig) => {
+  const editReminder = useCallback((reminder: ReminderConfig) => {
     setEditingReminder(reminder);
     setShowEditor(true);
-  };
+  }, []);
+
+  // Memoize reminder display strings to avoid recalculating on every render
+  const reminderDisplays = useMemo(() => {
+    return reminders.map(reminder => ({
+      id: reminder.id,
+      display: formatReminderDisplay(reminder, t),
+      hasAlarm: reminder.hasAlarm ?? false,
+    }));
+  }, [reminders, t]);
+
+  const toggleAlarm = useCallback((reminderId: string) => {
+    const updated = reminders.map((r) =>
+      r.id === reminderId ? { ...r, hasAlarm: !r.hasAlarm } : r
+    );
+    onRemindersChange(updated);
+  }, [reminders, onRemindersChange]);
+
+  const handleCancelEditor = useCallback(() => {
+    setEditingReminder(null);
+    setShowEditor(false);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -111,44 +132,42 @@ export default function ReminderConfigComponent({ reminders, onRemindersChange }
         </p>
       ) : (
         <div className="space-y-2">
-          {reminders.map((reminder) => (
-            <div
-              key={reminder.id}
-              className="premium-card p-4 flex items-center justify-between gap-3"
-            >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                  {formatReminderDisplay(reminder, t)}
-                </span>
-                <button
-                  onClick={() => {
-                    const updated = reminders.map((r) =>
-                      r.id === reminder.id ? { ...r, hasAlarm: !r.hasAlarm } : r
-                    );
-                    onRemindersChange(updated);
-                  }}
-                  className="text-lg"
-                  title={reminder.hasAlarm ? t('reminders.alarmOn', { defaultValue: 'Alarm on' }) : t('reminders.alarmOff', { defaultValue: 'Alarm off' })}
-                >
-                  {reminder.hasAlarm ? '🔔' : '🔕'}
-                </button>
+          {reminders.map((reminder, index) => {
+            const display = reminderDisplays[index];
+            return (
+              <div
+                key={reminder.id}
+                className="premium-card p-4 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                    {display.display}
+                  </span>
+                  <button
+                    onClick={() => toggleAlarm(reminder.id)}
+                    className="text-lg"
+                    title={display.hasAlarm ? t('reminders.alarmOn', { defaultValue: 'Alarm on' }) : t('reminders.alarmOff', { defaultValue: 'Alarm off' })}
+                  >
+                    {display.hasAlarm ? '🔔' : '🔕'}
+                  </button>
+                </div>
+                <div className={`flex gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <button
+                    onClick={() => editReminder(reminder)}
+                    className="px-3 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 rounded-lg"
+                  >
+                    {t('common.edit', { defaultValue: 'Edit' })}
+                  </button>
+                  <button
+                    onClick={() => removeReminder(reminder.id)}
+                    className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 rounded-lg"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
-              <div className={`flex gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <button
-                  onClick={() => editReminder(reminder)}
-                  className="px-3 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                >
-                  {t('common.edit', { defaultValue: 'Edit' })}
-                </button>
-                <button
-                  onClick={() => removeReminder(reminder.id)}
-                  className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -157,15 +176,14 @@ export default function ReminderConfigComponent({ reminders, onRemindersChange }
         <ReminderEditor
           reminder={editingReminder}
           onSave={saveReminder}
-          onCancel={() => {
-            setEditingReminder(null);
-            setShowEditor(false);
-          }}
+          onCancel={handleCancelEditor}
         />
       )}
     </div>
   );
-}
+});
+
+export default ReminderConfigComponent;
 
 interface ReminderEditorProps {
   reminder: ReminderConfig;
@@ -266,11 +284,11 @@ function ReminderEditor({ reminder, onSave, onCancel }: ReminderEditorProps) {
                           : undefined,
                     })
                   }
-                  className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                    config.timeframe === tf.value
-                      ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transform scale-105'
-                      : 'glass-card text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:transform hover:scale-[1.02]'
-                  }`}
+                    className={`px-4 py-3 rounded-xl text-sm font-semibold ${
+                      config.timeframe === tf.value
+                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 scale-105'
+                        : 'glass-card text-gray-700 dark:text-gray-300'
+                    }`}
                 >
                   {tf.label}
                 </button>
@@ -289,10 +307,10 @@ function ReminderEditor({ reminder, onSave, onCancel }: ReminderEditorProps) {
                   <button
                     key={sd.value}
                     onClick={() => setConfig({ ...config, specificDate: sd.value })}
-                    className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    className={`px-4 py-3 rounded-xl text-sm font-semibold ${
                       config.specificDate === sd.value
-                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transform scale-105'
-                        : 'glass-card text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:transform hover:scale-[1.02]'
+                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 scale-105'
+                        : 'glass-card text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {sd.label}

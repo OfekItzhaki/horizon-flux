@@ -22,7 +22,7 @@ import { Task, CreateTaskDto, ReminderConfig, ReminderTimeframe, ListType } from
 import ReminderConfigComponent from '../components/ReminderConfig';
 import DatePicker from '../components/DatePicker';
 import { scheduleTaskReminders, cancelAllTaskNotifications } from '../services/notifications.service';
-import { EveryDayRemindersStorage, ReminderTimesStorage, ReminderAlarmsStorage } from '../utils/storage';
+import { ReminderTimesStorage, ReminderAlarmsStorage } from '../utils/storage';
 import { convertRemindersToBackend, formatDate } from '../utils/helpers';
 import { handleApiError, isAuthError, showErrorAlert } from '../utils/errorHandler';
 import { useTheme } from '../context/ThemeContext';
@@ -610,15 +610,6 @@ export default function TasksScreen() {
 
       const createdTask = await tasksService.create(listId, taskData);
       
-      // Separate EVERY_DAY reminders (client-side storage) from others
-      const everyDayReminders = taskReminders.filter(r => r.timeframe === ReminderTimeframe.EVERY_DAY);
-      const otherReminders = taskReminders.filter(r => r.timeframe !== ReminderTimeframe.EVERY_DAY);
-      
-      // Store EVERY_DAY reminders client-side
-      if (everyDayReminders.length > 0) {
-        await EveryDayRemindersStorage.setRemindersForTask(createdTask.id, everyDayReminders);
-      }
-      
       // Store reminder times for all reminders (backend doesn't store times)
       const reminderTimes: Record<string, string> = {};
       taskReminders.forEach(reminder => {
@@ -671,7 +662,6 @@ export default function TasksScreen() {
               // Cancel all notifications for this task
               await cancelAllTaskNotifications(task.id);
               // Clean up client-side storage for this task
-              await EveryDayRemindersStorage.removeRemindersForTask(task.id);
               await ReminderTimesStorage.removeTimesForTask(task.id);
               await ReminderAlarmsStorage.removeAlarmsForTask(task.id);
               await tasksService.delete(task.id);
@@ -720,7 +710,6 @@ export default function TasksScreen() {
                       // Cancel all notifications for this task
                       await cancelAllTaskNotifications(task.id);
                       // Clean up client-side storage
-                      await EveryDayRemindersStorage.removeRemindersForTask(task.id);
                       await ReminderTimesStorage.removeTimesForTask(task.id);
                       await ReminderAlarmsStorage.removeAlarmsForTask(task.id);
                       await tasksService.permanentDelete(task.id);

@@ -34,6 +34,7 @@ export const convertBackendToReminders = (
   reminderDaysBefore: number[] | undefined,
   specificDayOfWeek: number | null | undefined,
   dueDate: string | null | undefined,
+  reminderConfig?: any,
 ): ReminderConfig[] => {
   const reminders: ReminderConfig[] = [];
 
@@ -59,6 +60,77 @@ export const convertBackendToReminders = (
     });
   }
 
+  // Convert reminderConfig JSON field (contains "every day" and other reminders)
+  // Prisma returns JSONB as JavaScript objects/arrays, not strings
+  if (reminderConfig !== null && reminderConfig !== undefined) {
+    let parsedConfig: any = reminderConfig;
+    
+    // If reminderConfig is a string, try to parse it as JSON
+    // (This handles cases where it might come as a string from API)
+    if (typeof reminderConfig === 'string') {
+      try {
+        parsedConfig = JSON.parse(reminderConfig);
+      } catch (e) {
+        // If parsing fails, skip this reminder config
+        if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+          console.warn('Failed to parse reminderConfig JSON:', e, reminderConfig);
+        }
+        parsedConfig = null;
+      }
+    }
+    
+    // Handle array of reminder configs (most common case)
+    if (Array.isArray(parsedConfig)) {
+      parsedConfig.forEach((config: any) => {
+        // Ensure the config has required fields
+        if (config && config.timeframe) {
+          // Handle both ReminderTimeframe enum values and string values
+          const timeframe = typeof config.timeframe === 'string' 
+            ? config.timeframe as ReminderTimeframe
+            : config.timeframe;
+          
+          reminders.push({
+            id: config.id || `reminder-${Date.now()}-${Math.random()}`,
+            timeframe: timeframe,
+            time: config.time || '09:00',
+            specificDate: config.specificDate,
+            customDate: config.customDate,
+            dayOfWeek: config.dayOfWeek,
+            daysBefore: config.daysBefore,
+            hasAlarm: config.hasAlarm || false,
+          });
+        } else if (import.meta.env?.DEV) {
+          console.warn('Skipping invalid reminder config (missing timeframe):', config);
+        }
+      });
+    } 
+    // Handle single reminder config object
+    else if (parsedConfig && typeof parsedConfig === 'object' && !Array.isArray(parsedConfig)) {
+      // Check if it has timeframe (valid reminder config)
+      if (parsedConfig.timeframe) {
+        // Handle both ReminderTimeframe enum values and string values
+        const timeframe = typeof parsedConfig.timeframe === 'string'
+          ? parsedConfig.timeframe as ReminderTimeframe
+          : parsedConfig.timeframe;
+        
+        reminders.push({
+          id: parsedConfig.id || `reminder-${Date.now()}-${Math.random()}`,
+          timeframe: timeframe,
+          time: parsedConfig.time || '09:00',
+          specificDate: parsedConfig.specificDate,
+          customDate: parsedConfig.customDate,
+          dayOfWeek: parsedConfig.dayOfWeek,
+          daysBefore: parsedConfig.daysBefore,
+          hasAlarm: parsedConfig.hasAlarm || false,
+        });
+      } else if (import.meta.env?.DEV) {
+        console.warn('Skipping invalid reminder config object (missing timeframe):', parsedConfig);
+      }
+    } else if (import.meta.env?.DEV && parsedConfig !== null) {
+      console.warn('Unexpected reminderConfig format:', typeof parsedConfig, parsedConfig);
+    }
+  }
+
   return reminders;
 };
 
@@ -68,17 +140,40 @@ export const convertBackendToReminders = (
 export const convertRemindersToBackend = (
   reminders: ReminderConfig[],
   dueDate?: string,
-): { reminderDaysBefore?: number[]; specificDayOfWeek?: number | null } => {
+): { reminderDaysBefore?: number[]; specificDayOfWeek?: number | null; reminderConfig?: any } => {
   const daysBefore: number[] = [];
   let dayOfWeek: number | undefined;
+  const reminderConfigs: ReminderConfig[] = [];
 
   reminders.forEach((reminder) => {
-    // Skip EVERY_DAY reminders (client-side only)
+    // Store EVERY_DAY reminders in reminderConfig JSON field
     if (reminder.timeframe === ReminderTimeframe.EVERY_DAY) {
+      reminderConfigs.push(reminder);
+      return;
+    }
+
+    // Store SPECIFIC_DATE reminders with CUSTOM_DATE in reminderConfig JSON field
+    // (These are one-time reminders for specific dates, not relative to due date)
+    if (reminder.timeframe === ReminderTimeframe.SPECIFIC_DATE && reminder.customDate) {
+      reminderConfigs.push(reminder);
+      return;
+    }
+
+    // Store other SPECIFIC_DATE types (START_OF_WEEK, START_OF_MONTH, etc.) in reminderConfig
+    if (reminder.timeframe === ReminderTimeframe.SPECIFIC_DATE && reminder.specificDate) {
+      reminderConfigs.push(reminder);
+      return;
+    }
+
+    // Store EVERY_MONTH and EVERY_YEAR reminders in reminderConfig
+    if (reminder.timeframe === ReminderTimeframe.EVERY_MONTH || 
+        reminder.timeframe === ReminderTimeframe.EVERY_YEAR) {
+      reminderConfigs.push(reminder);
       return;
     }
 
     // For reminders with daysBefore (relative to due date)
+    // These go into reminderDaysBefore array, not reminderConfig
     if (reminder.daysBefore !== undefined && reminder.daysBefore > 0) {
       if (dueDate) {
         daysBefore.push(reminder.daysBefore);
@@ -91,7 +186,7 @@ export const convertRemindersToBackend = (
     }
   });
 
-  const result: { reminderDaysBefore?: number[]; specificDayOfWeek?: number | null } = {};
+  const result: { reminderDaysBefore?: number[]; specificDayOfWeek?: number | null; reminderConfig?: any } = {};
 
   if (daysBefore.length > 0) {
     result.reminderDaysBefore = [...new Set(daysBefore)].sort((a, b) => b - a);
@@ -103,6 +198,13 @@ export const convertRemindersToBackend = (
     result.specificDayOfWeek = dayOfWeek;
   } else {
     result.specificDayOfWeek = null;
+  }
+
+  // Store reminder configurations (including "every day" reminders) in JSON field
+  if (reminderConfigs.length > 0) {
+    result.reminderConfig = reminderConfigs;
+  } else {
+    result.reminderConfig = null;
   }
 
   return result;

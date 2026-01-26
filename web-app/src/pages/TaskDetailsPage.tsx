@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useQueuedMutation } from '../hooks/useQueuedMutation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { tasksService } from '../services/tasks.service';
@@ -23,10 +23,15 @@ import {
 import { handleApiError, extractErrorMessage } from '../utils/errorHandler';
 import {
   ReminderConfig,
+  ReminderTimeframe,
   convertBackendToReminders,
   convertRemindersToBackend,
   formatReminderDisplay,
 } from '../utils/reminderHelpers';
+import {
+  scheduleTaskReminders,
+  cancelAllTaskNotifications,
+} from '../services/notifications.service';
 
 export default function TaskDetailsPage() {
   const { t, i18n } = useTranslation();
@@ -112,6 +117,8 @@ export default function TaskDetailsPage() {
     queryFn: () => tasksService.getTaskById(numericTaskId as number),
   });
 
+  // Removed initialReminders - it was causing dependency issues and not being used
+
   useEffect(() => {
     if (task) {
       // Always sync task description draft
@@ -125,11 +132,27 @@ export default function TaskDetailsPage() {
           task.reminderDaysBefore,
           task.specificDayOfWeek,
           task.dueDate || null,
+          task.reminderConfig,
         );
+        
+        // Debug logging
+        if (import.meta.env.DEV) {
+          console.log('🔍 useEffect - Task Reminder Data:', {
+            taskId: task.id,
+            reminderDaysBefore: task.reminderDaysBefore,
+            specificDayOfWeek: task.specificDayOfWeek,
+            reminderConfig: task.reminderConfig,
+            reminderConfigType: typeof task.reminderConfig,
+            convertedRemindersCount: convertedReminders.length,
+            convertedReminders: convertedReminders,
+          });
+        }
+        
         setEditReminders(convertedReminders);
       }
     }
   }, [task, isFullEditMode]);
+
 
   const invalidateTask = (t: Task) => {
     // Non-blocking invalidations - don't await
@@ -340,6 +363,129 @@ export default function TaskDetailsPage() {
       ? numericTaskId
       : null;
 
+  // Optimized handlers to prevent unnecessary re-renders
+  const handleRemindersChange = useCallback((newReminders: ReminderConfig[]) => {
+    // Only update local state - no auto-save to keep UI responsive
+    // Reminders will be saved when user clicks "Save" button
+    setEditReminders(newReminders);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsFullEditMode(false);
+    if (task) {
+      setEditDescription(task.description);
+      setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
+      const convertedReminders = convertBackendToReminders(
+        task.reminderDaysBefore,
+        task.specificDayOfWeek,
+        task.dueDate || null,
+        task.reminderConfig,
+      );
+      setEditReminders(convertedReminders);
+    }
+  }, [task]);
+
+  const handleSaveTask = useCallback(() => {
+    if (!editDescription.trim()) {
+      toast.error(t('taskDetails.descriptionRequired', { defaultValue: 'Description is required' }));
+      return;
+    }
+
+    if (!task) return;
+
+    const updateData: UpdateTaskDto = {
+      description: editDescription.trim(),
+    };
+
+    if (editDueDate.trim()) {
+      const date = new Date(editDueDate);
+      if (!isNaN(date.getTime())) {
+        updateData.dueDate = date.toISOString();
+      }
+    } else {
+      updateData.dueDate = null;
+    }
+
+    // Use the new due date for conversion, or fall back to task's due date only if new one is undefined
+    // If due date is explicitly set to null (cleared), use null for conversion
+    const dueDateForConversion = updateData.dueDate !== undefined 
+      ? (updateData.dueDate || undefined) 
+      : (task?.dueDate || undefined);
+    
+    const reminderData = convertRemindersToBackend(editReminders, dueDateForConversion);
+    
+    // Debug logging for save
+    if (import.meta.env.DEV) {
+      console.log('💾 Saving reminders:', {
+        editReminders,
+        reminderData,
+        dueDateForConversion,
+        updateDataReminderConfig: reminderData.reminderConfig,
+      });
+    }
+    
+    // Always include reminder data explicitly - these fields must be sent to save/clear reminders
+    // convertRemindersToBackend always returns these fields (never undefined)
+    updateData.reminderDaysBefore = reminderData.reminderDaysBefore || [];
+    updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
+      ? reminderData.specificDayOfWeek 
+      : null;
+    updateData.reminderConfig = reminderData.reminderConfig || null;
+
+    // Close edit mode immediately, save in background
+    setIsFullEditMode(false);
+    
+    updateTaskMutation.mutate(
+      { id: task.id, data: updateData },
+      {
+        onSuccess: async (updatedTask) => {
+          // Debug logging for save response
+          if (import.meta.env.DEV) {
+            console.log('✅ Task saved successfully:', {
+              taskId: updatedTask.id,
+              reminderDaysBefore: updatedTask.reminderDaysBefore,
+              specificDayOfWeek: updatedTask.specificDayOfWeek,
+              reminderConfig: updatedTask.reminderConfig,
+              reminderConfigType: typeof updatedTask.reminderConfig,
+              reminderConfigStringified: JSON.stringify(updatedTask.reminderConfig),
+            });
+          }
+          
+          toast.success(t('taskDetails.taskUpdated'));
+          
+          // Cancel existing notifications for this task
+          cancelAllTaskNotifications(task.id);
+          
+          // Schedule new notifications if there are reminders
+          if (editReminders.length > 0) {
+            await scheduleTaskReminders(
+              task.id,
+              updatedTask.description,
+              editReminders,
+              updatedTask.dueDate || null,
+            );
+          }
+
+          // Update cache immediately with the saved reminder data from server response
+          // Use the full updatedTask to ensure all fields (including reminderConfig) are present
+          queryClient.setQueryData<Task>(['task', task.id], updatedTask);
+          
+          // Also update in tasks list cache if it exists
+          queryClient.setQueryData<Task[]>(['tasks', task.todoListId], (old = []) =>
+            old.map((t) => (t.id === task.id ? updatedTask : t))
+          );
+          
+          // Invalidate to trigger refetch in background (non-blocking)
+          queryClient.invalidateQueries({ queryKey: ['task', task.id] });
+          queryClient.invalidateQueries({ queryKey: ['tasks', task.todoListId] });
+        },
+        onError: (error) => {
+          handleApiError(error, t('taskDetails.updateTaskFailed', { defaultValue: 'Failed to update task. Please try again.' }));
+        },
+      }
+    );
+  }, [editDescription, editDueDate, editReminders, task, updateTaskMutation, queryClient, t]);
+
   const restoreTaskMutation = useQueuedMutation<Task, ApiError, { id: number }>({
     mutationFn: ({ id }) => tasksService.restoreTask(id),
     onError: (err) => {
@@ -533,7 +679,80 @@ export default function TaskDetailsPage() {
           </div>
           {!isArchivedTask && (
             <button
-              onClick={() => setIsFullEditMode(true)}
+              onClick={useCallback(async () => {
+                // Refetch the task to ensure we have the latest data including reminderConfig
+                if (numericTaskId) {
+                  try {
+                    const freshTask = await queryClient.fetchQuery<Task>({
+                      queryKey: ['task', numericTaskId],
+                      queryFn: () => tasksService.getTaskById(numericTaskId),
+                    });
+                    
+                    setEditDescription(freshTask.description);
+                    setEditDueDate(freshTask.dueDate ? freshTask.dueDate.split('T')[0] : '');
+                    
+                    // Log raw data for debugging
+                    if (import.meta.env.DEV) {
+                      console.log('🔍 Raw task data from server:', {
+                        taskId: freshTask.id,
+                        reminderDaysBefore: freshTask.reminderDaysBefore,
+                        specificDayOfWeek: freshTask.specificDayOfWeek,
+                        reminderConfig: freshTask.reminderConfig,
+                        reminderConfigType: typeof freshTask.reminderConfig,
+                        reminderConfigIsArray: Array.isArray(freshTask.reminderConfig),
+                        reminderConfigRaw: freshTask.reminderConfig,
+                      });
+                    }
+                    
+                    const convertedReminders = convertBackendToReminders(
+                      freshTask.reminderDaysBefore,
+                      freshTask.specificDayOfWeek,
+                      freshTask.dueDate || null,
+                      freshTask.reminderConfig,
+                    );
+                    
+                    // Log conversion result
+                    if (import.meta.env.DEV) {
+                      console.log('🔍 Converted reminders:', {
+                        count: convertedReminders.length,
+                        reminders: convertedReminders,
+                      });
+                    }
+                    
+                    setEditReminders(convertedReminders);
+                  } catch (error) {
+                    // Fallback to cached data on error
+                    // Fallback to cached data
+                    const latestTask = queryClient.getQueryData<Task>(['task', numericTaskId]) || task;
+                    if (latestTask) {
+                      setEditDescription(latestTask.description);
+                      setEditDueDate(latestTask.dueDate ? latestTask.dueDate.split('T')[0] : '');
+                      const convertedReminders = convertBackendToReminders(
+                        latestTask.reminderDaysBefore,
+                        latestTask.specificDayOfWeek,
+                        latestTask.dueDate || null,
+                        latestTask.reminderConfig,
+                      );
+                      setEditReminders(convertedReminders);
+                    }
+                  }
+                } else {
+                  // Fallback if no taskId
+                  const latestTask = queryClient.getQueryData<Task>(['task', numericTaskId]) || task;
+                  if (latestTask) {
+                    setEditDescription(latestTask.description);
+                    setEditDueDate(latestTask.dueDate ? latestTask.dueDate.split('T')[0] : '');
+                    const convertedReminders = convertBackendToReminders(
+                      latestTask.reminderDaysBefore,
+                      latestTask.specificDayOfWeek,
+                      latestTask.dueDate || null,
+                      latestTask.reminderConfig,
+                    );
+                    setEditReminders(convertedReminders);
+                  }
+                }
+                setIsFullEditMode(true);
+              }, [task, queryClient, numericTaskId])}
               className="glass-button text-sm font-medium"
             >
               {t('common.edit', { defaultValue: 'Edit' })}
@@ -601,38 +820,34 @@ export default function TaskDetailsPage() {
 
             {/* Reminders */}
             {(() => {
-              // Check if task has any reminder data
-              const hasReminderData = 
-                (task.reminderDaysBefore && Array.isArray(task.reminderDaysBefore) && task.reminderDaysBefore.length > 0) ||
-                (task.specificDayOfWeek !== null && task.specificDayOfWeek !== undefined && task.specificDayOfWeek >= 0 && task.specificDayOfWeek <= 6);
-              
-              if (!hasReminderData) {
-                return null;
-              }
-
+              // Convert all reminders (including reminderConfig)
               const reminders = convertBackendToReminders(
                 task.reminderDaysBefore,
                 task.specificDayOfWeek,
                 task.dueDate || null,
+                task.reminderConfig,
               );
 
+              // Debug logging
+              if (import.meta.env.DEV) {
+                console.log('🔍 View Mode - Task Reminder Data:', {
+                  taskId: task.id,
+                  taskDescription: task.description,
+                  reminderDaysBefore: task.reminderDaysBefore,
+                  specificDayOfWeek: task.specificDayOfWeek,
+                  dueDate: task.dueDate,
+                  reminderConfig: task.reminderConfig,
+                  reminderConfigType: typeof task.reminderConfig,
+                  reminderConfigIsArray: Array.isArray(task.reminderConfig),
+                  reminderConfigStringified: JSON.stringify(task.reminderConfig),
+                  convertedRemindersCount: reminders.length,
+                  convertedReminders: reminders,
+                });
+              }
+
+              // Show reminders section if there are any reminders
               if (reminders.length === 0) {
-                // If we have reminder data but conversion returned empty, show debug info
-                return (
-                  <div className="mb-6">
-                    <h3 className="premium-header-section text-lg mb-4">
-                      {t('reminders.title', { defaultValue: 'Reminders' })}
-                    </h3>
-                    <div className="premium-card p-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div>Reminder data exists but couldn't be converted.</div>
-                      <div className="text-xs mt-2 opacity-75">
-                        reminderDaysBefore: {JSON.stringify(task.reminderDaysBefore)}, 
-                        specificDayOfWeek: {String(task.specificDayOfWeek)},
-                        dueDate: {task.dueDate ? 'set' : 'not set'}
-                      </div>
-                    </div>
-                  </div>
-                );
+                return null;
               }
 
               return (
@@ -641,28 +856,71 @@ export default function TaskDetailsPage() {
                     {t('reminders.title', { defaultValue: 'Reminders' })}
                   </h3>
                   <div className="space-y-3">
-                    {reminders.map((reminder, idx) => (
-                      <div 
-                        key={idx} 
-                        className="premium-card p-4"
-                      >
-                        <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                          <span className="text-xl">
-                            {reminder.hasAlarm ? '🔔' : '⏰'}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {formatReminderDisplay(reminder, t)}
-                            </div>
-                            {reminder.hasAlarm && (
-                              <div className="text-xs text-primary-600 dark:text-primary-400 mt-1">
-                                {t('reminders.alarmOn', { defaultValue: 'Alarm enabled' })}
+                    {reminders.map((reminder, idx) => {
+                      const timeStr = reminder.time || '09:00';
+                      const displayText = formatReminderDisplay(reminder, t);
+                      
+                      return (
+                        <div 
+                          key={reminder.id || idx} 
+                          className="premium-card p-4 hover:shadow-lg transition-shadow"
+                        >
+                          <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                            <span className="text-xl flex-shrink-0">
+                              {reminder.hasAlarm ? '🔔' : '⏰'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                {displayText}
                               </div>
-                            )}
+                              
+                              {/* Additional information */}
+                              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span className="flex items-center gap-1">
+                                  <span>🕐</span>
+                                  <span>{timeStr}</span>
+                                </span>
+                                
+                                {reminder.hasAlarm && (
+                                  <span className="flex items-center gap-1 text-primary-600 dark:text-primary-400">
+                                    <span>🔔</span>
+                                    <span>{t('reminders.alarmOn', { defaultValue: 'Alarm enabled' })}</span>
+                                  </span>
+                                )}
+                                
+                                {reminder.daysBefore !== undefined && reminder.daysBefore > 0 && task.dueDate && (
+                                  <span className="flex items-center gap-1">
+                                    <span>📅</span>
+                                    <span>
+                                      {(() => {
+                                        const due = new Date(task.dueDate);
+                                        const reminderDate = new Date(due);
+                                        reminderDate.setDate(reminderDate.getDate() - reminder.daysBefore);
+                                        return reminderDate.toLocaleDateString();
+                                      })()}
+                                    </span>
+                                  </span>
+                                )}
+                                
+                                {reminder.timeframe === ReminderTimeframe.EVERY_DAY && (
+                                  <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                    <span>🔄</span>
+                                    <span>{t('reminders.recurring', { defaultValue: 'Recurring' })}</span>
+                                  </span>
+                                )}
+                                
+                                {reminder.timeframe === ReminderTimeframe.EVERY_WEEK && (
+                                  <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                    <span>🔄</span>
+                                    <span>{t('reminders.recurring', { defaultValue: 'Recurring' })}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -700,123 +958,18 @@ export default function TaskDetailsPage() {
 
             <ReminderConfigComponent
               reminders={editReminders}
-              onRemindersChange={(newReminders) => {
-                // Update local state immediately for instant UI feedback
-                setEditReminders(newReminders);
-                
-                // Auto-save reminders in background when they change
-                if (task) {
-                  const updateData: UpdateTaskDto = {};
-                  
-                  // Use editDueDate if set, otherwise use task's dueDate
-                  const dueDateForConversion = editDueDate.trim()
-                    ? new Date(editDueDate).toISOString()
-                    : (task.dueDate || undefined);
-                  
-                  const reminderData = convertRemindersToBackend(newReminders, dueDateForConversion);
-                  
-                  // Always set these fields explicitly
-                  updateData.reminderDaysBefore = reminderData.reminderDaysBefore || [];
-                  updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
-                    ? reminderData.specificDayOfWeek 
-                    : null;
-
-                  // Save in background without blocking UI
-                  updateTaskMutation.mutate(
-                    { id: task.id, data: updateData },
-                    {
-                      onSuccess: (updatedTask) => {
-                        // Update the task query data immediately with the saved reminders
-                        queryClient.setQueryData<Task>(['task', task.id], (old) => {
-                          if (!old) return old;
-                          return {
-                            ...old,
-                            reminderDaysBefore: updatedTask.reminderDaysBefore || [],
-                            specificDayOfWeek: updatedTask.specificDayOfWeek ?? null,
-                            dueDate: updatedTask.dueDate ?? old.dueDate,
-                          };
-                        });
-                        
-                        // Also invalidate to ensure fresh data
-                        queryClient.invalidateQueries({ queryKey: ['task', task.id] });
-                        queryClient.invalidateQueries({ queryKey: ['tasks', task.todoListId] });
-                      },
-                      onError: (error) => {
-                        // Show error only if save fails
-                        handleApiError(error, t('taskDetails.updateTaskFailed', { defaultValue: 'Failed to save reminders' }));
-                        // Revert to previous state on error
-                        const previousReminders = convertBackendToReminders(
-                          task.reminderDaysBefore,
-                          task.specificDayOfWeek,
-                          task.dueDate || null,
-                        );
-                        setEditReminders(previousReminders);
-                      },
-                    }
-                  );
-                }
-              }}
+              onRemindersChange={handleRemindersChange}
             />
 
             <div className={`flex gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <button
-                onClick={() => {
-                  setIsFullEditMode(false);
-                  if (task) {
-                    setEditDescription(task.description);
-                    setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
-                    const convertedReminders = convertBackendToReminders(
-                      task.reminderDaysBefore,
-                      task.specificDayOfWeek,
-                      task.dueDate || null,
-                    );
-                    setEditReminders(convertedReminders);
-                  }
-                }}
+                onClick={handleCancelEdit}
                 className="flex-1 glass-button"
               >
                 {t('common.cancel')}
               </button>
               <button
-                onClick={() => {
-                  if (!editDescription.trim()) {
-                    toast.error(t('taskDetails.descriptionRequired', { defaultValue: 'Description is required' }));
-                    return;
-                  }
-
-                  const updateData: UpdateTaskDto = {
-                    description: editDescription.trim(),
-                  };
-
-                  if (editDueDate.trim()) {
-                    const date = new Date(editDueDate);
-                    if (!isNaN(date.getTime())) {
-                      updateData.dueDate = date.toISOString();
-                    }
-                  } else {
-                    updateData.dueDate = null;
-                  }
-
-                  const dueDateForConversion = updateData.dueDate || (task?.dueDate || undefined);
-                  const reminderData = convertRemindersToBackend(editReminders, dueDateForConversion);
-                  
-                  updateData.reminderDaysBefore = reminderData.reminderDaysBefore || [];
-                  updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
-                    ? reminderData.specificDayOfWeek 
-                    : null;
-
-                  // Close edit mode immediately, save in background
-                  setIsFullEditMode(false);
-                  
-                  updateTaskMutation.mutate(
-                    { id: task.id, data: updateData },
-                    {
-                      onSuccess: () => {
-                        toast.success(t('taskDetails.taskUpdated'));
-                      },
-                    }
-                  );
-                }}
+                onClick={handleSaveTask}
                 disabled={updateTaskMutation.isPending || !editDescription.trim()}
                 className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >

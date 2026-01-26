@@ -44,6 +44,7 @@ export interface Task {
   dueDate: string | null;
   reminderDaysBefore: number[];
   specificDayOfWeek: number | null;
+  reminderConfig?: any; // JSON field for storing reminder configurations
   createdAt: string;
   updatedAt: string;
   todoList?: ToDoList;
@@ -101,6 +102,7 @@ export interface CreateTaskDto {
   dueDate?: string;
   reminderDaysBefore?: number[];
   specificDayOfWeek?: number;
+  reminderConfig?: any;
 }
 
 export interface UpdateTaskDto {
@@ -109,6 +111,7 @@ export interface UpdateTaskDto {
   dueDate?: string | null;
   reminderDaysBefore?: number[];
   specificDayOfWeek?: number | null;
+  reminderConfig?: any;
 }
 
 export interface CreateStepDto {

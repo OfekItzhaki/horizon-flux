@@ -63,6 +63,7 @@ export interface Task {
     dueDate: string | null;
     reminderDaysBefore: number[];
     specificDayOfWeek: number | null;
+    reminderConfig?: any;
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
@@ -74,13 +75,15 @@ export interface CreateTaskDto {
     dueDate?: string;
     specificDayOfWeek?: number;
     reminderDaysBefore?: number[];
+    reminderConfig?: any;
     completed?: boolean;
 }
 export interface UpdateTaskDto {
     description?: string;
-    dueDate?: string;
-    specificDayOfWeek?: number;
+    dueDate?: string | null;
+    specificDayOfWeek?: number | null;
     reminderDaysBefore?: number[];
+    reminderConfig?: any;
     completed?: boolean;
     order?: number;
 }

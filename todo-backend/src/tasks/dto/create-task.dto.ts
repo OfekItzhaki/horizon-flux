@@ -55,6 +55,13 @@ export class CreateTaskDto {
   reminderDaysBefore?: number[];
 
   @ApiPropertyOptional({
+    description: 'Reminder configurations as JSON (for storing "every day" and other reminder types)',
+    example: [{ timeframe: 'EVERY_DAY', time: '09:00', hasAlarm: true }],
+  })
+  @IsOptional()
+  reminderConfig?: any;
+
+  @ApiPropertyOptional({
     description: 'Whether the task is completed',
     example: false,
     default: false,

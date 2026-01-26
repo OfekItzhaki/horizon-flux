@@ -49,13 +49,12 @@ export const formatReminderDisplay = (reminder: ReminderConfig): string => {
 
 /**
  * Convert reminder configurations to backend format
- * Note: EVERY_DAY reminders are handled client-side only via notifications
  */
 export const convertRemindersToBackend = (
   reminders: ReminderConfig[],
   dueDate?: string,
-): { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number } => {
-  const result: { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number } = {};
+): { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number | null; reminderConfig?: any } => {
+  const result: { dueDate?: string; reminderDaysBefore?: number[]; specificDayOfWeek?: number | null; reminderConfig?: any } = {};
 
   if (dueDate) {
     result.dueDate = new Date(dueDate).toISOString();
@@ -63,13 +62,13 @@ export const convertRemindersToBackend = (
 
   const daysBefore: number[] = [];
   let dayOfWeek: number | undefined;
+  const reminderConfigs: ReminderConfig[] = [];
 
   reminders.forEach((reminder) => {
-    // Note: EVERY_DAY reminders are NOT saved to backend (backend only supports 0-6 for weekly)
-    // They're handled client-side via notifications only
-    // Skip EVERY_DAY reminders for backend storage
+    // Store EVERY_DAY reminders in reminderConfig JSON field
     if (reminder.timeframe === ReminderTimeframe.EVERY_DAY) {
-      return; // Skip - handled by notification system only
+      reminderConfigs.push(reminder);
+      return;
     }
     
     // For reminders with daysBefore (relative to due date) - this is the primary use case
@@ -106,12 +105,64 @@ export const convertRemindersToBackend = (
     result.reminderDaysBefore = [];
   }
 
-  // Set specificDayOfWeek (0-6 for weekly reminders only, backend doesn't support "every day")
+  // Set specificDayOfWeek (0-6 for weekly reminders only)
   if (dayOfWeek !== undefined && dayOfWeek >= 0 && dayOfWeek <= 6) {
     result.specificDayOfWeek = dayOfWeek;
+  } else {
+    result.specificDayOfWeek = null;
+  }
+
+  // Store reminder configurations (including "every day" reminders) in JSON field
+  if (reminderConfigs.length > 0) {
+    result.reminderConfig = reminderConfigs;
+  } else {
+    result.reminderConfig = null;
   }
 
   return result;
+};
+
+/**
+ * Convert backend format to ReminderConfig format
+ */
+export const convertBackendToReminders = (
+  reminderDaysBefore: number[] | undefined,
+  specificDayOfWeek: number | null | undefined,
+  dueDate: string | null | undefined,
+  reminderConfig?: any,
+): ReminderConfig[] => {
+  const reminders: ReminderConfig[] = [];
+
+  // Convert reminderDaysBefore array to ReminderConfig
+  if (reminderDaysBefore && reminderDaysBefore.length > 0 && dueDate) {
+    reminderDaysBefore.forEach((days) => {
+      reminders.push({
+        id: `days-before-${days}`,
+        timeframe: ReminderTimeframe.SPECIFIC_DATE,
+        time: '09:00',
+        daysBefore: days,
+      });
+    });
+  }
+
+  // Convert specificDayOfWeek to ReminderConfig
+  if (specificDayOfWeek !== null && specificDayOfWeek !== undefined && specificDayOfWeek >= 0 && specificDayOfWeek <= 6) {
+    reminders.push({
+      id: `day-of-week-${specificDayOfWeek}`,
+      timeframe: ReminderTimeframe.EVERY_WEEK,
+      time: '09:00',
+      dayOfWeek: specificDayOfWeek,
+    });
+  }
+
+  // Convert reminderConfig JSON field (contains "every day" and other reminders)
+  if (reminderConfig && Array.isArray(reminderConfig)) {
+    reminderConfig.forEach((config: ReminderConfig) => {
+      reminders.push(config);
+    });
+  }
+
+  return reminders;
 };
 
 /**

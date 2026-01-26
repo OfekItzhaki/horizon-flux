@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Skeleton from './components/Skeleton';
+import { useNotifications } from './hooks/useNotifications';
 
 // Lazy load pages for code splitting - faster initial load
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -31,30 +32,40 @@ const PageLoader = () => (
   </div>
 );
 
+function AppContent() {
+  // Always call useNotifications at the top level to maintain consistent hook order
+  // The hook internally guards against running when not authenticated
+  useNotifications();
+  
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/lists" replace />} />
+          <Route path="lists" element={<ListsPage />} />
+          <Route path="lists/:listId/tasks" element={<TasksPage />} />
+          <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="analysis" element={<AnalysisPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/lists" replace />} />
-              <Route path="lists" element={<ListsPage />} />
-              <Route path="lists/:listId/tasks" element={<TasksPage />} />
-              <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="analysis" element={<AnalysisPage />} />
-            </Route>
-          </Routes>
-        </Suspense>
+        <AppContent />
       </AuthProvider>
     </ThemeProvider>
   );

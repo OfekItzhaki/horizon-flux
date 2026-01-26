@@ -46,7 +46,9 @@ export function useQueuedMutation<
           }
         } catch (error) {
           // If onMutate throws, continue anyway
-          console.warn('onMutate error:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('onMutate error:', error);
+          }
         }
       }
 

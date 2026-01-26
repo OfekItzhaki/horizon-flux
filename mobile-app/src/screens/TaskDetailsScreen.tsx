@@ -21,7 +21,7 @@ import { Task, Step, UpdateTaskDto, ReminderConfig, ReminderTimeframe, ReminderS
 import ReminderConfigComponent from '../components/ReminderConfig';
 import DatePicker from '../components/DatePicker';
 import { scheduleTaskReminders, cancelAllTaskNotifications } from '../services/notifications.service';
-import { EveryDayRemindersStorage, ReminderAlarmsStorage, ReminderTimesStorage } from '../utils/storage';
+import { ReminderAlarmsStorage, ReminderTimesStorage } from '../utils/storage';
 import { convertRemindersToBackend, formatDate, formatReminderDisplay } from '../utils/helpers';
 import { handleApiError, isAuthError, showErrorAlert } from '../utils/errorHandler';
 import { TaskHeader } from '../components/task/TaskHeader';
@@ -630,6 +630,7 @@ export default function TaskDetailsScreen() {
     reminderDaysBefore: number[] | undefined,
     specificDayOfWeek: number | null | undefined,
     dueDate: string | null | undefined,
+    reminderConfig?: any,
   ): ReminderConfig[] => {
     const reminders: ReminderConfig[] = [];
 
@@ -647,8 +648,6 @@ export default function TaskDetailsScreen() {
     }
 
     // Convert specificDayOfWeek to ReminderConfig
-    // Note: Backend only supports 0-6 (weekly reminders), so "every day" reminders
-    // are handled client-side only via notifications
     if (specificDayOfWeek !== null && specificDayOfWeek !== undefined && specificDayOfWeek >= 0 && specificDayOfWeek <= 6) {
       reminders.push({
         id: `day-of-week-${specificDayOfWeek}`,
@@ -658,8 +657,12 @@ export default function TaskDetailsScreen() {
       });
     }
     
-    // Note: EVERY_DAY reminders are stored client-side only (not in backend)
-    // They're handled via the notification system but won't persist in task details
+    // Convert reminderConfig JSON field (contains "every day" and other reminders)
+    if (reminderConfig && Array.isArray(reminderConfig)) {
+      reminderConfig.forEach((config: ReminderConfig) => {
+        reminders.push(config);
+      });
+    }
 
     return reminders;
   };
@@ -678,19 +681,16 @@ export default function TaskDetailsScreen() {
       setEditDescription(taskData.description);
       setEditDueDate(taskData.dueDate ? taskData.dueDate.split('T')[0] : '');
       // Convert reminderDaysBefore to ReminderConfig format
-      let convertedReminders = convertBackendToReminders(
+      const convertedReminders = convertBackendToReminders(
         taskData.reminderDaysBefore,
         taskData.specificDayOfWeek,
         taskData.dueDate || undefined,
+        taskData.reminderConfig,
       );
       
-      // Load client-side stored "every day" reminders
-      const everyDayReminders = await EveryDayRemindersStorage.getRemindersForTask(taskId);
-      setDisplayEveryDayReminders(everyDayReminders || []);
-      
-      if (everyDayReminders && everyDayReminders.length > 0) {
-        convertedReminders = [...convertedReminders, ...everyDayReminders];
-      }
+      // Extract "every day" reminders for display purposes
+      const everyDayReminders = convertedReminders.filter(r => r.timeframe === ReminderTimeframe.EVERY_DAY);
+      setDisplayEveryDayReminders(everyDayReminders);
       
       // Load alarm states for all reminders
       const alarmStates = await ReminderAlarmsStorage.getAlarmsForTask(taskId);
@@ -771,17 +771,6 @@ export default function TaskDetailsScreen() {
       }
 
       const updatedTask = await tasksService.update(taskId, updateData);
-      
-      // Separate EVERY_DAY reminders (client-side storage) from others
-      const everyDayReminders = editReminders.filter(r => r.timeframe === ReminderTimeframe.EVERY_DAY);
-      const otherReminders = editReminders.filter(r => r.timeframe !== ReminderTimeframe.EVERY_DAY);
-      
-      // Store EVERY_DAY reminders client-side
-      if (everyDayReminders.length > 0) {
-        await EveryDayRemindersStorage.setRemindersForTask(taskId, everyDayReminders);
-      } else {
-        await EveryDayRemindersStorage.removeRemindersForTask(taskId);
-      }
       
       // Store reminder times for all reminders (backend doesn't store times)
       // Use normalized IDs that will match after reload from backend
@@ -941,8 +930,12 @@ export default function TaskDetailsScreen() {
         task.specificDayOfWeek,
         task.dueDate || undefined,
       );
-      const everyDayReminders = await EveryDayRemindersStorage.getRemindersForTask(taskId) || [];
-      const allReminders = [...backendReminders, ...everyDayReminders];
+      const allReminders = convertBackendToReminders(
+        task.reminderDaysBefore,
+        task.specificDayOfWeek,
+        task.dueDate || undefined,
+        task.reminderConfig,
+      );
 
       // Apply updated alarm states to all reminders
       const updatedAlarmStates = { ...reminderAlarmStates, [reminderId]: newAlarmState };
@@ -1018,14 +1011,12 @@ export default function TaskDetailsScreen() {
   
   // Prepare display reminders
   const displayReminders = !isEditing ? (() => {
-    const backendReminders = convertBackendToReminders(
+    const allDisplayReminders = convertBackendToReminders(
       task.reminderDaysBefore,
       task.specificDayOfWeek,
       task.dueDate || undefined,
+      task.reminderConfig,
     );
-    
-    // Add client-side stored EVERY_DAY reminders for display
-    let allDisplayReminders = [...backendReminders, ...displayEveryDayReminders];
     
     // Apply alarm states and saved times from state
     allDisplayReminders = allDisplayReminders.map(r => {

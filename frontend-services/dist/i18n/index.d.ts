@@ -27,6 +27,7 @@ export declare const resources: {
                 readonly unknownError: "Unknown error";
                 readonly errorOccurred: "An error occurred";
                 readonly retry: "Retry";
+                readonly edit: "Edit";
             };
             readonly login: {
                 readonly title: "Sign in to Tasks Management";
@@ -101,6 +102,8 @@ export declare const resources: {
                 readonly stepsTitle: "Steps";
                 readonly noSteps: "No steps yet.";
                 readonly addStepFab: "Add step";
+                readonly dueDate: "Due Date";
+                readonly descriptionRequired: "Description is required";
                 readonly form: {
                     readonly descriptionLabel: "Description";
                     readonly descriptionPlaceholder: "e.g. Call the supplier";
@@ -184,6 +187,31 @@ export declare const resources: {
                 readonly retryLists: "Retry Lists";
                 readonly retryTasks: "Retry Tasks";
             };
+            readonly reminders: {
+                readonly title: "Reminders";
+                readonly add: "Add";
+                readonly empty: "No reminders set";
+                readonly edit: "Edit";
+                readonly configure: "Configure Reminder";
+                readonly timeframe: "Timeframe";
+                readonly dateOption: "Date Option";
+                readonly customDate: "Custom Date";
+                readonly daysBefore: "Days Before Due Date";
+                readonly dayOfWeek: "Day of Week";
+                readonly time: "Time";
+                readonly enableAlarm: "Enable Alarm";
+                readonly alarmOn: "Alarm on";
+                readonly alarmOff: "Alarm off";
+                readonly beforeDueDate: "before due date";
+                readonly at: "at";
+                readonly every: "Every";
+                readonly everyDay: "Every day";
+                readonly everyMonday: "Every Monday";
+                readonly firstOfMonth: "1st of every month";
+                readonly janFirst: "Jan 1st every year";
+                readonly specificDate: "Specific date";
+                readonly sameDateYearly: "Same date every year";
+            };
         };
     };
     readonly he: {
@@ -214,6 +242,7 @@ export declare const resources: {
                 readonly unknownError: "שגיאה לא ידועה";
                 readonly errorOccurred: "אירעה שגיאה";
                 readonly retry: "נסה שוב";
+                readonly edit: "ערוך";
             };
             readonly login: {
                 readonly title: "התחברות למנהל המשימות";
@@ -288,6 +317,8 @@ export declare const resources: {
                 readonly stepsTitle: "שלבים";
                 readonly noSteps: "אין שלבים עדיין.";
                 readonly addStepFab: "הוסף שלב";
+                readonly dueDate: "תאריך יעד";
+                readonly descriptionRequired: "תיאור נדרש";
                 readonly form: {
                     readonly descriptionLabel: "תיאור";
                     readonly descriptionPlaceholder: "לדוגמה: להתקשר לספק";
@@ -370,6 +401,31 @@ export declare const resources: {
                 readonly loadTasksFailed: "טעינת המשימות נכשלה";
                 readonly retryLists: "נסה שוב - רשימות";
                 readonly retryTasks: "נסה שוב - משימות";
+            };
+            readonly reminders: {
+                readonly title: "תזכורות";
+                readonly add: "הוסף";
+                readonly empty: "לא הוגדרו תזכורות";
+                readonly edit: "ערוך";
+                readonly configure: "הגדר תזכורת";
+                readonly timeframe: "מסגרת זמן";
+                readonly dateOption: "אפשרות תאריך";
+                readonly customDate: "תאריך מותאם";
+                readonly daysBefore: "ימים לפני תאריך היעד";
+                readonly dayOfWeek: "יום בשבוע";
+                readonly time: "שעה";
+                readonly enableAlarm: "הפעל התראה";
+                readonly alarmOn: "התראה פעילה";
+                readonly alarmOff: "התראה כבויה";
+                readonly beforeDueDate: "לפני תאריך היעד";
+                readonly at: "ב-";
+                readonly every: "כל";
+                readonly everyDay: "כל יום";
+                readonly everyMonday: "כל יום שני";
+                readonly firstOfMonth: "ראשון בכל חודש";
+                readonly janFirst: "1 בינואר בכל שנה";
+                readonly specificDate: "תאריך ספציפי";
+                readonly sameDateYearly: "אותו תאריך בכל שנה";
             };
         };
     };

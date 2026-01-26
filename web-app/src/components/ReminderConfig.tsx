@@ -1,0 +1,408 @@
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  ReminderConfig,
+  ReminderTimeframe,
+  ReminderSpecificDate,
+  DAY_NAMES,
+  formatReminderDisplay,
+} from '../utils/reminderHelpers';
+import { useTheme } from '../context/ThemeContext';
+import { isRtlLanguage } from '@tasks-management/frontend-services';
+
+interface ReminderConfigProps {
+  reminders: ReminderConfig[];
+  onRemindersChange: (reminders: ReminderConfig[]) => void;
+}
+
+const TIMEFRAMES = [
+  { value: ReminderTimeframe.SPECIFIC_DATE, label: 'Specific Date' },
+  { value: ReminderTimeframe.EVERY_DAY, label: 'Every Day' },
+  { value: ReminderTimeframe.EVERY_WEEK, label: 'Every Week' },
+  { value: ReminderTimeframe.EVERY_MONTH, label: 'Every Month' },
+  { value: ReminderTimeframe.EVERY_YEAR, label: 'Every Year' },
+];
+
+const SPECIFIC_DATES = [
+  { value: ReminderSpecificDate.START_OF_WEEK, label: 'Start of Week (Monday)' },
+  { value: ReminderSpecificDate.START_OF_MONTH, label: 'Start of Month (1st)' },
+  { value: ReminderSpecificDate.START_OF_YEAR, label: 'Start of Year (Jan 1st)' },
+  { value: ReminderSpecificDate.CUSTOM_DATE, label: 'Custom Date' },
+];
+
+export default function ReminderConfigComponent({ reminders, onRemindersChange }: ReminderConfigProps) {
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
+  const { isDark } = useTheme();
+  const [editingReminder, setEditingReminder] = useState<ReminderConfig | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+
+  const addReminder = () => {
+    const newReminder: ReminderConfig = {
+      id: Date.now().toString(),
+      timeframe: ReminderTimeframe.SPECIFIC_DATE,
+      time: '09:00',
+      specificDate: ReminderSpecificDate.CUSTOM_DATE,
+    };
+    setEditingReminder(newReminder);
+    setShowEditor(true);
+  };
+
+  const saveReminder = (reminder: ReminderConfig) => {
+    // Save the editing reminder ID before closing modal
+    const editingId = editingReminder?.id;
+    
+    // Close modal immediately for better UX
+    setEditingReminder(null);
+    setShowEditor(false);
+    
+    // Update reminders in background
+    if (editingId) {
+      const existingIndex = reminders.findIndex((r) => r.id === editingId);
+      if (existingIndex >= 0) {
+        // Update existing reminder
+        const updated = reminders.map((r) =>
+          r.id === editingId
+            ? {
+                ...reminder,
+                id: reminder.id,
+                time: reminder.time || '09:00',
+              }
+            : r
+        );
+        onRemindersChange(updated);
+      } else {
+        // Add new reminder (shouldn't happen, but handle it)
+        onRemindersChange([...reminders, reminder]);
+      }
+    } else {
+      // Add new reminder
+      onRemindersChange([...reminders, reminder]);
+    }
+  };
+
+  const removeReminder = (id: string) => {
+    onRemindersChange(reminders.filter((r) => r.id !== id));
+  };
+
+  const editReminder = (reminder: ReminderConfig) => {
+    setEditingReminder(reminder);
+    setShowEditor(true);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={`flex items-center justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {t('reminders.title', { defaultValue: 'Reminders' })}
+        </h3>
+        <button
+          onClick={addReminder}
+          className="glass-button text-sm font-medium"
+        >
+          + {t('reminders.add', { defaultValue: 'Add' })}
+        </button>
+      </div>
+
+      {reminders.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+          {t('reminders.empty', { defaultValue: 'No reminders set' })}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {reminders.map((reminder) => (
+            <div
+              key={reminder.id}
+              className="premium-card p-4 flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                  {formatReminderDisplay(reminder, t)}
+                </span>
+                <button
+                  onClick={() => {
+                    const updated = reminders.map((r) =>
+                      r.id === reminder.id ? { ...r, hasAlarm: !r.hasAlarm } : r
+                    );
+                    onRemindersChange(updated);
+                  }}
+                  className="text-lg"
+                  title={reminder.hasAlarm ? t('reminders.alarmOn', { defaultValue: 'Alarm on' }) : t('reminders.alarmOff', { defaultValue: 'Alarm off' })}
+                >
+                  {reminder.hasAlarm ? '🔔' : '🔕'}
+                </button>
+              </div>
+              <div className={`flex gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <button
+                  onClick={() => editReminder(reminder)}
+                  className="px-3 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                >
+                  {t('common.edit', { defaultValue: 'Edit' })}
+                </button>
+                <button
+                  onClick={() => removeReminder(reminder.id)}
+                  className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Reminder Editor Modal */}
+      {showEditor && editingReminder && (
+        <ReminderEditor
+          reminder={editingReminder}
+          onSave={saveReminder}
+          onCancel={() => {
+            setEditingReminder(null);
+            setShowEditor(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ReminderEditorProps {
+  reminder: ReminderConfig;
+  onSave: (reminder: ReminderConfig) => void;
+  onCancel: () => void;
+}
+
+function ReminderEditor({ reminder, onSave, onCancel }: ReminderEditorProps) {
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
+  const { isDark } = useTheme();
+  const [config, setConfig] = useState<ReminderConfig>({
+    ...reminder,
+    time: reminder.time || '09:00',
+  });
+  const [daysBefore, setDaysBefore] = useState<string>(
+    reminder.daysBefore?.toString() || ''
+  );
+  const [customDate, setCustomDate] = useState<string>(
+    reminder.customDate ? reminder.customDate.split('T')[0] : ''
+  );
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onCancel]);
+
+  const handleSave = () => {
+    let timeToUse = config.time || '09:00';
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(timeToUse)) {
+      timeToUse = '09:00';
+    }
+
+    const reminderToSave: ReminderConfig = {
+      ...config,
+      time: timeToUse,
+      daysBefore: daysBefore ? parseInt(daysBefore, 10) : undefined,
+      customDate: customDate ? new Date(customDate).toISOString() : undefined,
+      dayOfWeek: config.timeframe === ReminderTimeframe.EVERY_WEEK && config.dayOfWeek === undefined
+        ? 1
+        : config.dayOfWeek,
+    };
+
+    onSave(reminderToSave);
+  };
+
+  // Use portal to render modal at body level, outside any parent containers
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in"
+      onClick={onCancel}
+    >
+      <div 
+        className="premium-card max-w-lg w-full max-h-[90vh] shadow-2xl animate-scale-in flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Sticky Header */}
+        <div className={`flex items-center justify-between p-6 pb-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl z-10 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <h3 className="premium-header-section text-xl">
+            {t('reminders.configure', { defaultValue: 'Configure Reminder' })}
+          </h3>
+          <button
+            onClick={onCancel}
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-3xl leading-none font-light w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label={t('common.close', { defaultValue: 'Close' })}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+
+        <div className="space-y-6">
+          {/* Timeframe Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              {t('reminders.timeframe', { defaultValue: 'Timeframe' })}:
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf.value}
+                  onClick={() =>
+                    setConfig({
+                      ...config,
+                      timeframe: tf.value,
+                      specificDate:
+                        tf.value === ReminderTimeframe.SPECIFIC_DATE
+                          ? ReminderSpecificDate.CUSTOM_DATE
+                          : undefined,
+                    })
+                  }
+                  className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    config.timeframe === tf.value
+                      ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transform scale-105'
+                      : 'glass-card text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:transform hover:scale-[1.02]'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Specific Date Options */}
+          {config.timeframe === ReminderTimeframe.SPECIFIC_DATE && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                {t('reminders.dateOption', { defaultValue: 'Date Option' })}:
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {SPECIFIC_DATES.map((sd) => (
+                  <button
+                    key={sd.value}
+                    onClick={() => setConfig({ ...config, specificDate: sd.value })}
+                    className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      config.specificDate === sd.value
+                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transform scale-105'
+                        : 'glass-card text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:transform hover:scale-[1.02]'
+                    }`}
+                  >
+                    {sd.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Custom Date Input */}
+          {config.timeframe === ReminderTimeframe.SPECIFIC_DATE &&
+            config.specificDate === ReminderSpecificDate.CUSTOM_DATE && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  {t('reminders.customDate', { defaultValue: 'Custom Date' })}:
+                </label>
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+                />
+              </div>
+            )}
+
+          {/* Days Before Due Date */}
+          {config.timeframe === ReminderTimeframe.SPECIFIC_DATE && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                {t('reminders.daysBefore', { defaultValue: 'Days Before Due Date' })}:
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={daysBefore}
+                onChange={(e) => setDaysBefore(e.target.value)}
+                placeholder="e.g. 1, 7"
+                className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              />
+            </div>
+          )}
+
+          {/* Day of Week (for EVERY_WEEK) */}
+          {config.timeframe === ReminderTimeframe.EVERY_WEEK && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                {t('reminders.dayOfWeek', { defaultValue: 'Day of Week' })}:
+              </label>
+              <select
+                value={config.dayOfWeek ?? 1}
+                onChange={(e) =>
+                  setConfig({ ...config, dayOfWeek: parseInt(e.target.value, 10) })
+                }
+                className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              >
+                {DAY_NAMES.map((day, index) => (
+                  <option key={index} value={index}>
+                    {day}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Time Input */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              {t('reminders.time', { defaultValue: 'Time' })}:
+            </label>
+            <input
+              type="time"
+              value={config.time || '09:00'}
+              onChange={(e) => setConfig({ ...config, time: e.target.value })}
+              className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+            />
+          </div>
+
+          {/* Alarm Toggle */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="hasAlarm"
+              checked={config.hasAlarm ?? false}
+              onChange={(e) => setConfig({ ...config, hasAlarm: e.target.checked })}
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <label htmlFor="hasAlarm" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('reminders.enableAlarm', { defaultValue: 'Enable Alarm' })}
+            </label>
+          </div>
+          </div>
+        </div>
+
+        {/* Sticky Footer */}
+        <div className={`flex gap-3 p-6 pt-4 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <button
+            onClick={onCancel}
+            className="flex-1 glass-button"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-glow transition-all"
+          >
+            {t('common.save')}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}

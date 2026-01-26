@@ -99,6 +99,21 @@
     @apply opacity-60;
   }
 
+  /* Premium Button - Selected State */
+  .premium-button-selected {
+    @apply bg-gradient-to-r from-primary-600 to-purple-600 text-white;
+    @apply shadow-lg shadow-primary-500/30;
+    @apply hover:shadow-xl hover:shadow-primary-500/40;
+    @apply scale-105;
+  }
+
+  /* Premium Button - Unselected State */
+  .premium-button-unselected {
+    @apply glass-card text-gray-700 dark:text-gray-300;
+    @apply hover:bg-white/90 dark:hover:bg-gray-800/90;
+    @apply hover:scale-102;
+  }
+
   /* Smooth Scroll */
   html {
     scroll-behavior: smooth;
@@ -119,5 +134,34 @@
 
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400 dark:bg-gray-600;
+  }
+
+  /* Animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.2s ease-out;
   }
 }

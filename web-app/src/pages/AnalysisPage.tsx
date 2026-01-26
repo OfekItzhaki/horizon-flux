@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { listsService } from '../services/lists.service';
 import { tasksService } from '../services/tasks.service';
 import { ToDoList, Task } from '@tasks-management/frontend-services';
@@ -50,6 +51,14 @@ export default function AnalysisPage() {
   if (hasError && !isLoading) {
     return (
       <div className={`space-y-6 ${isRtl ? 'rtl' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="mb-6">
+          <Link
+            to="/lists"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+          >
+            {t('tasks.backToLists', { defaultValue: '← Back to Lists' })}
+          </Link>
+        </div>
         <h1 className={`premium-header-main ${isRtl ? 'text-right' : 'text-left'}`}>
           {t('analysis.title', { defaultValue: 'Task Analysis' })}
         </h1>
@@ -231,6 +240,14 @@ export default function AnalysisPage() {
   if (isLoading) {
     return (
       <div className={`space-y-6 ${isRtl ? 'rtl' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="mb-6">
+          <Link
+            to="/lists"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+          >
+            {t('tasks.backToLists', { defaultValue: '← Back to Lists' })}
+          </Link>
+        </div>
         <Skeleton className="h-9 w-48 mx-auto" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -254,6 +271,14 @@ export default function AnalysisPage() {
 
   return (
     <div className={`space-y-6 animate-fade-in ${isRtl ? 'rtl' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="mb-6">
+        <Link
+          to="/lists"
+          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+        >
+          {t('tasks.backToLists', { defaultValue: '← Back to Lists' })}
+        </Link>
+      </div>
       <h1 className="premium-header-main">{t('analysis.title', { defaultValue: 'Task Analysis' })}</h1>
 
       {/* Overview Cards */}

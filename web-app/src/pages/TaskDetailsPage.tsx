@@ -7,6 +7,7 @@ import { tasksService } from '../services/tasks.service';
 import { stepsService } from '../services/steps.service';
 import FloatingActionButton from '../components/FloatingActionButton';
 import Skeleton from '../components/Skeleton';
+import ReminderConfigComponent from '../components/ReminderConfig';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardShortcuts } from '../utils/useKeyboardShortcuts';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
@@ -20,6 +21,12 @@ import {
   ListType,
 } from '@tasks-management/frontend-services';
 import { handleApiError, extractErrorMessage } from '../utils/errorHandler';
+import {
+  ReminderConfig,
+  convertBackendToReminders,
+  convertRemindersToBackend,
+  formatReminderDisplay,
+} from '../utils/reminderHelpers';
 
 export default function TaskDetailsPage() {
   const { t, i18n } = useTranslation();
@@ -35,6 +42,12 @@ export default function TaskDetailsPage() {
   const [newStepDescription, setNewStepDescription] = useState('');
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
   const [stepDescriptionDraft, setStepDescriptionDraft] = useState('');
+  
+  // Full edit mode state (for description, due date, reminders)
+  const [isFullEditMode, setIsFullEditMode] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editReminders, setEditReminders] = useState<ReminderConfig[]>([]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
@@ -100,8 +113,23 @@ export default function TaskDetailsPage() {
   });
 
   useEffect(() => {
-    if (task) setTaskDescriptionDraft(task.description);
-  }, [task]);
+    if (task) {
+      // Always sync task description draft
+      setTaskDescriptionDraft(task.description);
+      
+      // Only update edit form when not in edit mode to avoid overwriting user changes
+      if (!isFullEditMode) {
+        setEditDescription(task.description);
+        setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
+        const convertedReminders = convertBackendToReminders(
+          task.reminderDaysBefore,
+          task.specificDayOfWeek,
+          task.dueDate || null,
+        );
+        setEditReminders(convertedReminders);
+      }
+    }
+  }, [task, isFullEditMode]);
 
   const invalidateTask = (t: Task) => {
     // Non-blocking invalidations - don't await
@@ -434,9 +462,9 @@ export default function TaskDetailsPage() {
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-[#1f1f1f] rounded-lg shadow p-6">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-center space-x-3">
+      <div className="premium-card p-6">
+        <div className={`flex items-start justify-between gap-3 mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-3' : 'space-x-3'} flex-1`}>
           <input
             type="checkbox"
             checked={task.completed}
@@ -446,7 +474,7 @@ export default function TaskDetailsPage() {
                 data: { completed: !task.completed },
               });
             }}
-            className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
           />
             {isEditingTask ? (
               <div className="flex flex-col gap-2">
@@ -503,8 +531,16 @@ export default function TaskDetailsPage() {
               </h1>
             )}
           </div>
+          {!isArchivedTask && (
+            <button
+              onClick={() => setIsFullEditMode(true)}
+              className="glass-button text-sm font-medium"
+            >
+              {t('common.edit', { defaultValue: 'Edit' })}
+            </button>
+          )}
           {isArchivedTask && (
-            <div className="flex gap-2">
+            <div className={`flex gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <button
                 type="button"
                 disabled={false}
@@ -537,12 +573,256 @@ export default function TaskDetailsPage() {
           )}
         </div>
 
-        {task.dueDate && (
-          <div className="mb-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Due Date: </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {new Date(task.dueDate).toLocaleDateString()}
-            </span>
+        {/* Task Info Display (when not in full edit mode) */}
+        {!isFullEditMode && (
+          <>
+            {/* Due Date */}
+            {task.dueDate && (
+              <div className="mb-6">
+                <div className="premium-card p-4">
+                  <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                    <span className="text-lg">📅</span>
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        {t('taskDetails.dueDate', { defaultValue: 'Due Date' })}
+                      </div>
+                      <div className="text-base font-medium text-gray-900 dark:text-white">
+                        {new Date(task.dueDate).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reminders */}
+            {(() => {
+              // Check if task has any reminder data
+              const hasReminderData = 
+                (task.reminderDaysBefore && Array.isArray(task.reminderDaysBefore) && task.reminderDaysBefore.length > 0) ||
+                (task.specificDayOfWeek !== null && task.specificDayOfWeek !== undefined && task.specificDayOfWeek >= 0 && task.specificDayOfWeek <= 6);
+              
+              if (!hasReminderData) {
+                return null;
+              }
+
+              const reminders = convertBackendToReminders(
+                task.reminderDaysBefore,
+                task.specificDayOfWeek,
+                task.dueDate || null,
+              );
+
+              if (reminders.length === 0) {
+                // If we have reminder data but conversion returned empty, show debug info
+                return (
+                  <div className="mb-6">
+                    <h3 className="premium-header-section text-lg mb-4">
+                      {t('reminders.title', { defaultValue: 'Reminders' })}
+                    </h3>
+                    <div className="premium-card p-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div>Reminder data exists but couldn't be converted.</div>
+                      <div className="text-xs mt-2 opacity-75">
+                        reminderDaysBefore: {JSON.stringify(task.reminderDaysBefore)}, 
+                        specificDayOfWeek: {String(task.specificDayOfWeek)},
+                        dueDate: {task.dueDate ? 'set' : 'not set'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="mb-6">
+                  <h3 className="premium-header-section text-lg mb-4">
+                    {t('reminders.title', { defaultValue: 'Reminders' })}
+                  </h3>
+                  <div className="space-y-3">
+                    {reminders.map((reminder, idx) => (
+                      <div 
+                        key={idx} 
+                        className="premium-card p-4"
+                      >
+                        <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                          <span className="text-xl">
+                            {reminder.hasAlarm ? '🔔' : '⏰'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {formatReminderDisplay(reminder, t)}
+                            </div>
+                            {reminder.hasAlarm && (
+                              <div className="text-xs text-primary-600 dark:text-primary-400 mt-1">
+                                {t('reminders.alarmOn', { defaultValue: 'Alarm enabled' })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </>
+        )}
+
+        {/* Full Edit Form */}
+        {isFullEditMode && (
+          <div className="premium-card p-6 mb-6 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('taskDetails.form.descriptionLabel')}
+              </label>
+              <input
+                type="text"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="premium-input w-full"
+                placeholder={t('taskDetails.form.descriptionPlaceholder')}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('taskDetails.dueDate', { defaultValue: 'Due Date' })}
+              </label>
+              <input
+                type="date"
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+                className="premium-input w-full"
+              />
+            </div>
+
+            <ReminderConfigComponent
+              reminders={editReminders}
+              onRemindersChange={(newReminders) => {
+                // Update local state immediately for instant UI feedback
+                setEditReminders(newReminders);
+                
+                // Auto-save reminders in background when they change
+                if (task) {
+                  const updateData: UpdateTaskDto = {};
+                  
+                  // Use editDueDate if set, otherwise use task's dueDate
+                  const dueDateForConversion = editDueDate.trim()
+                    ? new Date(editDueDate).toISOString()
+                    : (task.dueDate || undefined);
+                  
+                  const reminderData = convertRemindersToBackend(newReminders, dueDateForConversion);
+                  
+                  // Always set these fields explicitly
+                  updateData.reminderDaysBefore = reminderData.reminderDaysBefore || [];
+                  updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
+                    ? reminderData.specificDayOfWeek 
+                    : null;
+
+                  // Save in background without blocking UI
+                  updateTaskMutation.mutate(
+                    { id: task.id, data: updateData },
+                    {
+                      onSuccess: (updatedTask) => {
+                        // Update the task query data immediately with the saved reminders
+                        queryClient.setQueryData<Task>(['task', task.id], (old) => {
+                          if (!old) return old;
+                          return {
+                            ...old,
+                            reminderDaysBefore: updatedTask.reminderDaysBefore || [],
+                            specificDayOfWeek: updatedTask.specificDayOfWeek ?? null,
+                            dueDate: updatedTask.dueDate ?? old.dueDate,
+                          };
+                        });
+                        
+                        // Also invalidate to ensure fresh data
+                        queryClient.invalidateQueries({ queryKey: ['task', task.id] });
+                        queryClient.invalidateQueries({ queryKey: ['tasks', task.todoListId] });
+                      },
+                      onError: (error) => {
+                        // Show error only if save fails
+                        handleApiError(error, t('taskDetails.updateTaskFailed', { defaultValue: 'Failed to save reminders' }));
+                        // Revert to previous state on error
+                        const previousReminders = convertBackendToReminders(
+                          task.reminderDaysBefore,
+                          task.specificDayOfWeek,
+                          task.dueDate || null,
+                        );
+                        setEditReminders(previousReminders);
+                      },
+                    }
+                  );
+                }
+              }}
+            />
+
+            <div className={`flex gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <button
+                onClick={() => {
+                  setIsFullEditMode(false);
+                  if (task) {
+                    setEditDescription(task.description);
+                    setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
+                    const convertedReminders = convertBackendToReminders(
+                      task.reminderDaysBefore,
+                      task.specificDayOfWeek,
+                      task.dueDate || null,
+                    );
+                    setEditReminders(convertedReminders);
+                  }
+                }}
+                className="flex-1 glass-button"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  if (!editDescription.trim()) {
+                    toast.error(t('taskDetails.descriptionRequired', { defaultValue: 'Description is required' }));
+                    return;
+                  }
+
+                  const updateData: UpdateTaskDto = {
+                    description: editDescription.trim(),
+                  };
+
+                  if (editDueDate.trim()) {
+                    const date = new Date(editDueDate);
+                    if (!isNaN(date.getTime())) {
+                      updateData.dueDate = date.toISOString();
+                    }
+                  } else {
+                    updateData.dueDate = null;
+                  }
+
+                  const dueDateForConversion = updateData.dueDate || (task?.dueDate || undefined);
+                  const reminderData = convertRemindersToBackend(editReminders, dueDateForConversion);
+                  
+                  updateData.reminderDaysBefore = reminderData.reminderDaysBefore || [];
+                  updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
+                    ? reminderData.specificDayOfWeek 
+                    : null;
+
+                  // Close edit mode immediately, save in background
+                  setIsFullEditMode(false);
+                  
+                  updateTaskMutation.mutate(
+                    { id: task.id, data: updateData },
+                    {
+                      onSuccess: () => {
+                        toast.success(t('taskDetails.taskUpdated'));
+                      },
+                    }
+                  );
+                }}
+                disabled={updateTaskMutation.isPending || !editDescription.trim()}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {updateTaskMutation.isPending ? t('common.loading') : t('common.save')}
+              </button>
+            </div>
           </div>
         )}
 

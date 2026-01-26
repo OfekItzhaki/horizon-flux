@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +83,14 @@ export default function ProfilePage() {
 
   return (
     <div className="animate-fade-in">
+      <div className="mb-6">
+        <Link
+          to="/lists"
+          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+        >
+          {t('tasks.backToLists', { defaultValue: '← Back to Lists' })}
+        </Link>
+      </div>
       <h1 className="premium-header-main mb-8">{t('profile.title')}</h1>
 
       <div className="premium-card p-8 mb-6">

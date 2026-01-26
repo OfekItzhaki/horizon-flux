@@ -25,6 +25,7 @@ declare const _default: {
         readonly unknownError: "Unknown error";
         readonly errorOccurred: "An error occurred";
         readonly retry: "Retry";
+        readonly edit: "Edit";
     };
     readonly login: {
         readonly title: "Sign in to Tasks Management";
@@ -99,6 +100,8 @@ declare const _default: {
         readonly stepsTitle: "Steps";
         readonly noSteps: "No steps yet.";
         readonly addStepFab: "Add step";
+        readonly dueDate: "Due Date";
+        readonly descriptionRequired: "Description is required";
         readonly form: {
             readonly descriptionLabel: "Description";
             readonly descriptionPlaceholder: "e.g. Call the supplier";
@@ -181,6 +184,31 @@ declare const _default: {
         readonly loadTasksFailed: "Failed to load tasks";
         readonly retryLists: "Retry Lists";
         readonly retryTasks: "Retry Tasks";
+    };
+    readonly reminders: {
+        readonly title: "Reminders";
+        readonly add: "Add";
+        readonly empty: "No reminders set";
+        readonly edit: "Edit";
+        readonly configure: "Configure Reminder";
+        readonly timeframe: "Timeframe";
+        readonly dateOption: "Date Option";
+        readonly customDate: "Custom Date";
+        readonly daysBefore: "Days Before Due Date";
+        readonly dayOfWeek: "Day of Week";
+        readonly time: "Time";
+        readonly enableAlarm: "Enable Alarm";
+        readonly alarmOn: "Alarm on";
+        readonly alarmOff: "Alarm off";
+        readonly beforeDueDate: "before due date";
+        readonly at: "at";
+        readonly every: "Every";
+        readonly everyDay: "Every day";
+        readonly everyMonday: "Every Monday";
+        readonly firstOfMonth: "1st of every month";
+        readonly janFirst: "Jan 1st every year";
+        readonly specificDate: "Specific date";
+        readonly sameDateYearly: "Same date every year";
     };
 };
 export default _default;

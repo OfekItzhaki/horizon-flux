@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
+import { handleApiError } from '../utils/errorHandler';
 
 export default function LoginScreen() {
   const { login, register } = useAuth();
@@ -116,28 +117,7 @@ export default function LoginScreen() {
       await login(email, password);
       // Navigation will be handled by AppNavigator via AuthContext
     } catch (error: any) {
-      const errorMessage = error.message || 'Invalid credentials';
-      // Check for timeout or slow connection
-      const isTimeout = errorMessage.toLowerCase().includes('too long') || 
-                       errorMessage.toLowerCase().includes('timeout') ||
-                       error?.code === 'ECONNABORTED';
-      const isNetworkError = error.statusCode === 0 || 
-                            errorMessage.toLowerCase().includes('connect') ||
-                            isTimeout;
-      
-      let finalMessage = errorMessage;
-      if (isTimeout) {
-        finalMessage = 'Login is taking too long. Please try again later.';
-      } else if (isNetworkError && !isTimeout) {
-        finalMessage = errorMessage + ' Please try again later.';
-      }
-      
-      Alert.alert(
-        isNetworkError ? 'Connection Error' : 'Login Failed',
-        finalMessage,
-        [{ text: 'OK', style: 'default' }],
-        { cancelable: true },
-      );
+      handleApiError(error, 'Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -156,28 +136,7 @@ export default function LoginScreen() {
       setIsLogin(true);
       setPassword('');
     } catch (error: any) {
-      const errorMessage = error.message || 'Could not create account';
-      // Check for timeout or slow connection
-      const isTimeout = errorMessage.toLowerCase().includes('too long') || 
-                       errorMessage.toLowerCase().includes('timeout') ||
-                       error?.code === 'ECONNABORTED';
-      const isNetworkError = error.statusCode === 0 || 
-                            errorMessage.toLowerCase().includes('connect') ||
-                            isTimeout;
-      
-      let finalMessage = errorMessage;
-      if (isTimeout) {
-        finalMessage = 'Registration is taking too long. Please try again later.';
-      } else if (isNetworkError && !isTimeout) {
-        finalMessage = errorMessage + ' Please try again later.';
-      }
-      
-      Alert.alert(
-        isNetworkError ? 'Connection Error' : 'Registration Failed',
-        finalMessage,
-        [{ text: 'OK', style: 'default' }],
-        { cancelable: true },
-      );
+      handleApiError(error, 'Could not create account. Please try again.');
     } finally {
       setLoading(false);
     }

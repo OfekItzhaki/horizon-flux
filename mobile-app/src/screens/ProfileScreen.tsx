@@ -10,7 +10,11 @@ import {
   Linking,
   Image,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
@@ -20,13 +24,17 @@ import { useThemedStyles } from '../utils/useThemedStyles';
 import { usersService } from '../services/users.service';
 import { authService } from '../services/auth.service';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
+import { handleApiError, isAuthError } from '../utils/errorHandler';
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
   const { user, logout, isLoading, refreshUser } = useAuth();
   const { t, i18n } = useTranslation();
   const { colors, themeMode, setThemeMode, isDark } = useTheme();
   const isRtl = isRtlLanguage(i18n.language);
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const styles = useThemedStyles((colors) => ({
     container: {
@@ -35,19 +43,54 @@ export default function ProfileScreen() {
     },
     scrollContent: {
       flexGrow: 1,
-      padding: 20,
+      paddingHorizontal: 16,
+      paddingBottom: 24,
     },
     header: {
       backgroundColor: colors.card,
-      padding: 20,
+      padding: 24,
       paddingTop: Platform.OS === 'ios' ? 60 : 45,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      paddingBottom: 24,
+      marginBottom: 0,
+      borderBottomWidth: 0,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+      elevation: 8,
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    headerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 0,
+    },
+    backButton: {
+      padding: 10,
+      borderRadius: 12,
+      backgroundColor: colors.primary + '15',
+    },
+    headerGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '50%',
+      opacity: 0.08,
     },
     title: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: colors.text,
+      fontSize: 40,
+      fontWeight: '900',
+      color: colors.primary,
+      letterSpacing: -1,
+      textShadowColor: 'rgba(99, 102, 241, 0.2)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+      textAlign: 'center',
+      marginBottom: 0,
+      flex: 1,
     },
     content: {
       flex: 1,
@@ -63,6 +106,7 @@ export default function ProfileScreen() {
       padding: 20,
       borderRadius: 12,
       marginBottom: 20,
+      marginHorizontal: 0,
       shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
@@ -140,6 +184,7 @@ export default function ProfileScreen() {
       padding: 20,
       borderRadius: 12,
       marginBottom: 20,
+      marginHorizontal: 0,
       shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
@@ -216,6 +261,7 @@ export default function ProfileScreen() {
       borderRadius: 8,
       alignItems: 'center',
       marginTop: 20,
+      marginHorizontal: 0,
     },
     logoutText: {
       color: '#fff',
@@ -309,14 +355,12 @@ export default function ProfileScreen() {
       }
 
       const updatedUser = await usersService.uploadAvatar(user.id, uri, fileName, fileType);
+      setImageError(false); // Reset error state when new image is uploaded
       await refreshUser();
       Alert.alert(t('profile.pictureUpdated'), t('profile.pictureUpdatedMessage', { defaultValue: 'Profile picture updated successfully' }));
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      Alert.alert(
-        t('profile.error'),
-        error?.message || t('profile.pictureUpdateFailed'),
-      );
+      handleApiError(error, t('profile.pictureUpdateFailed', { defaultValue: 'Failed to update profile picture. Please try again.' }));
     } finally {
       setUploading(false);
     }
@@ -332,10 +376,7 @@ export default function ProfileScreen() {
         t('profile.verificationEmailSentMessage', { defaultValue: 'Verification email sent. Please check your inbox.' }),
       );
     } catch (error: any) {
-      Alert.alert(
-        t('profile.error'),
-        error?.message || t('profile.failedToResendVerification', { defaultValue: 'Failed to resend verification email' }),
-      );
+      handleApiError(error, t('profile.failedToResendVerification', { defaultValue: 'Failed to resend verification email. Please try again.' }));
     }
   };
 
@@ -352,6 +393,26 @@ export default function ProfileScreen() {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return isRtl ? `${day}/${month}/${year}` : `${month}/${day}/${year}`;
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshUser();
+    } catch (error: any) {
+      console.error('Error refreshing user:', error);
+      // Silently ignore auth errors - the navigation will handle redirect to login
+      try {
+        if (!isAuthError(error)) {
+          handleApiError(error, 'Unable to refresh user data. Please try again.');
+        }
+      } catch (handlerError) {
+        // If error handler itself fails, show a generic message
+        console.error('Error in error handler:', handlerError);
+      }
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   if (isLoading) {
@@ -372,10 +433,31 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('profile.title')}</Text>
-      </View>
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.header}>
+          <LinearGradient
+            colors={[colors.primary, '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          />
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>{t('profile.title')}</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </View>
         <View style={styles.profileCard}>
           {/* Profile Picture */}
           <View style={styles.profileSection}>
@@ -386,12 +468,18 @@ export default function ProfileScreen() {
               disabled={uploading}
             >
               <View style={styles.profilePictureWrapper}>
-                {user.profilePicture ? (
+                {user.profilePicture && !imageError ? (
                   <Image
-                    source={{ uri: user.profilePicture }}
+                    key={`${user.id}-${user.profilePicture}-${user.updatedAt}`}
+                    source={{ 
+                      uri: `${user.profilePicture}${user.profilePicture.includes('?') ? '&' : '?'}v=${user.updatedAt ? new Date(user.updatedAt).getTime() : Date.now()}` 
+                    }}
                     style={styles.profilePicture}
                     onError={() => {
-                      // Handle image load error
+                      setImageError(true);
+                    }}
+                    onLoad={() => {
+                      setImageError(false);
                     }}
                   />
                 ) : (
@@ -401,13 +489,9 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                 )}
-                {uploading ? (
+                {uploading && (
                   <View style={styles.profilePictureOverlay}>
                     <ActivityIndicator size="small" color="#fff" />
-                  </View>
-                ) : (
-                  <View style={[styles.profilePictureOverlay, { opacity: 0.7 }]}>
-                    <Text style={{ color: '#fff', fontSize: 24 }}>✏️</Text>
                   </View>
                 )}
               </View>

@@ -6,28 +6,79 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { listsService } from '../services/lists.service';
 import { tasksService } from '../services/tasks.service';
 import { ToDoList, Task } from '../types';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { useTheme } from '../context/ThemeContext';
+import { handleApiError, isAuthError } from '../utils/errorHandler';
 
 export default function AnalysisScreen() {
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const styles = useThemedStyles((colors) => ({
     container: {
       flex: 1,
       backgroundColor: colors.surface,
     },
+    scrollView: {
+      flex: 1,
+    },
+    headerContainer: {
+      backgroundColor: colors.card,
+      padding: 24,
+      paddingTop: Platform.OS === 'ios' ? 60 : 45,
+      paddingBottom: 24,
+      borderBottomWidth: 0,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+      elevation: 8,
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    headerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    backButton: {
+      padding: 10,
+      borderRadius: 12,
+      backgroundColor: colors.primary + '15',
+    },
+    headerGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '50%',
+      opacity: 0.08,
+    },
     scrollContent: {
-      padding: 20,
+      flexGrow: 1,
+      paddingHorizontal: 0,
+      paddingBottom: 24,
     },
     title: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 24,
+      fontSize: 40,
+      fontWeight: '900',
+      color: colors.primary,
+      marginBottom: 0,
+      letterSpacing: -1,
+      textShadowColor: 'rgba(99, 102, 241, 0.2)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+      textAlign: 'center',
+      flex: 1,
     },
     card: {
       backgroundColor: colors.card,
@@ -163,25 +214,37 @@ export default function AnalysisScreen() {
   const [lists, setLists] = useState<ToDoList[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isRefresh) {
+        setLoading(true);
+      }
       const loadedLists = await listsService.getAll();
       setLists(loadedLists);
 
-      const tasksPromises = loadedLists.map((list) => tasksService.getTasksByListId(list.id));
+      const tasksPromises = loadedLists.map((list) => tasksService.getAll(list.id));
       const tasksArrays = await Promise.all(tasksPromises);
       setAllTasks(tasksArrays.flat());
-    } catch (error) {
-      console.error('Error loading analysis data:', error);
+    } catch (error: any) {
+      // Silently ignore auth errors - the navigation will handle redirect to login
+      if (!isAuthError(error)) {
+        handleApiError(error, 'Unable to load analysis data. Please try again.');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData(true);
   };
 
   if (loading) {
@@ -245,8 +308,32 @@ export default function AnalysisScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Task Analysis</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={[colors.primary, '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          />
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Task Analysis</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </View>
 
         {/* Overview Stats */}
         <View style={styles.card}>

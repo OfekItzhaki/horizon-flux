@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   Modal,
@@ -18,11 +17,274 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { listsService } from '../services/lists.service';
 import { ToDoList, CreateTodoListDto } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../utils/useThemedStyles';
+import { handleApiError, isAuthError } from '../utils/errorHandler';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ListsScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTheme();
+  const styles = useThemedStyles((colors) => ({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+    },
+    header: {
+      backgroundColor: colors.card,
+      padding: 24,
+      paddingTop: Platform.OS === 'ios' ? 60 : 45,
+      paddingBottom: 24,
+      borderBottomWidth: 0,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+      elevation: 8,
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    headerGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '50%',
+      opacity: 0.08,
+    },
+    title: {
+      fontSize: 40,
+      fontWeight: '900',
+      color: colors.primary,
+      marginBottom: 8,
+      letterSpacing: -1,
+      textAlign: 'center',
+      textShadowColor: 'rgba(99, 102, 241, 0.2)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    },
+    listCount: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    listItem: {
+      backgroundColor: colors.card,
+      padding: 20,
+      marginHorizontal: 16,
+      marginVertical: 8,
+      borderRadius: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    listContent: {
+      flexDirection: 'column',
+    },
+    listInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    listName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    typeBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      marginTop: 4,
+    },
+    typeText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    emptyContainer: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 60,
+    },
+    emptyIcon: {
+      fontSize: 64,
+      marginBottom: 16,
+      opacity: 0.5,
+    },
+    emptyText: {
+      fontSize: 20,
+      color: colors.textSecondary,
+      fontWeight: '600',
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: 40,
+      opacity: 0.7,
+    },
+    fab: {
+      position: 'absolute',
+      right: 24,
+      bottom: 80,
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.5,
+      shadowRadius: 16,
+      elevation: 12,
+      borderWidth: 3,
+      borderColor: 'rgba(255, 255, 255, 0.4)',
+    },
+    fabText: {
+      fontSize: 38,
+      color: '#fff',
+      fontWeight: '200',
+      lineHeight: 38,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      padding: 0,
+      paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+      maxHeight: '80%',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: -8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 24,
+      elevation: 25,
+      overflow: 'hidden',
+    },
+    modalTitle: {
+      fontSize: 32,
+      fontWeight: '900',
+      marginBottom: 0,
+      padding: 28,
+      paddingBottom: 20,
+      color: colors.text,
+      letterSpacing: -0.5,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    input: {
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 16,
+      padding: 18,
+      fontSize: 17,
+      marginHorizontal: 24,
+      marginTop: 24,
+      marginBottom: 24,
+      backgroundColor: colors.surface,
+      color: colors.text,
+      fontWeight: '500',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    typeLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 10,
+      color: colors.text,
+    },
+    typeSelector: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 20,
+      gap: 8,
+    },
+    typeOption: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    typeOptionText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    typeOptionTextSelected: {
+      color: '#fff',
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      paddingTop: 8,
+      gap: 12,
+    },
+    modalButton: {
+      flex: 1,
+      padding: 18,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 56,
+    },
+    cancelButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    submitButtonText: {
+      color: '#fff',
+      fontSize: 17,
+      fontWeight: '800',
+      letterSpacing: 0.3,
+    },
+  }));
   const [lists, setLists] = useState<ToDoList[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,25 +307,13 @@ export default function ListsScreen() {
 
   const loadLists = async () => {
     try {
-      console.log('Loading lists...');
       const data = await listsService.getAll();
-      console.log('Lists loaded:', data);
-      console.log('Lists count:', data?.length ?? 'undefined');
       setLists(data || []);
     } catch (error: any) {
       console.error('Error loading lists:', error);
       // Silently ignore auth errors - the navigation will handle redirect to login
-      const isAuthError = error?.response?.status === 401 || 
-                          error?.message?.toLowerCase()?.includes('unauthorized');
-      if (!isAuthError) {
-        const errorMessage = error?.message || error?.response?.data?.message || 'Unable to load lists.';
-        const isTimeout = errorMessage.toLowerCase().includes('too long') || 
-                         errorMessage.toLowerCase().includes('timeout') ||
-                         error?.code === 'ECONNABORTED';
-        const finalMessage = isTimeout 
-          ? 'Loading lists is taking too long. Please try again later.'
-          : errorMessage + ' Please try again later.';
-        Alert.alert('Error Loading Lists', finalMessage);
+      if (!isAuthError(error)) {
+        handleApiError(error, 'Unable to load lists. Please try again later.');
       }
     } finally {
       setLoading(false);
@@ -109,7 +359,7 @@ export default function ListsScreen() {
       loadLists();
       // Success feedback - UI update is visible, no alert needed
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update list');
+      handleApiError(error, 'Failed to update list. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -138,8 +388,7 @@ export default function ListsScreen() {
       loadLists();
       // Success feedback - UI update is visible, no alert needed
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Unable to create list. Please try again.';
-      Alert.alert('Create List Failed', errorMessage);
+      handleApiError(error, 'Unable to create list. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -159,8 +408,7 @@ export default function ListsScreen() {
               await listsService.delete(list.id);
               loadLists();
             } catch (error: any) {
-              const errorMessage = error?.response?.data?.message || error?.message || 'Unable to delete list. Please try again.';
-              Alert.alert('Delete Failed', errorMessage);
+              handleApiError(error, 'Unable to delete list. Please try again.');
             }
           },
         },
@@ -171,7 +419,7 @@ export default function ListsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -179,6 +427,12 @@ export default function ListsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <LinearGradient
+          colors={[colors.primary, '#a855f7']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        />
         <Text style={styles.title}>My Lists</Text>
         <Text style={styles.listCount}>{lists.length} list{lists.length !== 1 ? 's' : ''}</Text>
       </View>
@@ -303,218 +557,3 @@ export default function ListsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 45,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.2)',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#6366f1',
-    marginBottom: 5,
-  },
-  listCount: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  listItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    padding: 20,
-    marginHorizontal: 10,
-    marginVertical: 6,
-    borderRadius: 16,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
-  },
-  listContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  listInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  listName: {
-    fontSize: 20,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 10,
-    color: '#1e293b',
-  },
-  typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  typeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.5,
-  },
-  emptyText: {
-    fontSize: 20,
-    color: '#666',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 70,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  fabText: {
-    fontSize: 36,
-    color: '#fff',
-    fontWeight: '300',
-    lineHeight: 36,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 20,
-  },
-  modalTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#1e293b',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    color: '#1e293b',
-  },
-  typeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-    gap: 8,
-  },
-  typeOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    backgroundColor: '#f5f5f5',
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  typeOptionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  typeOptionTextSelected: {
-    color: '#fff',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: 'rgba(241, 245, 249, 0.8)',
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-  },
-  cancelButtonText: {
-    color: '#64748b',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  submitButton: {
-    backgroundColor: '#6366f1',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});

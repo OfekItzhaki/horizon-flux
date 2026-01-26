@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -33,26 +35,68 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabs() {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown: false, // Screens have their own custom headers
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 8 : 0),
+          paddingTop: 12,
+          height: 70 + (insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 8 : 0)),
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 15,
+          fontWeight: '700',
+          marginTop: 4,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
+        },
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tab.Screen
         name="Lists"
         component={ListsScreen}
-        options={{ title: 'My Lists' }}
+        options={{
+          title: 'My Lists',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list" size={24} color={color} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Analysis"
         component={AnalysisScreen}
-        options={{ title: 'Analysis' }}
+        options={{
+          title: 'Analysis',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="analytics" size={24} color={color} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={24} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

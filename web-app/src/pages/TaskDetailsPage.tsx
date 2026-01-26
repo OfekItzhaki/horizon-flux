@@ -491,7 +491,7 @@ export default function TaskDetailsPage() {
               </div>
             ) : (
               <h1
-                className="text-2xl font-bold text-gray-900 dark:text-white cursor-text"
+                className="premium-header-section text-2xl cursor-text"
                 title={t('taskDetails.clickToEdit')}
                 onClick={() => {
                   if (isArchivedTask) return;
@@ -548,7 +548,7 @@ export default function TaskDetailsPage() {
 
         <div className="mt-6">
           <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center justify-between gap-3 mb-3`}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="premium-header-section text-lg">
               {t('taskDetails.stepsTitle')}
             </h2>
           </div>

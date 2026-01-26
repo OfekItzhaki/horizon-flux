@@ -43,7 +43,7 @@ export default function LoginPage() {
       
       <div className="max-w-md w-full space-y-8 relative z-10 animate-fade-in">
         <div className="text-center">
-          <h2 className="text-5xl font-extrabold gradient-text mb-2">
+          <h2 className="premium-header-main text-5xl mb-2">
             {t('login.title')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">

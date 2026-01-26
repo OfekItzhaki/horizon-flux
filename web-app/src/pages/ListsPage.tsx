@@ -196,7 +196,7 @@ export default function ListsPage() {
   return (
     <div className="animate-fade-in">
       <div className="flex justify-center items-center mb-8 gap-3">
-        <h1 className="text-4xl font-bold gradient-text text-center">{t('lists.title')}</h1>
+        <h1 className="premium-header-main">{t('lists.title')}</h1>
       </div>
 
       {showCreate && (

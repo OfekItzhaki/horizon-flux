@@ -16,6 +16,11 @@
       "package-name": "mobile-app",
       "changelog-path": "mobile-app/CHANGELOG.md",
       "extra-files": ["mobile-app/app.json"]
+    },
+    "web-app": {
+      "release-type": "node",
+      "package-name": "web-app",
+      "changelog-path": "web-app/CHANGELOG.md"
     }
   }
 }

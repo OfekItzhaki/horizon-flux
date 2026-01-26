@@ -64,6 +64,39 @@
   /* Gradient Text */
   .gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-purple-600;
+    @apply drop-shadow-lg;
+    filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
+  }
+
+  /* Premium Header - Main Title */
+  .premium-header-main {
+    @apply text-4xl font-bold gradient-text text-center;
+    @apply drop-shadow-2xl;
+    filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.4)) drop-shadow(0 2px 4px rgba(139, 92, 246, 0.3));
+    @apply tracking-tight;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    @apply pb-3;
+    padding-bottom: 0.75rem;
+    @apply mb-2;
+  }
+
+  /* Premium Header - Section Title */
+  .premium-header-section {
+    @apply text-2xl font-bold;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-gray-100 dark:via-gray-200 dark:to-gray-100;
+    @apply drop-shadow-md;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+    @apply tracking-tight;
+    letter-spacing: -0.01em;
+    @apply relative pb-2;
+  }
+
+  .premium-header-section::after {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0 h-0.5;
+    @apply bg-gradient-to-r from-transparent via-primary-500/30 to-transparent;
+    @apply opacity-60;
   }
 
   /* Smooth Scroll */

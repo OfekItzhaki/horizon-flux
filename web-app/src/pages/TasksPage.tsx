@@ -720,7 +720,7 @@ export default function TasksPage() {
             </div>
           ) : (
             <h1
-              className="text-4xl font-bold gradient-text text-center cursor-text hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
+              className="premium-header-main cursor-text hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
               title={t('tasks.renameTitle')}
               onClick={() => {
                 if (!list) return;

@@ -50,7 +50,7 @@ export default function AnalysisPage() {
   if (hasError && !isLoading) {
     return (
       <div className={`space-y-6 ${isRtl ? 'rtl' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
-        <h1 className={`text-3xl font-bold text-gray-900 dark:text-white ${isRtl ? 'text-right' : 'text-left'}`}>
+        <h1 className={`premium-header-main ${isRtl ? 'text-right' : 'text-left'}`}>
           {t('analysis.title', { defaultValue: 'Task Analysis' })}
         </h1>
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
@@ -254,7 +254,7 @@ export default function AnalysisPage() {
 
   return (
     <div className={`space-y-6 animate-fade-in ${isRtl ? 'rtl' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
-      <h1 className="text-4xl font-bold gradient-text text-center">{t('analysis.title', { defaultValue: 'Task Analysis' })}</h1>
+      <h1 className="premium-header-main">{t('analysis.title', { defaultValue: 'Task Analysis' })}</h1>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -293,7 +293,7 @@ export default function AnalysisPage() {
         {/* Completion Status Pie Chart with Streak */}
         {allTasks.length > 0 && (
           <div className="premium-card p-8">
-            <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
+            <h2 className={`premium-header-section mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
               {t('analysis.completionStatus', { defaultValue: 'Completion Status' })}
             </h2>
             <ResponsiveContainer width="100%" height={300}>
@@ -381,7 +381,7 @@ export default function AnalysisPage() {
 
         {/* Daily Completion Activity Calendar Heatmap */}
         <div className="premium-card p-8">
-          <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
+          <h2 className={`premium-header-section mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
             {t('analysis.dailyActivity', { defaultValue: 'Daily Completion Activity' })}
           </h2>
           <CalendarHeatmap data={dailyCompletions} days={90} />
@@ -391,7 +391,7 @@ export default function AnalysisPage() {
       {/* Tasks by List Bar Chart */}
       {tasksByList.length > 0 && (
         <div className="premium-card p-8">
-          <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-4 ${isRtl ? 'text-right' : 'text-left'}`}>
+          <h2 className={`premium-header-section mb-16 ${isRtl ? 'text-right' : 'text-left'}`}>
             {t('analysis.tasksByListChart', { defaultValue: 'Tasks by List (Chart)' })}
           </h2>
           <ResponsiveContainer width="100%" height={400}>
@@ -469,7 +469,7 @@ export default function AnalysisPage() {
       {/* Completion Trends Line Chart */}
       {completionTrends.length > 0 && (
         <div className="premium-card p-8">
-          <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-4 ${isRtl ? 'text-right' : 'text-left'}`}>
+          <h2 className={`premium-header-section mb-16 ${isRtl ? 'text-right' : 'text-left'}`}>
             {t('analysis.completionTrends', { defaultValue: 'Completion Trends (Last 30 Days)' })}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -542,7 +542,7 @@ export default function AnalysisPage() {
       {/* Due Date Statistics */}
       {tasksWithDueDates.length > 0 && (
         <div className="premium-card p-8">
-          <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
+          <h2 className={`premium-header-section mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
             {t('analysis.dueDateOverview', { defaultValue: 'Due Date Overview' })}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -585,7 +585,7 @@ export default function AnalysisPage() {
       {/* Steps Statistics */}
       {tasksWithSteps.length > 0 && (
         <div className="premium-card p-8">
-          <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
+          <h2 className={`premium-header-section ${isRtl ? 'text-right' : 'text-left'}`}>
             {t('analysis.stepsProgress', { defaultValue: 'Steps Progress' })}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -619,7 +619,7 @@ export default function AnalysisPage() {
 
       {/* Tasks by List */}
       <div className="premium-card p-8">
-        <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
+        <h2 className={`premium-header-section mb-6 ${isRtl ? 'text-right' : 'text-left'}`}>
           {t('analysis.tasksByList', { defaultValue: 'Tasks by List' })}
         </h2>
         <div className="overflow-x-auto">

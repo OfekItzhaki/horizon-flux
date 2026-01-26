@@ -1,32 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useQueuedMutation } from '../hooks/useQueuedMutation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { tasksService } from '../services/tasks.service';
-import { stepsService } from '../services/steps.service';
 import FloatingActionButton from '../components/FloatingActionButton';
 import Skeleton from '../components/Skeleton';
-import ReminderConfigComponent from '../components/ReminderConfig';
+import ReminderDisplay from '../components/ReminderDisplay';
+import TaskEditForm from '../components/TaskEditForm';
+import StepsList from '../components/StepsList';
+import { useStepManagement } from '../hooks/useStepManagement';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardShortcuts } from '../utils/useKeyboardShortcuts';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
 import {
   Task,
   ApiError,
-  Step,
-  CreateStepDto,
   UpdateTaskDto,
-  UpdateStepDto,
   ListType,
 } from '@tasks-management/frontend-services';
 import { handleApiError, extractErrorMessage } from '../utils/errorHandler';
 import {
   ReminderConfig,
-  ReminderTimeframe,
   convertBackendToReminders,
   convertRemindersToBackend,
-  formatReminderDisplay,
 } from '../utils/reminderHelpers';
 import {
   scheduleTaskReminders,
@@ -43,10 +40,6 @@ export default function TaskDetailsPage() {
   const numericTaskId = taskId ? Number(taskId) : null;
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [taskDescriptionDraft, setTaskDescriptionDraft] = useState('');
-  const [showAddStep, setShowAddStep] = useState(false);
-  const [newStepDescription, setNewStepDescription] = useState('');
-  const [editingStepId, setEditingStepId] = useState<number | null>(null);
-  const [stepDescriptionDraft, setStepDescriptionDraft] = useState('');
   const stepInputRef = useRef<HTMLInputElement>(null);
   
   // Full edit mode state (for description, due date, reminders)
@@ -63,12 +56,12 @@ export default function TaskDetailsPage() {
         if (isEditingTask) {
           setIsEditingTask(false);
           setTaskDescriptionDraft(task?.description ?? '');
-        } else if (editingStepId !== null) {
-          setEditingStepId(null);
-          setStepDescriptionDraft('');
-        } else if (showAddStep) {
-          setShowAddStep(false);
-          setNewStepDescription('');
+        } else if (stepManagement.editingStepId !== null) {
+          stepManagement.setEditingStepId(null);
+          stepManagement.setStepDescriptionDraft('');
+        } else if (stepManagement.showAddStep) {
+          stepManagement.setShowAddStep(false);
+          stepManagement.setNewStepDescription('');
         }
       },
       description: 'Cancel editing',
@@ -76,8 +69,8 @@ export default function TaskDetailsPage() {
     {
       key: 's',
       handler: () => {
-        if (!showAddStep && task) {
-          setShowAddStep(true);
+        if (!stepManagement.showAddStep && task) {
+          stepManagement.setShowAddStep(true);
         }
       },
       description: 'Add new step',
@@ -118,6 +111,9 @@ export default function TaskDetailsPage() {
     queryFn: () => tasksService.getTaskById(numericTaskId as number),
   });
 
+  // Step management hook (initialized after task is loaded)
+  const stepManagement = useStepManagement(task);
+
   // Removed initialReminders - it was causing dependency issues and not being used
 
   useEffect(() => {
@@ -156,20 +152,15 @@ export default function TaskDetailsPage() {
 
   // Auto-focus step input when showAddStep becomes true
   useEffect(() => {
-    if (showAddStep && stepInputRef.current) {
+    if (stepManagement.showAddStep && stepInputRef.current) {
       // Small delay to ensure the input is rendered
       setTimeout(() => {
         stepInputRef.current?.focus();
       }, 0);
     }
-  }, [showAddStep]);
+  }, [stepManagement.showAddStep]);
 
 
-  const invalidateTask = (t: Task) => {
-    // Non-blocking invalidations - don't await
-    queryClient.invalidateQueries({ queryKey: ['task', t.id] });
-    queryClient.invalidateQueries({ queryKey: ['tasks', t.todoListId] });
-  };
 
   const updateTaskMutation = useQueuedMutation<
     Task,
@@ -230,144 +221,6 @@ export default function TaskDetailsPage() {
     },
   });
 
-  const updateStepMutation = useQueuedMutation<
-    Step,
-    ApiError,
-    { task: Task; stepId: number; data: UpdateStepDto },
-    { previousTask?: Task; previousTasks?: Task[] }
-  >({
-    mutationFn: ({ stepId, data }) => stepsService.updateStep(stepId, data),
-    onMutate: async (vars) => {
-      // Removed cancelQueries to allow parallel mutations
-
-      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
-      const previousTasks = queryClient.getQueryData<Task[]>([
-        'tasks',
-        vars.task.todoListId,
-      ]);
-
-      const patchTaskSteps = (t: Task): Task => ({
-        ...t,
-        steps: (t.steps ?? []).map((s) =>
-          s.id === vars.stepId ? { ...s, ...vars.data } : s,
-        ),
-        updatedAt: new Date().toISOString(),
-      });
-
-      if (previousTask) {
-        queryClient.setQueryData<Task>(['task', vars.task.id], patchTaskSteps(previousTask));
-      }
-
-      queryClient.setQueryData<Task[]>(['tasks', vars.task.todoListId], (old = []) =>
-        old.map((t) => (t.id === vars.task.id ? patchTaskSteps(t) : t)),
-      );
-
-      return { previousTask, previousTasks };
-    },
-    onError: (err, vars, ctx) => {
-      if (ctx?.previousTask) {
-        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
-      }
-      if (ctx?.previousTasks) {
-        queryClient.setQueryData(['tasks', vars.task.todoListId], ctx.previousTasks);
-      }
-      handleApiError(err, t('taskDetails.updateStepFailed', { defaultValue: 'Failed to update step. Please try again.' }));
-    },
-    onSettled: (_data, _err, vars) => {
-      // Non-blocking invalidation - don't await
-      invalidateTask(vars.task);
-    },
-  });
-
-  const createStepMutation = useMutation<
-    Step,
-    ApiError,
-    { task: Task; data: CreateStepDto },
-    { previousTask?: Task }
-  >({
-    mutationFn: ({ task, data }) => stepsService.createStep(task.id, data),
-    onMutate: async (vars) => {
-      // Removed cancelQueries to allow parallel mutations
-
-      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
-
-      const now = new Date().toISOString();
-      const tempId = -Date.now();
-      const optimistic: Step = {
-        id: tempId,
-        description: vars.data.description,
-        completed: Boolean(vars.data.completed ?? false),
-        taskId: vars.task.id,
-        order: Date.now(),
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      };
-
-      if (previousTask) {
-        queryClient.setQueryData<Task>(['task', vars.task.id], {
-          ...previousTask,
-          steps: [...(previousTask.steps ?? []), optimistic],
-          updatedAt: now,
-        });
-      }
-
-      return { previousTask };
-    },
-    onError: (err, vars, ctx) => {
-      if (ctx?.previousTask) {
-        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
-      }
-      handleApiError(err, t('taskDetails.addStepFailed', { defaultValue: 'Failed to add step. Please try again.' }));
-    },
-    onSuccess: (_created, vars) => {
-      setNewStepDescription('');
-      setShowAddStep(false);
-      toast.success(t('taskDetails.stepAdded'));
-      // ensure list view reflects steps count if needed
-      queryClient.invalidateQueries({ queryKey: ['tasks', vars.task.todoListId] });
-    },
-    onSettled: (_data, _err, vars) => {
-      // Non-blocking invalidation - don't await
-      invalidateTask(vars.task);
-    },
-  });
-
-  const deleteStepMutation = useQueuedMutation<
-    Step,
-    ApiError,
-    { task: Task; id: number },
-    { previousTask?: Task }
-  >({
-    mutationFn: ({ id }) => stepsService.deleteStep(id),
-    onMutate: async (vars) => {
-      // Removed cancelQueries to allow parallel mutations
-      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
-
-      if (previousTask) {
-        queryClient.setQueryData<Task>(['task', vars.task.id], {
-          ...previousTask,
-          steps: (previousTask.steps ?? []).filter((s) => s.id !== vars.id),
-          updatedAt: new Date().toISOString(),
-        });
-      }
-
-      return { previousTask };
-    },
-    onError: (err, vars, ctx) => {
-      if (ctx?.previousTask) {
-        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
-      }
-      handleApiError(err, t('taskDetails.deleteStepFailed', { defaultValue: 'Failed to delete step. Please try again.' }));
-    },
-    onSuccess: () => {
-      toast.success(t('taskDetails.stepDeleted'));
-    },
-    onSettled: (_data, _err, vars) => {
-      // Non-blocking invalidation - don't await
-      invalidateTask(vars.task);
-    },
-  });
 
   const safeTaskId =
     typeof numericTaskId === 'number' && !Number.isNaN(numericTaskId)
@@ -830,357 +683,57 @@ export default function TaskDetailsPage() {
             )}
 
             {/* Reminders */}
-            {(() => {
-              // Convert all reminders (including reminderConfig)
-              const reminders = convertBackendToReminders(
-                task.reminderDaysBefore,
-                task.specificDayOfWeek,
-                task.dueDate || null,
-                task.reminderConfig,
-              );
-
-              // Debug logging
-              if (import.meta.env.DEV) {
-                console.log('🔍 View Mode - Task Reminder Data:', {
-                  taskId: task.id,
-                  taskDescription: task.description,
-                  reminderDaysBefore: task.reminderDaysBefore,
-                  specificDayOfWeek: task.specificDayOfWeek,
-                  dueDate: task.dueDate,
-                  reminderConfig: task.reminderConfig,
-                  reminderConfigType: typeof task.reminderConfig,
-                  reminderConfigIsArray: Array.isArray(task.reminderConfig),
-                  reminderConfigStringified: JSON.stringify(task.reminderConfig),
-                  convertedRemindersCount: reminders.length,
-                  convertedReminders: reminders,
-                });
-              }
-
-              // Show reminders section if there are any reminders
-              if (reminders.length === 0) {
-                return null;
-              }
-
-              return (
-                <div className="mb-6">
-                  <h3 className="premium-header-section text-lg mb-4">
-                    {t('reminders.title', { defaultValue: 'Reminders' })}
-                  </h3>
-                  <div className="space-y-3">
-                    {reminders.map((reminder, idx) => {
-                      const timeStr = reminder.time || '09:00';
-                      const displayText = formatReminderDisplay(reminder, t);
-                      
-                      return (
-                        <div 
-                          key={reminder.id || idx} 
-                          className="premium-card p-4 hover:shadow-lg transition-shadow"
-                        >
-                          <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                            <span className="text-xl flex-shrink-0">
-                              {reminder.hasAlarm ? '🔔' : '⏰'}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                {displayText}
-                              </div>
-                              
-                              {/* Additional information */}
-                              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-600 dark:text-gray-400">
-                                <span className="flex items-center gap-1">
-                                  <span>🕐</span>
-                                  <span>{timeStr}</span>
-                                </span>
-                                
-                                {reminder.hasAlarm && (
-                                  <span className="flex items-center gap-1 text-primary-600 dark:text-primary-400">
-                                    <span>🔔</span>
-                                    <span>{t('reminders.alarmOn', { defaultValue: 'Alarm enabled' })}</span>
-                                  </span>
-                                )}
-                                
-                                {reminder.daysBefore !== undefined && reminder.daysBefore > 0 && task.dueDate && (
-                                  <span className="flex items-center gap-1">
-                                    <span>📅</span>
-                                    <span>
-                                      {(() => {
-                                        const due = new Date(task.dueDate);
-                                        const reminderDate = new Date(due);
-                                        reminderDate.setDate(reminderDate.getDate() - reminder.daysBefore);
-                                        return reminderDate.toLocaleDateString();
-                                      })()}
-                                    </span>
-                                  </span>
-                                )}
-                                
-                                {reminder.timeframe === ReminderTimeframe.EVERY_DAY && (
-                                  <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                    <span>🔄</span>
-                                    <span>{t('reminders.recurring', { defaultValue: 'Recurring' })}</span>
-                                  </span>
-                                )}
-                                
-                                {reminder.timeframe === ReminderTimeframe.EVERY_WEEK && (
-                                  <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                    <span>🔄</span>
-                                    <span>{t('reminders.recurring', { defaultValue: 'Recurring' })}</span>
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
+            <ReminderDisplay task={task} />
           </>
         )}
 
         {/* Full Edit Form */}
         {isFullEditMode && (
-          <div className="premium-card p-6 mb-6 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('taskDetails.form.descriptionLabel')}
-              </label>
-              <input
-                type="text"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="premium-input w-full"
-                placeholder={t('taskDetails.form.descriptionPlaceholder')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('taskDetails.dueDate', { defaultValue: 'Due Date' })}
-              </label>
-              <input
-                type="date"
-                value={editDueDate}
-                onChange={(e) => setEditDueDate(e.target.value)}
-                className="premium-input w-full"
-              />
-            </div>
-
-            <ReminderConfigComponent
-              reminders={editReminders}
-              onRemindersChange={handleRemindersChange}
-            />
-
-            <div className={`flex gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <button
-                onClick={handleCancelEdit}
-                className="flex-1 glass-button"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleSaveTask}
-                disabled={updateTaskMutation.isPending || !editDescription.trim()}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {updateTaskMutation.isPending ? t('common.loading') : t('common.save')}
-              </button>
-            </div>
-          </div>
+          <TaskEditForm
+            editDescription={editDescription}
+            onEditDescriptionChange={setEditDescription}
+            editDueDate={editDueDate}
+            onEditDueDateChange={setEditDueDate}
+            editReminders={editReminders}
+            onRemindersChange={handleRemindersChange}
+            onSave={handleSaveTask}
+            onCancel={handleCancelEdit}
+            isSaving={updateTaskMutation.isPending}
+          />
         )}
 
-        <div className="mt-6">
-          <div className={`flex ${isRtl ? 'flex-row-reverse' : ''} items-center justify-between gap-3 mb-3`}>
-            <h2 className="premium-header-section text-lg">
-              {t('taskDetails.stepsTitle', { defaultValue: 'Steps' })}
-            </h2>
-            {!showAddStep && (
-              <button
-                type="button"
-                onClick={() => setShowAddStep(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg hover:from-primary-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-                {t('taskDetails.addStep', { defaultValue: 'Add Step' })}
-              </button>
-            )}
-          </div>
-
-          {showAddStep && (
-            <form
-              className="bg-white dark:bg-[#1a1a1a] rounded-lg border border-gray-200 dark:border-[#2a2a2a] p-4 mb-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newStepDescription.trim()) return;
-                createStepMutation.mutate({
-                  task,
-                  data: { description: newStepDescription.trim() },
-                });
-              }}
-            >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-end">
-                <div className="sm:col-span-10">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('taskDetails.form.descriptionLabel')}
-                  </label>
-                  <input
-                    ref={stepInputRef}
-                    value={newStepDescription}
-                    onChange={(e) => setNewStepDescription(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder={t('taskDetails.form.descriptionPlaceholder')}
-                  />
-                </div>
-                <div className="sm:col-span-2 flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={createStepMutation.isPending || !newStepDescription.trim()}
-                    className="inline-flex flex-1 justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {createStepMutation.isPending
-                      ? t('common.loading')
-                      : t('common.create')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddStep(false);
-                      setNewStepDescription('');
-                    }}
-                    className="inline-flex justify-center rounded-md bg-gray-100 dark:bg-[#2a2a2a] px-3 py-2 text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#333333]"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-
-          {!showAddStep && task.steps && task.steps.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              <p className="text-sm">{t('taskDetails.noSteps', { defaultValue: 'No steps yet' })}</p>
-            </div>
-          )}
-
-          {task.steps && task.steps.length > 0 && (
-            <ul className="space-y-2">
-              {task.steps.map((step) => (
-                <li
-                  key={step.id}
-                  className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-[#1a1a1a] rounded"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={step.completed}
-                      onChange={() => {
-                        updateStepMutation.mutate({
-                          task,
-                          stepId: step.id,
-                          data: { completed: !step.completed },
-                        });
-                      }}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    {editingStepId === step.id ? (
-                      <input
-                        value={stepDescriptionDraft}
-                        onChange={(e) => setStepDescriptionDraft(e.target.value)}
-                        className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    ) : (
-                      <span
-                        className={
-                          step.completed
-                            ? 'line-through text-gray-500 dark:text-gray-400 truncate'
-                            : 'text-gray-900 dark:text-white truncate'
-                        }
-                        title={t('taskDetails.clickToEdit')}
-                        onClick={() => {
-                          setEditingStepId(step.id);
-                          setStepDescriptionDraft(step.description);
-                        }}
-                      >
-                        {step.description}
-                      </span>
-                    )}
-                  </div>
-
-                  {editingStepId === step.id ? (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={!stepDescriptionDraft.trim()}
-                        onClick={() => {
-                          updateStepMutation.mutate(
-                            {
-                              task,
-                              stepId: step.id,
-                              data: { description: stepDescriptionDraft.trim() },
-                            },
-                            {
-                              onSuccess: () => {
-                                toast.success(t('taskDetails.stepUpdated'));
-                                setEditingStepId(null);
-                                setStepDescriptionDraft('');
-                              },
-                            },
-                          );
-                        }}
-                        className="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {t('common.save')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingStepId(null);
-                          setStepDescriptionDraft('');
-                        }}
-                        className="inline-flex justify-center rounded-md bg-gray-200 dark:bg-[#2a2a2a] px-3 py-2 text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-[#333333]"
-                      >
-                        {t('common.cancel')}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={false}
-                      onClick={() => {
-                        const ok = window.confirm(
-                          t('taskDetails.deleteStepConfirm', { description: step.description }),
-                        );
-                        if (!ok) return;
-                        deleteStepMutation.mutate({ task, id: step.id });
-                      }}
-                      className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {t('common.delete')}
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {task && (
+          <StepsList
+            task={task}
+            showAddStep={stepManagement.showAddStep}
+            newStepDescription={stepManagement.newStepDescription}
+            onNewStepDescriptionChange={stepManagement.setNewStepDescription}
+            editingStepId={stepManagement.editingStepId}
+            stepDescriptionDraft={stepManagement.stepDescriptionDraft}
+            onStepDescriptionDraftChange={stepManagement.setStepDescriptionDraft}
+            onCreateStep={stepManagement.handleCreateStep}
+            onToggleStep={stepManagement.handleToggleStep}
+            onEditStep={stepManagement.handleEditStep}
+            onSaveStep={stepManagement.handleSaveStep}
+            onCancelEdit={() => {
+              stepManagement.setEditingStepId(null);
+              stepManagement.setStepDescriptionDraft('');
+            }}
+            onDeleteStep={stepManagement.handleDeleteStep}
+            onCreateStepClick={() => stepManagement.setShowAddStep(true)}
+            onCancelAddStep={() => {
+              stepManagement.setShowAddStep(false);
+              stepManagement.setNewStepDescription('');
+            }}
+            createStepMutation={stepManagement.createStepMutation}
+            stepInputRef={stepInputRef}
+          />
+        )}
       </div>
 
       <FloatingActionButton
         ariaLabel={t('taskDetails.addStepFab')}
-        onClick={() => setShowAddStep(true)}
+        onClick={() => stepManagement.setShowAddStep(true)}
       />
     </div>
   );

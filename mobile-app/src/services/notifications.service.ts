@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, Linking, Alert } from 'react-native';
 import { ReminderConfig, ReminderTimeframe, ReminderSpecificDate } from '../types';
 import Constants from 'expo-constants';
 
@@ -49,6 +49,16 @@ async function setupNotificationChannel(): Promise<void> {
         vibrationPattern: [0, 250, 250, 250],
         enableVibrate: true,
       });
+      
+      // Create a separate channel for daily tasks (persistent notification)
+      await Notifications.setNotificationChannelAsync('daily-tasks', {
+        name: 'Daily Tasks',
+        description: 'Persistent notification showing all tasks for today',
+        importance: Notifications.AndroidImportance.LOW, // Low importance for persistent notification
+        sound: false,
+        enableVibrate: false,
+        showBadge: false,
+      });
     }
   } catch (error) {
     console.error('Error setting up notification channel:', error);
@@ -92,10 +102,41 @@ export interface ScheduledNotification {
 }
 
 /**
- * Request notification permissions
+ * Open Android notification settings for the app
+ */
+async function openAndroidNotificationSettings(): Promise<void> {
+  try {
+    const packageName = Constants?.expoConfig?.android?.package;
+    if (!packageName) {
+      // Fallback to generic settings
+      await Linking.openSettings();
+      return;
+    }
+
+    // Try to open app-specific notification settings (Android 8+)
+    try {
+      await Linking.sendIntent('android.settings.APP_NOTIFICATION_SETTINGS', [
+        {
+          key: 'android.provider.extra.APP_PACKAGE',
+          value: packageName,
+        },
+      ]);
+    } catch {
+      // Fallback to app settings
+      await Linking.openSettings();
+    }
+  } catch (error) {
+    console.error('Error opening notification settings:', error);
+    // Final fallback
+    await Linking.openSettings();
+  }
+}
+
+/**
+ * Request notification permissions with user guidance
  * Returns false silently in Expo Go where notifications aren't supported
  */
-export async function requestNotificationPermissions(): Promise<boolean> {
+export async function requestNotificationPermissions(showGuidance = false): Promise<boolean> {
   // Skip in Expo Go
   if (isExpoGo()) {
     console.log('Skipping notification permissions - running in Expo Go');
@@ -110,6 +151,65 @@ export async function requestNotificationPermissions(): Promise<boolean> {
     let finalStatus = existingStatus;
     
     if (existingStatus !== 'granted') {
+      // Show guidance before requesting if this is the first time
+      if (showGuidance && Platform.OS === 'android') {
+        const androidVersion = Platform.Version;
+        const isAndroid12Plus = typeof androidVersion === 'number' && androidVersion >= 31;
+        
+        if (isAndroid12Plus) {
+          // Show guidance alert and wait for user response
+          return new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Enable Notifications',
+              'To receive task reminders, please:\n\n1. Allow notifications when prompted\n2. After granting permission, enable "Pop on screen" in notification settings for heads-up notifications\n\nWe\'ll open the settings for you after you grant permission.',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: 'Continue',
+                  onPress: async () => {
+                    const { status } = await Notifications.requestPermissionsAsync({
+                      ios: {
+                        allowAlert: true,
+                        allowBadge: true,
+                        allowSound: true,
+                      },
+                    });
+                    finalStatus = status;
+                    
+                    if (status === 'granted') {
+                      // Show additional guidance for Android 12+
+                      setTimeout(() => {
+                        Alert.alert(
+                          'Enable "Pop on screen"',
+                          'For the best experience, please enable "Pop on screen" in your notification settings. This allows reminders to appear as popups even when the app is closed.\n\nWould you like to open notification settings now?',
+                          [
+                            {
+                              text: 'Not Now',
+                              style: 'cancel',
+                            },
+                            {
+                              text: 'Open Settings',
+                              onPress: () => openAndroidNotificationSettings(),
+                            },
+                          ],
+                        );
+                      }, 500);
+                    }
+                    
+                    resolve(status === 'granted');
+                  },
+                },
+              ],
+            );
+          });
+        }
+      }
+      
+      // Standard permission request
       const { status } = await Notifications.requestPermissionsAsync({
         ios: {
           allowAlert: true,
@@ -413,6 +513,218 @@ export async function getAllScheduledNotifications(): Promise<
 }
 
 /**
+ * Get all tasks for today (both repeatable and non-repeatable)
+ * This includes tasks with dueDate today, daily reminders, and weekly reminders for today
+ */
+async function getTodayTasks(): Promise<Array<{ description: string; isRepeating: boolean }>> {
+  try {
+    // Import here to avoid circular dependencies
+    const { tasksService } = await import('./tasks.service');
+    const { EveryDayRemindersStorage } = await import('../utils/storage');
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Get all tasks
+    const allTasks = await tasksService.getAll();
+    
+    // Get today's day of week (0 = Sunday, 6 = Saturday)
+    const todayDayOfWeek = today.getDay();
+    
+    const todayTasks: Array<{ description: string; isRepeating: boolean }> = [];
+    
+    for (const task of allTasks) {
+      // Skip completed tasks
+      if (task.completed) {
+        continue;
+      }
+      
+      let isToday = false;
+      let isRepeating = false;
+      
+      // Check if task is due today
+      if (task.dueDate) {
+        const dueDate = new Date(task.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate.getTime() === today.getTime()) {
+          isToday = true;
+        }
+      }
+      
+      // Check if task has daily reminder
+      const dailyReminders = await EveryDayRemindersStorage.getRemindersForTask(task.id);
+      if (dailyReminders && dailyReminders.length > 0) {
+        isToday = true;
+        isRepeating = true;
+      }
+      
+      // Check if task has weekly reminder for today
+      if (task.specificDayOfWeek !== null && task.specificDayOfWeek !== undefined) {
+        if (task.specificDayOfWeek === todayDayOfWeek) {
+          isToday = true;
+          isRepeating = true;
+        }
+      }
+      
+      if (isToday) {
+        todayTasks.push({
+          description: task.description,
+          isRepeating,
+        });
+      }
+    }
+    
+    return todayTasks;
+  } catch (error) {
+    console.error('Error getting today tasks:', error);
+    return [];
+  }
+}
+
+/**
+ * Update the daily tasks persistent notification
+ * This shows all tasks for today in a persistent notification
+ */
+export async function updateDailyTasksNotification(): Promise<void> {
+  // Skip in Expo Go
+  if (isExpoGo()) {
+    return;
+  }
+
+  try {
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      return;
+    }
+
+    await setupNotificationChannel();
+    
+    const todayTasks = await getTodayTasks();
+    
+    if (todayTasks.length === 0) {
+      // Cancel the notification if no tasks
+      try {
+        await Notifications.cancelScheduledNotificationAsync('daily-tasks-persistent');
+      } catch {
+        // Ignore if notification doesn't exist
+      }
+      return;
+    }
+    
+    // Separate repeating and non-repeating tasks
+    const repeatingTasks = todayTasks.filter(t => t.isRepeating);
+    const nonRepeatingTasks = todayTasks.filter(t => !t.isRepeating);
+    
+    // Build notification body
+    let body = '';
+    if (repeatingTasks.length > 0) {
+      body += `Repeating (${repeatingTasks.length}):\n`;
+      repeatingTasks.slice(0, 5).forEach((task, index) => {
+        body += `• ${task.description}\n`;
+      });
+      if (repeatingTasks.length > 5) {
+        body += `... and ${repeatingTasks.length - 5} more\n`;
+      }
+    }
+    
+    if (nonRepeatingTasks.length > 0) {
+      if (body) body += '\n';
+      body += `One-time (${nonRepeatingTasks.length}):\n`;
+      nonRepeatingTasks.slice(0, 5).forEach((task) => {
+        body += `• ${task.description}\n`;
+      });
+      if (nonRepeatingTasks.length > 5) {
+        body += `... and ${nonRepeatingTasks.length - 5} more`;
+      }
+    }
+    
+    // Schedule as a persistent notification (ongoing)
+    // Use a fixed identifier so we can update it
+    const notificationId = 'daily-tasks-persistent';
+    
+    // Cancel existing notification first
+    try {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+    } catch {
+      // Ignore if doesn't exist
+    }
+    
+    // Schedule immediate notification that will be persistent
+    // Note: Expo Notifications doesn't directly support ongoing/sticky notifications
+    // but we can use a low-priority channel and update it frequently
+    await Notifications.scheduleNotificationAsync({
+      identifier: notificationId,
+      content: {
+        title: `📋 Today's Tasks (${todayTasks.length})`,
+        body: body.trim(),
+        data: {
+          type: 'daily-tasks',
+        },
+        // Android-specific options
+        ...(Platform.OS === 'android' && {
+          channelId: 'daily-tasks',
+        }),
+      },
+      trigger: null, // Immediate notification
+    });
+    
+    console.log(`Updated daily tasks notification with ${todayTasks.length} tasks`);
+  } catch (error) {
+    console.error('Error updating daily tasks notification:', error);
+  }
+}
+
+/**
+ * Schedule daily update for tasks notification
+ * This will update the notification every day at midnight
+ */
+export async function scheduleDailyTasksNotificationUpdate(): Promise<void> {
+  // Skip in Expo Go
+  if (isExpoGo()) {
+    return;
+  }
+
+  try {
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      return;
+    }
+
+    await setupNotificationChannel();
+    
+    // Cancel existing scheduled update
+    try {
+      await Notifications.cancelScheduledNotificationAsync('daily-tasks-update');
+    } catch {
+      // Ignore if doesn't exist
+    }
+    
+    // Schedule daily update at midnight
+    await Notifications.scheduleNotificationAsync({
+      identifier: 'daily-tasks-update',
+      content: {
+        title: 'Updating daily tasks',
+        body: '',
+        data: {
+          type: 'daily-tasks-update',
+        },
+      },
+      trigger: {
+        type: 'daily',
+        hour: 0,
+        minute: 0,
+      },
+    });
+    
+    // Also update immediately
+    await updateDailyTasksNotification();
+  } catch (error) {
+    console.error('Error scheduling daily tasks notification update:', error);
+  }
+}
+
+/**
  * Reschedule all reminders for all tasks (call on app startup)
  * This ensures notifications are scheduled even after app restart
  */
@@ -484,6 +796,10 @@ export async function rescheduleAllReminders(): Promise<void> {
     }
 
     console.log(`Rescheduled ${scheduledCount} reminders across ${allTasks.length} tasks`);
+    
+    // Also update daily tasks notification
+    await updateDailyTasksNotification();
+    await scheduleDailyTasksNotificationUpdate();
   } catch (error) {
     console.error('Error rescheduling reminders:', error);
   }

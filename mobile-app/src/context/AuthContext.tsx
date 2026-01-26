@@ -47,6 +47,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await authService.login({ email, password });
     setUser(response.user);
     setHasToken(true);
+    
+    // Request notification permissions after successful login (first time only)
+    try {
+      const { AppPreferencesStorage } = await import('../utils/storage');
+      const { requestNotificationPermissions } = await import('../services/notifications.service');
+      
+      const hasSeenPermission = await AppPreferencesStorage.hasSeenNotificationPermission();
+      if (!hasSeenPermission) {
+        // Request with guidance for first-time users
+        // Use setTimeout to avoid blocking the login flow
+        setTimeout(async () => {
+          await requestNotificationPermissions(true);
+          await AppPreferencesStorage.setNotificationPermissionShown();
+        }, 500);
+      } else {
+        // Just check permissions without showing guidance
+        setTimeout(async () => {
+          await requestNotificationPermissions(false);
+        }, 500);
+      }
+    } catch (error) {
+      // Silently ignore errors - notifications are not critical for login
+      console.error('Error requesting notification permissions after login:', error);
+    }
   };
 
   const register = async (email: string, password: string, name: string) => {

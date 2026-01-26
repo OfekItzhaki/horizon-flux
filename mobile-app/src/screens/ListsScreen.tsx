@@ -145,7 +145,7 @@ export default function ListsScreen() {
     fab: {
       position: 'absolute',
       right: 24,
-      bottom: 80,
+      bottom: Platform.OS === 'ios' ? 50 : 40,
       width: 68,
       height: 68,
       borderRadius: 34,

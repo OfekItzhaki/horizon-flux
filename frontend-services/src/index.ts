@@ -22,4 +22,6 @@ export { API_CONFIG, getApiUrl } from './config';
 // Export storage utilities
 export { TokenStorage } from './utils/storage';
 
+// Export shared reminder types and helpers (web + mobile)
+export * from './reminders';
 

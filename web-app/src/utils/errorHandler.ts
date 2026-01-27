@@ -82,8 +82,8 @@ export function isAuthError(error: unknown): boolean {
   if (!error) return false;
   
   try {
-    const apiError = error as ApiError | any;
-    const statusCode = apiError?.statusCode || apiError?.response?.status;
+    const e = error as { statusCode?: number; response?: { status?: number } } | null | undefined;
+    const statusCode = e?.statusCode ?? e?.response?.status;
     const message = extractErrorMessage(error, '').toLowerCase();
     
     return statusCode === 401 || message.includes('unauthorized');
@@ -100,7 +100,7 @@ export function isTimeoutError(error: unknown): boolean {
   
   try {
     const message = extractErrorMessage(error, '').toLowerCase();
-    const apiError = error as any;
+    const apiError = error as { code?: string };
     const code = apiError?.code;
     
     return (

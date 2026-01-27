@@ -89,6 +89,13 @@ export interface CreateUserDto {
   profilePicture?: string;
 }
 
+export interface UpdateUserDto {
+  email?: string;
+  name?: string;
+  profilePicture?: string;
+  password?: string;
+}
+
 export interface CreateTodoListDto {
   name: string;
 }
@@ -132,34 +139,5 @@ export interface ShareListDto {
   sharedWithId: number;
 }
 
-// Reminder Configuration Types
-export enum ReminderTimeframe {
-  SPECIFIC_DATE = 'SPECIFIC_DATE',
-  EVERY_DAY = 'EVERY_DAY',
-  EVERY_WEEK = 'EVERY_WEEK',
-  EVERY_MONTH = 'EVERY_MONTH',
-  EVERY_YEAR = 'EVERY_YEAR',
-}
-
-export enum ReminderSpecificDate {
-  START_OF_WEEK = 'START_OF_WEEK',
-  START_OF_MONTH = 'START_OF_MONTH',
-  START_OF_YEAR = 'START_OF_YEAR',
-  CUSTOM_DATE = 'CUSTOM_DATE',
-}
-
-export interface ReminderConfig {
-  id: string; // Unique ID for this reminder
-  timeframe: ReminderTimeframe;
-  time: string; // HH:MM format
-  specificDate?: ReminderSpecificDate;
-  customDate?: string; // ISO date string for SPECIFIC_DATE with CUSTOM_DATE
-  dayOfWeek?: number; // 0-6 for weekly reminders
-  daysBefore?: number; // For reminders before due date
-  hasAlarm?: boolean; // Whether to play sound/vibration for this reminder
-}
-
-export interface TaskReminderConfig {
-  reminders: ReminderConfig[];
-  dueDate?: string; // ISO date string
-}
+// Reminder types (ReminderConfig, ReminderTimeframe, ReminderSpecificDate, etc.)
+// are in @tasks-management/frontend-services

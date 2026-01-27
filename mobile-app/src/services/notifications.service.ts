@@ -1,6 +1,11 @@
 import * as Notifications from 'expo-notifications';
 import { Platform, Linking, Alert } from 'react-native';
-import { ReminderConfig, ReminderTimeframe, ReminderSpecificDate } from '../types';
+import {
+  type ReminderConfig,
+  ReminderTimeframe,
+  ReminderSpecificDate,
+  convertBackendToReminders,
+} from '@tasks-management/frontend-services';
 import Constants from 'expo-constants';
 
 // Track if notification handler has been configured
@@ -54,8 +59,7 @@ async function setupNotificationChannel(): Promise<void> {
       await Notifications.setNotificationChannelAsync('daily-tasks', {
         name: 'Daily Tasks',
         description: 'Persistent notification showing all tasks for today',
-        importance: Notifications.AndroidImportance.LOW, // Low importance for persistent notification
-        sound: false,
+        importance: Notifications.AndroidImportance.LOW,
         enableVibrate: false,
         showBadge: false,
       });
@@ -416,25 +420,32 @@ function calculateNotificationDate(
 
 /**
  * Format notification body text
+ * Includes location when set.
  */
 function formatNotificationBody(
   reminder: ReminderConfig,
   dueDate: Date | string | null,
 ): string {
+  const parts: string[] = [];
+  if (reminder.location?.trim()) {
+    parts.push(`📍 ${reminder.location.trim()}`);
+  }
+
   if (reminder.daysBefore !== undefined && reminder.daysBefore >= 0 && dueDate) {
     const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
     const daysUntil = Math.ceil((due.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    
     if (daysUntil === 0) {
-      return 'This task is due today!';
+      parts.push('This task is due today!');
     } else if (daysUntil === 1) {
-      return 'This task is due tomorrow.';
+      parts.push('This task is due tomorrow.');
     } else {
-      return `This task is due in ${daysUntil} days.`;
+      parts.push(`This task is due in ${daysUntil} days.`);
     }
+  } else {
+    parts.push('Reminder for your task');
   }
 
-  return 'Reminder for your task';
+  return parts.join(' • ');
 }
 
 /**
@@ -528,10 +539,7 @@ export async function getAllScheduledNotifications(): Promise<
  */
 async function getTodayTasks(): Promise<Array<{ description: string; isRepeating: boolean }>> {
   try {
-    // Import here to avoid circular dependencies
     const { tasksService } = await import('./tasks.service');
-    const { ReminderTimeframe } = await import('../types');
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
@@ -725,7 +733,7 @@ export async function scheduleDailyTasksNotificationUpdate(): Promise<void> {
         },
       },
       trigger: {
-        type: 'daily',
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 0,
         minute: 0,
       },
@@ -752,10 +760,7 @@ export async function rescheduleAllReminders(): Promise<void> {
   }
 
   try {
-    // Import here to avoid circular dependencies
     const { tasksService } = await import('./tasks.service');
-    const { ReminderTimeframe } = await import('../types');
-    const { convertBackendToReminders } = await import('../utils/helpers');
 
     // Get all tasks
     const allTasks = await tasksService.getAll();

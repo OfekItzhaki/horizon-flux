@@ -4,6 +4,8 @@ import {
   ReminderSpecificDate,
   convertBackendToReminders,
 } from '@tasks-management/frontend-services';
+import toast from 'react-hot-toast';
+import React from 'react';
 
 /**
  * Web Notifications Service
@@ -151,13 +153,13 @@ function formatNotificationBody(
   parts.push(`🕐 ${timeFormatted}`);
 
   let message = `"${taskDescription}"`;
-  
+
   // Add due date info if available
   if (reminder.daysBefore !== undefined && reminder.daysBefore >= 0 && dueDate) {
     const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
     const now = new Date();
     const daysUntil = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysUntil === 0) {
       parts.push('(due today)');
     } else if (daysUntil === 1) {
@@ -166,12 +168,12 @@ function formatNotificationBody(
       parts.push(`(due in ${daysUntil} days)`);
     }
   }
-  
+
   // Combine: "Task Name" -> Time (due info)
   if (parts.length > 0) {
     message += ` → ${parts.join(' ')}`;
   }
-  
+
   return message;
 }
 
@@ -182,37 +184,57 @@ export async function showNotification(
   title: string,
   options: NotificationOptions & { data?: { taskId?: number; reminderId?: string } } = {},
 ): Promise<void> {
-  if (!isNotificationSupported()) {
-    return;
-  }
+  // 1. Browser Native Notification
+  if (isNotificationSupported()) {
+    const permission = await requestNotificationPermissions();
+    if (permission) {
+      try {
+        const notification = new Notification(title, {
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          ...options,
+        });
 
-  const permission = await requestNotificationPermissions();
-  if (!permission) {
-    return;
-  }
-
-  try {
-    const notification = new Notification(title, {
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
-      ...options,
-    });
-
-    // Handle notification click
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-      
-      // Navigate to task if taskId is provided
-      if (options.data?.taskId) {
-        window.location.href = `/tasks/${options.data.taskId}`;
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+          if (options.data?.taskId) {
+            window.location.href = `/tasks/${options.data.taskId}`;
+          }
+        };
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('Error showing browser notification:', error);
+        }
       }
-    };
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.error('Error showing notification:', error);
     }
   }
+
+  // 2. ALWAYS show an in-app toast "popup" as well
+  toast((t) => (
+    React.createElement('div', {
+      className: 'flex flex-col gap-1',
+      onClick: () => {
+        toast.dismiss(t.id);
+        if (options.data?.taskId) {
+          window.location.href = `/tasks/${options.data.taskId}`;
+        }
+      }
+    }, [
+      React.createElement('strong', { key: 'title', className: 'text-sm font-bold' }, title),
+      options.body && React.createElement('p', { key: 'body', className: 'text-xs opacity-90' }, options.body),
+      React.createElement('div', { key: 'actions', className: 'mt-2 flex gap-2' }, [
+        React.createElement('button', {
+          key: 'view',
+          className: 'px-2 py-1 bg-primary-600 dark:bg-primary-500 text-white text-[10px] rounded font-bold uppercase shadow-sm',
+        }, 'View Task')
+      ])
+    ])
+  ), {
+    duration: 8000,
+    position: 'top-right',
+    icon: '🔔',
+  });
 }
 
 /**
@@ -273,19 +295,19 @@ export async function scheduleReminderNotification(
       // Schedule for today at the specified time, then set up recurring
       scheduleDate = new Date();
       scheduleDate.setHours(hours, minutes, 0, 0);
-      
+
       // If time has passed today, schedule for tomorrow
       if (scheduleDate < new Date()) {
         scheduleDate.setDate(scheduleDate.getDate() + 1);
       }
-      
+
       isRecurring = true;
     } else if (reminder.timeframe === ReminderTimeframe.EVERY_WEEK && reminder.dayOfWeek !== undefined) {
       // Calculate next occurrence of the specified day of week
       const now = new Date();
       const currentDay = now.getDay();
       let daysUntil = reminder.dayOfWeek - currentDay;
-      
+
       if (daysUntil < 0) {
         daysUntil += 7; // Next week
       } else if (daysUntil === 0) {
@@ -296,11 +318,11 @@ export async function scheduleReminderNotification(
           daysUntil = 7; // Next week
         }
       }
-      
+
       scheduleDate = new Date(now);
       scheduleDate.setDate(scheduleDate.getDate() + daysUntil);
       scheduleDate.setHours(hours, minutes, 0, 0);
-      
+
       isRecurring = true;
     } else {
       // One-time notification (including custom date)
@@ -311,7 +333,7 @@ export async function scheduleReminderNotification(
         }
         return null;
       }
-      // If in the past: we fall through to delay <= 0 and show immediately (don't skip)
+      // If in the past, delay <= 0 below: we skip (no notification for one-time past reminders)
     }
 
     if (!scheduleDate) {
@@ -322,7 +344,17 @@ export async function scheduleReminderNotification(
     const delay = scheduleDate.getTime() - Date.now();
 
     if (delay <= 0) {
-      // Show immediately if time has passed (e.g. custom "in a few minutes" that became past)
+      // One-time reminders in the past: skip (don't notify on login for old reminders)
+      /*
+      if (!isRecurring) {
+        if (import.meta.env.DEV) {
+          console.log('[Notifications] Skipped past one-time reminder', notificationId, 'task', taskId, 'reminder', reminder.id);
+        }
+        return null;
+      }
+      */
+      if (!isRecurring) return null;
+      // Recurring reminder: fire now and schedule next occurrence
       if (import.meta.env.DEV) {
         console.log('[Notifications] Firing immediately (past or due now)', notificationId, 'task', taskId, 'reminder', reminder.id);
       }
@@ -331,9 +363,7 @@ export async function scheduleReminderNotification(
         tag: notificationId,
         data: { taskId, reminderId: reminder.id },
       });
-      if (isRecurring) {
-        scheduleNextRecurringNotification(taskId, taskDescription, reminder, dueDate, notificationId);
-      }
+      scheduleNextRecurringNotification(taskId, taskDescription, reminder, dueDate, notificationId);
       return notificationId;
     }
 
@@ -353,9 +383,11 @@ export async function scheduleReminderNotification(
 
     scheduledNotifications.set(notificationId, timeoutId);
 
+    /*
     if (import.meta.env.DEV) {
       console.log('[Notifications] Scheduled', notificationId, 'for task', taskId, 'at', scheduleDate.toISOString(), 'in', Math.round(delay / 1000), 's');
     }
+    */
 
     return notificationId;
   } catch (error) {
@@ -428,7 +460,7 @@ export function cancelNotification(notificationId: string): void {
  */
 export function cancelAllTaskNotifications(taskId: number): void {
   const keysToCancel: string[] = [];
-  
+
   scheduledNotifications.forEach((_, key) => {
     if (key.startsWith(`reminder-${taskId}-`)) {
       keysToCancel.push(key);
@@ -510,9 +542,5 @@ export async function rescheduleAllReminders(
     );
 
     scheduledCount += notificationIds.length;
-  }
-
-  if (import.meta.env.DEV) {
-    console.log(`Rescheduled ${scheduledCount} reminders across ${tasks.length} tasks`);
   }
 }

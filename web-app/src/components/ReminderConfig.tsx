@@ -7,13 +7,11 @@ import {
   ReminderSpecificDate,
   DAY_NAMES,
   formatReminderDisplay,
-} from '@tasks-management/frontend-services';
-import {
   validateTime,
   validateCustomReminderDate,
   validateDaysBefore,
   normalizeTime,
-} from '../utils/dateTimeValidation';
+} from '@tasks-management/frontend-services';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
 
 interface ReminderConfigProps {
@@ -58,11 +56,11 @@ const ReminderConfigComponent = memo(function ReminderConfigComponent({ reminder
   const saveReminder = useCallback((reminder: ReminderConfig) => {
     // Save the editing reminder ID before closing modal
     const editingId = editingReminder?.id;
-    
+
     // Close modal immediately for better UX
     setEditingReminder(null);
     setShowEditor(false);
-    
+
     // Update reminders in background
     if (editingId) {
       const existingIndex = reminders.findIndex((r) => r.id === editingId);
@@ -71,10 +69,10 @@ const ReminderConfigComponent = memo(function ReminderConfigComponent({ reminder
         const updated = reminders.map((r) =>
           r.id === editingId
             ? {
-                ...reminder,
-                id: reminder.id,
-                time: reminder.time || '09:00',
-              }
+              ...reminder,
+              id: reminder.id,
+              time: reminder.time || '09:00',
+            }
             : r
         );
         onRemindersChange(updated);
@@ -101,7 +99,7 @@ const ReminderConfigComponent = memo(function ReminderConfigComponent({ reminder
   const reminderDisplays = useMemo(() => {
     return reminders.map(reminder => ({
       id: reminder.id,
-      display: formatReminderDisplay(reminder, t),
+      display: formatReminderDisplay(reminder, t, { use24h: true }),
       hasAlarm: reminder.hasAlarm ?? false,
     }));
   }, [reminders, t]);
@@ -180,6 +178,7 @@ const ReminderConfigComponent = memo(function ReminderConfigComponent({ reminder
       {/* Reminder Editor Modal */}
       {showEditor && editingReminder && (
         <ReminderEditor
+          key={editingReminder.id}
           reminder={editingReminder}
           onSave={saveReminder}
           onCancel={handleCancelEditor}
@@ -202,6 +201,16 @@ interface ReminderEditorProps {
 function ReminderEditor({ reminder, onSave, onCancel, taskDueDate }: ReminderEditorProps) {
   const { t, i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const initialCustomDate = useMemo(() => {
+    const raw = reminder.customDate ? reminder.customDate.split('T')[0] : '';
+    if (!raw) return '';
+    const d = new Date(raw);
+    d.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d < today ? todayStr : raw;
+  }, [reminder.customDate, todayStr]);
   const [config, setConfig] = useState<ReminderConfig>({
     ...reminder,
     time: reminder.time || '09:00',
@@ -210,9 +219,7 @@ function ReminderEditor({ reminder, onSave, onCancel, taskDueDate }: ReminderEdi
   const [daysBefore, setDaysBefore] = useState<string>(
     reminder.daysBefore?.toString() ?? ''
   );
-  const [customDate, setCustomDate] = useState<string>(
-    reminder.customDate ? reminder.customDate.split('T')[0] : ''
-  );
+  const [customDate, setCustomDate] = useState<string>(initialCustomDate);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [customDateError, setCustomDateError] = useState<string | null>(null);
   const [daysBeforeError, setDaysBeforeError] = useState<string | null>(null);
@@ -282,11 +289,11 @@ function ReminderEditor({ reminder, onSave, onCancel, taskDueDate }: ReminderEdi
 
   // Use portal to render modal at body level, outside any parent containers
   return createPortal(
-    <div 
+    <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in"
       onClick={onCancel}
     >
-      <div 
+      <div
         className="premium-card max-w-lg w-full max-h-[90vh] shadow-2xl animate-scale-in flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -307,183 +314,212 @@ function ReminderEditor({ reminder, onSave, onCancel, taskDueDate }: ReminderEdi
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6">
 
-        <div className="space-y-6">
-          {/* Timeframe Selection */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {t('reminders.timeframe', { defaultValue: 'Timeframe' })}:
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf.value}
-                  onClick={() =>
-                    setConfig({
-                      ...config,
-                      timeframe: tf.value,
-                      specificDate:
-                        tf.value === ReminderTimeframe.SPECIFIC_DATE
-                          ? ReminderSpecificDate.CUSTOM_DATE
-                          : undefined,
-                    })
-                  }
-                    className={`px-4 py-3 rounded-xl text-sm font-semibold ${
-                      config.timeframe === tf.value
-                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 scale-105'
-                        : 'glass-card text-gray-700 dark:text-gray-300'
-                    }`}
-                >
-                  {tf.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Specific Date Options */}
-          {config.timeframe === ReminderTimeframe.SPECIFIC_DATE && (
+          <div className="space-y-6">
+            {/* Timeframe Selection */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                {t('reminders.dateOption', { defaultValue: 'Date Option' })}:
+                {t('reminders.timeframe', { defaultValue: 'Timeframe' })}:
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {SPECIFIC_DATES.map((sd) => (
+                {TIMEFRAMES.map((tf) => (
                   <button
-                    key={sd.value}
-                    onClick={() => setConfig({ ...config, specificDate: sd.value })}
-                    className={`px-4 py-3 rounded-xl text-sm font-semibold ${
-                      config.specificDate === sd.value
-                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 scale-105'
-                        : 'glass-card text-gray-700 dark:text-gray-300'
-                    }`}
+                    key={tf.value}
+                    onClick={() =>
+                      setConfig({
+                        ...config,
+                        timeframe: tf.value,
+                        specificDate:
+                          tf.value === ReminderTimeframe.SPECIFIC_DATE
+                            ? ReminderSpecificDate.CUSTOM_DATE
+                            : undefined,
+                      })
+                    }
+                    className={`px-4 py-3 rounded-xl text-sm font-semibold ${config.timeframe === tf.value
+                      ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 scale-105'
+                      : 'glass-card text-gray-700 dark:text-gray-300'
+                      }`}
                   >
-                    {sd.label}
+                    {tf.label}
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Custom Date Input */}
-          {config.timeframe === ReminderTimeframe.SPECIFIC_DATE &&
-            config.specificDate === ReminderSpecificDate.CUSTOM_DATE && (
+            {/* Specific Date Options */}
+            {config.timeframe === ReminderTimeframe.SPECIFIC_DATE && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  {t('reminders.customDate', { defaultValue: 'Custom Date' })}:
+                  {t('reminders.dateOption', { defaultValue: 'Date Option' })}:
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {SPECIFIC_DATES.map((sd) => (
+                    <button
+                      key={sd.value}
+                      onClick={() => setConfig({ ...config, specificDate: sd.value })}
+                      className={`px-4 py-3 rounded-xl text-sm font-semibold ${config.specificDate === sd.value
+                        ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30 scale-105'
+                        : 'glass-card text-gray-700 dark:text-gray-300'
+                        }`}
+                    >
+                      {sd.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Custom Date Input */}
+            {config.timeframe === ReminderTimeframe.SPECIFIC_DATE &&
+              config.specificDate === ReminderSpecificDate.CUSTOM_DATE && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    {t('reminders.customDate', { defaultValue: 'Custom Date' })}:
+                  </label>
+                  <input
+                    type="date"
+                    value={customDate}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => {
+                      setCustomDate(e.target.value);
+                      setCustomDateError(null);
+                    }}
+                    className={`premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${customDateError ? 'border-red-500 dark:border-red-400' : ''}`}
+                  />
+                  {customDateError && (
+                    <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
+                      {customDateError}
+                    </p>
+                  )}
+                </div>
+              )}
+
+            {/* Days Before Due Date */}
+            {config.timeframe === ReminderTimeframe.SPECIFIC_DATE && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  {t('reminders.daysBefore', { defaultValue: 'Days Before Due Date' })}:
                 </label>
                 <input
-                  type="date"
-                  value={customDate}
-                  min={new Date().toISOString().slice(0, 10)}
+                  type="number"
+                  min="0"
+                  value={daysBefore}
                   onChange={(e) => {
-                    setCustomDate(e.target.value);
-                    setCustomDateError(null);
+                    setDaysBefore(e.target.value);
+                    setDaysBeforeError(null);
+                    setDaysBeforeDueDateError(null);
                   }}
-                  className={`premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${customDateError ? 'border-red-500 dark:border-red-400' : ''}`}
+                  placeholder="e.g. 0, 1, 7"
+                  className={`premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${(daysBeforeError || daysBeforeDueDateError) ? 'border-red-500 dark:border-red-400' : ''}`}
                 />
-                {customDateError && (
+                {(daysBeforeError || daysBeforeDueDateError) && (
                   <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
-                    {customDateError}
+                    {daysBeforeError ?? daysBeforeDueDateError}
                   </p>
                 )}
               </div>
             )}
 
-          {/* Days Before Due Date */}
-          {config.timeframe === ReminderTimeframe.SPECIFIC_DATE && (
+            {/* Day of Week (for EVERY_WEEK) */}
+            {config.timeframe === ReminderTimeframe.EVERY_WEEK && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  {t('reminders.dayOfWeek', { defaultValue: 'Day of Week' })}:
+                </label>
+                <select
+                  value={config.dayOfWeek ?? 1}
+                  onChange={(e) =>
+                    setConfig({ ...config, dayOfWeek: parseInt(e.target.value, 10) })
+                  }
+                  className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+                >
+                  {DAY_NAMES.map((day, index) => (
+                    <option key={index} value={index}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Time Input (24-hour format) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                {t('reminders.daysBefore', { defaultValue: 'Days Before Due Date' })}:
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <span>🕐</span>
+                {t('reminders.time', { defaultValue: 'Time' })}
+                <span className="text-xs font-normal text-gray-500">(24h)</span>
               </label>
-              <input
-                type="number"
-                min="0"
-                value={daysBefore}
-                onChange={(e) => {
-                  setDaysBefore(e.target.value);
-                  setDaysBeforeError(null);
-                  setDaysBeforeDueDateError(null);
-                }}
-                placeholder="e.g. 0, 1, 7"
-                className={`premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${(daysBeforeError || daysBeforeDueDateError) ? 'border-red-500 dark:border-red-400' : ''}`}
-              />
-              {(daysBeforeError || daysBeforeDueDateError) && (
-                <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
-                  {daysBeforeError ?? daysBeforeDueDateError}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <select
+                    value={(config.time || '09:00').split(':')[0]}
+                    onChange={(e) => {
+                      const mins = (config.time || '09:00').split(':')[1] || '00';
+                      setConfig({ ...config, time: `${e.target.value}:${mins}` });
+                      setTimeError(null);
+                    }}
+                    className={`premium-input w-full text-center text-lg font-mono focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${timeError ? 'border-red-500 dark:border-red-400' : ''}`}
+                  >
+                    {Array.from({ length: 24 }).map((_, i) => {
+                      const val = String(i).padStart(2, '0');
+                      return <option key={val} value={val}>{val}</option>;
+                    })}
+                  </select>
+                </div>
+                <span className="text-xl font-bold text-gray-400">:</span>
+                <div className="flex-1">
+                  <select
+                    value={(config.time || '09:00').split(':')[1]}
+                    onChange={(e) => {
+                      const hrs = (config.time || '09:00').split(':')[0] || '09';
+                      setConfig({ ...config, time: `${hrs}:${e.target.value}` });
+                      setTimeError(null);
+                    }}
+                    className={`premium-input w-full text-center text-lg font-mono focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${timeError ? 'border-red-500 dark:border-red-400' : ''}`}
+                  >
+                    {Array.from({ length: 60 }).map((_, i) => {
+                      const val = String(i).padStart(2, '0');
+                      return <option key={val} value={val}>{val}</option>;
+                    })}
+                  </select>
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t('reminders.time24hHint', { defaultValue: 'Select time in 24-hour format' })}
+              </p>
+              {timeError && (
+                <p className="mt-1.5 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
+                  {timeError}
                 </p>
               )}
             </div>
-          )}
 
-          {/* Day of Week (for EVERY_WEEK) */}
-          {config.timeframe === ReminderTimeframe.EVERY_WEEK && (
+            {/* Location (optional) */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                {t('reminders.dayOfWeek', { defaultValue: 'Day of Week' })}:
+                {t('reminders.location', { defaultValue: 'Location' })} <span className="text-gray-500 font-normal">({t('common.optional', { defaultValue: 'optional' })})</span>
               </label>
-              <select
-                value={config.dayOfWeek ?? 1}
-                onChange={(e) =>
-                  setConfig({ ...config, dayOfWeek: parseInt(e.target.value, 10) })
-                }
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t('reminders.locationPlaceholder', { defaultValue: 'e.g. Office, 123 Main St' })}
                 className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-              >
-                {DAY_NAMES.map((day, index) => (
-                  <option key={index} value={index}>
-                    {day}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
-          )}
 
-          {/* Time Input */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {t('reminders.time', { defaultValue: 'Time' })}:
-            </label>
-            <input
-              type="time"
-              value={config.time || '09:00'}
-              onChange={(e) => {
-                setConfig({ ...config, time: e.target.value });
-                setTimeError(null);
-              }}
-              className={`premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all ${timeError ? 'border-red-500 dark:border-red-400' : ''}`}
-            />
-            {timeError && (
-              <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
-                {timeError}
-              </p>
-            )}
-          </div>
-
-          {/* Location (optional) */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {t('reminders.location', { defaultValue: 'Location' })} <span className="text-gray-500 font-normal">({t('common.optional', { defaultValue: 'optional' })})</span>
-            </label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={t('reminders.locationPlaceholder', { defaultValue: 'e.g. Office, 123 Main St' })}
-              className="premium-input w-full focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-            />
-          </div>
-
-          {/* Alarm Toggle */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="hasAlarm"
-              checked={config.hasAlarm ?? false}
-              onChange={(e) => setConfig({ ...config, hasAlarm: e.target.checked })}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="hasAlarm" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('reminders.enableAlarm', { defaultValue: 'Enable Alarm' })}
-            </label>
-          </div>
+            {/* Alarm Toggle */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="hasAlarm"
+                checked={config.hasAlarm ?? false}
+                onChange={(e) => setConfig({ ...config, hasAlarm: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="hasAlarm" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('reminders.enableAlarm', { defaultValue: 'Enable Alarm' })}
+              </label>
+            </div>
           </div>
         </div>
 

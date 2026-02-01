@@ -23,9 +23,10 @@ import { handleApiError, extractErrorMessage } from '../utils/errorHandler';
 import {
   type ReminderConfig,
   convertBackendToReminders,
-  convertRemindersToBackend,
 } from '@tasks-management/frontend-services';
-import { validateDueDate } from '../utils/dateTimeValidation';
+import { taskFormSchema } from '../validation/schemas';
+import { getCachedTaskById } from '../utils/taskCache';
+import { buildTaskUpdatePayload } from '../utils/taskUpdatePayload';
 import {
   scheduleTaskReminders,
   cancelAllTaskNotifications,
@@ -42,7 +43,7 @@ export default function TaskDetailsPage() {
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [taskDescriptionDraft, setTaskDescriptionDraft] = useState('');
   const stepInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Full edit mode state (for description, due date, reminders)
   const [isFullEditMode, setIsFullEditMode] = useState(false);
   const [editDescription, setEditDescription] = useState('');
@@ -78,27 +79,6 @@ export default function TaskDetailsPage() {
     },
   ]);
 
-  // Speed-up + consistency:
-  // If the user just toggled completion in the list view and immediately navigates here,
-  // the network fetch may still return stale data. Use cached task from React Query first.
-  const getCachedTaskById = (): Task | undefined => {
-    if (typeof numericTaskId !== 'number' || Number.isNaN(numericTaskId)) {
-      return undefined;
-    }
-
-    const direct = queryClient.getQueryData<Task>(['task', numericTaskId]);
-    if (direct) return direct;
-
-    const candidates = queryClient.getQueriesData<Task[]>({
-      queryKey: ['tasks'],
-    });
-    for (const [, tasks] of candidates) {
-      const found = tasks?.find((t) => t.id === numericTaskId);
-      if (found) return found;
-    }
-    return undefined;
-  };
-
   const {
     data: task,
     isLoading,
@@ -108,7 +88,7 @@ export default function TaskDetailsPage() {
   } = useQuery<Task, ApiError>({
     queryKey: ['task', numericTaskId],
     enabled: typeof numericTaskId === 'number' && !Number.isNaN(numericTaskId),
-    initialData: () => getCachedTaskById(),
+    initialData: () => getCachedTaskById(queryClient, numericTaskId),
     queryFn: () => tasksService.getTaskById(numericTaskId as number),
   });
 
@@ -121,7 +101,7 @@ export default function TaskDetailsPage() {
     if (task) {
       // Always sync task description draft
       setTaskDescriptionDraft(task.description);
-      
+
       // Only update edit form when not in edit mode to avoid overwriting user changes
       if (!isFullEditMode) {
         setEditDescription(task.description);
@@ -132,20 +112,6 @@ export default function TaskDetailsPage() {
           task.dueDate || null,
           task.reminderConfig,
         );
-        
-        // Debug logging
-        if (import.meta.env.DEV) {
-          console.log('🔍 useEffect - Task Reminder Data:', {
-            taskId: task.id,
-            reminderDaysBefore: task.reminderDaysBefore,
-            specificDayOfWeek: task.specificDayOfWeek,
-            reminderConfig: task.reminderConfig,
-            reminderConfigType: typeof task.reminderConfig,
-            convertedRemindersCount: convertedReminders.length,
-            convertedReminders: convertedReminders,
-          });
-        }
-        
         setEditReminders(convertedReminders);
       }
     }
@@ -251,82 +217,37 @@ export default function TaskDetailsPage() {
   }, [task]);
 
   const handleSaveTask = useCallback(() => {
-    if (!editDescription.trim()) {
-      toast.error(t('taskDetails.descriptionRequired', { defaultValue: 'Description is required' }));
+    if (!task) return;
+
+    const parsed = taskFormSchema.safeParse({
+      description: editDescription,
+      dueDate: editDueDate || '',
+    });
+    if (!parsed.success) {
+      const first = parsed.error.flatten().fieldErrors;
+      const msg = first.description?.[0] ?? first.dueDate?.[0] ?? t('validation.invalidForm', { defaultValue: 'Please fix the errors below.' });
+      toast.error(msg);
       return;
     }
 
-    if (!task) return;
+    const updateData = buildTaskUpdatePayload(
+      editDescription,
+      editDueDate,
+      editReminders,
+      task,
+    );
 
-    if (editDueDate.trim()) {
-      const dueResult = validateDueDate(editDueDate);
-      if (!dueResult.valid) {
-        toast.error(t('validation.invalidDueDate', { defaultValue: dueResult.error }));
-        return;
-      }
-    }
-
-    const updateData: UpdateTaskDto = {
-      description: editDescription.trim(),
-    };
-
-    if (editDueDate.trim()) {
-      const date = new Date(editDueDate);
-      updateData.dueDate = date.toISOString();
-    } else {
-      updateData.dueDate = null;
-    }
-
-    // Use the new due date for conversion, or fall back to task's due date only if new one is undefined
-    // If due date is explicitly set to null (cleared), use null for conversion
-    const dueDateForConversion = updateData.dueDate !== undefined 
-      ? (updateData.dueDate || undefined) 
-      : (task?.dueDate || undefined);
-    
-    const reminderData = convertRemindersToBackend(editReminders, dueDateForConversion);
-    
-    // Debug logging for save
-    if (import.meta.env.DEV) {
-      console.log('💾 Saving reminders:', {
-        editReminders,
-        reminderData,
-        dueDateForConversion,
-        updateDataReminderConfig: reminderData.reminderConfig,
-      });
-    }
-    
-    // Always include reminder data explicitly - these fields must be sent to save/clear reminders
-    // convertRemindersToBackend always returns these fields (never undefined)
-    updateData.reminderDaysBefore = reminderData.reminderDaysBefore || [];
-    updateData.specificDayOfWeek = reminderData.specificDayOfWeek !== undefined 
-      ? reminderData.specificDayOfWeek 
-      : null;
-    updateData.reminderConfig = reminderData.reminderConfig || null;
-
-    // Close edit mode immediately, save in background
     setIsFullEditMode(false);
-    
+
     updateTaskMutation.mutate(
       { id: task.id, data: updateData },
       {
         onSuccess: async (updatedTask) => {
-          // Debug logging for save response
-          if (import.meta.env.DEV) {
-            console.log('✅ Task saved successfully:', {
-              taskId: updatedTask.id,
-              reminderDaysBefore: updatedTask.reminderDaysBefore,
-              specificDayOfWeek: updatedTask.specificDayOfWeek,
-              reminderConfig: updatedTask.reminderConfig,
-              reminderConfigType: typeof updatedTask.reminderConfig,
-              reminderConfigStringified: JSON.stringify(updatedTask.reminderConfig),
-            });
-          }
-          
           toast.success(t('taskDetails.taskUpdated'));
-          
+
           // Cancel existing notifications for this task
           cancelAllTaskNotifications(task.id);
-          
+
           // Schedule new notifications if there are reminders
           if (editReminders.length > 0) {
             await scheduleTaskReminders(
@@ -340,12 +261,12 @@ export default function TaskDetailsPage() {
           // Update cache immediately with the saved reminder data from server response
           // Use the full updatedTask to ensure all fields (including reminderConfig) are present
           queryClient.setQueryData<Task>(['task', task.id], updatedTask);
-          
+
           // Also update in tasks list cache if it exists
           queryClient.setQueryData<Task[]>(['tasks', task.todoListId], (old = []) =>
             old.map((t) => (t.id === task.id ? updatedTask : t))
           );
-          
+
           // Invalidate to trigger refetch in background (non-blocking)
           queryClient.invalidateQueries({ queryKey: ['task', task.id] });
           queryClient.invalidateQueries({ queryKey: ['tasks', task.todoListId] });
@@ -515,17 +436,17 @@ export default function TaskDetailsPage() {
       <div className="premium-card p-6">
         <div className={`flex items-start justify-between gap-3 mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-3' : 'space-x-3'} flex-1`}>
-          <input
-            type="checkbox"
-            checked={task.completed}
-            onChange={() => {
-              updateTaskMutation.mutate({
-                id: task.id,
-                data: { completed: !task.completed },
-              });
-            }}
-            className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
-          />
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => {
+                updateTaskMutation.mutate({
+                  id: task.id,
+                  data: { completed: !task.completed },
+                });
+              }}
+              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+            />
             {isEditingTask ? (
               <div className="flex flex-col gap-2">
                 <input
@@ -581,7 +502,7 @@ export default function TaskDetailsPage() {
               </h1>
             )}
           </div>
-          {!isArchivedTask && (
+          {!isArchivedTask && !isFullEditMode && (
             <button
               onClick={handleOpenEdit}
               className="glass-button text-sm font-medium"

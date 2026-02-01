@@ -5,6 +5,7 @@ import {
   ReminderTimeframe,
   convertBackendToReminders,
   formatReminderDisplay,
+  formatTimeForDisplay,
 } from '@tasks-management/frontend-services';
 
 interface ReminderDisplayProps {
@@ -23,23 +24,6 @@ export default function ReminderDisplay({ task }: ReminderDisplayProps) {
     task.reminderConfig,
   );
 
-  // Debug logging
-  if (import.meta.env.DEV) {
-    console.log('🔍 View Mode - Task Reminder Data:', {
-      taskId: task.id,
-      taskDescription: task.description,
-      reminderDaysBefore: task.reminderDaysBefore,
-      specificDayOfWeek: task.specificDayOfWeek,
-      dueDate: task.dueDate,
-      reminderConfig: task.reminderConfig,
-      reminderConfigType: typeof task.reminderConfig,
-      reminderConfigIsArray: Array.isArray(task.reminderConfig),
-      reminderConfigStringified: JSON.stringify(task.reminderConfig),
-      convertedRemindersCount: reminders.length,
-      convertedReminders: reminders,
-    });
-  }
-
   // Show reminders section if there are any reminders
   if (reminders.length === 0) {
     return null;
@@ -52,8 +36,8 @@ export default function ReminderDisplay({ task }: ReminderDisplayProps) {
       </h3>
       <div className="space-y-3">
         {reminders.map((reminder, idx) => {
-          const timeStr = reminder.time || '09:00';
-          const displayText = formatReminderDisplay(reminder, t);
+          const timeStr = formatTimeForDisplay(reminder.time || '09:00', true);
+          const displayText = formatReminderDisplay(reminder, t, { use24h: true });
           
           return (
             <div 

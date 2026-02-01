@@ -4,6 +4,7 @@ import { useQueuedMutation } from './useQueuedMutation';
 import { stepsService } from '../services/steps.service';
 import { Task, Step, CreateStepDto, UpdateStepDto, ApiError } from '@tasks-management/frontend-services';
 import { handleApiError } from '../utils/errorHandler';
+import { invalidateTaskQueries } from '../utils/taskCache';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -15,11 +16,8 @@ export function useStepManagement(task: Task | undefined | null) {
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
   const [stepDescriptionDraft, setStepDescriptionDraft] = useState('');
 
-  const invalidateTask = (task: Task) => {
-    queryClient.invalidateQueries({ queryKey: ['task', task.id] });
-    if (task.todoListId) {
-      queryClient.invalidateQueries({ queryKey: ['tasks', task.todoListId] });
-    }
+  const invalidateTask = (taskItem: Task) => {
+    invalidateTaskQueries(queryClient, taskItem);
   };
 
   const updateStepMutation = useQueuedMutation<

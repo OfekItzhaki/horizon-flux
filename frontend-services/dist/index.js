@@ -18,3 +18,9 @@ export { API_CONFIG, getApiUrl } from './config';
 export { TokenStorage } from './utils/storage';
 // Export shared reminder types and helpers (web + mobile)
 export * from './reminders';
+// Explicit named re-exports so bundlers (Vite pre-bundle) pick them up
+export { formatReminderDisplay, formatTimeForDisplay, } from './reminders';
+// Export validation, error and task utilities
+export * from './utils/dateTimeValidation';
+export * from './utils/error-extraction';
+export * from './utils/task-utils';

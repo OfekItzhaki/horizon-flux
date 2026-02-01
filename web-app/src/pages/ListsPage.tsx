@@ -10,6 +10,8 @@ import Skeleton from '../components/Skeleton';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardShortcuts } from '../utils/useKeyboardShortcuts';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
+import { listFormSchema } from '../validation/schemas';
+import toast from 'react-hot-toast';
 
 export default function ListsPage() {
   const { t, i18n } = useTranslation();
@@ -202,10 +204,13 @@ export default function ListsPage() {
           className="premium-card p-6 mb-8 animate-slide-down"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!newListName.trim()) return;
-            createListMutation.mutate({
-              name: newListName.trim(),
-            });
+            const parsed = listFormSchema.safeParse({ name: newListName });
+            if (!parsed.success) {
+              const msg = parsed.error.flatten().fieldErrors.name?.[0] ?? t('validation.invalidForm', { defaultValue: 'Please fix the errors below.' });
+              toast.error(msg);
+              return;
+            }
+            createListMutation.mutate({ name: parsed.data.name });
           }}
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">

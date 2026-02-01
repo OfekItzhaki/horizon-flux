@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "postinstall": "node build-if-needed.js"
+    "postinstall": "node scripts/build-if-needed.js"
   },
   "keywords": ["tasks", "todo", "api", "client"],
   "author": "",

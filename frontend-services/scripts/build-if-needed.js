@@ -4,8 +4,9 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const distPath = path.join(__dirname, 'dist');
-const nodeModulesTsc = path.join(__dirname, 'node_modules', '.bin', 'tsc');
+const rootDir = path.join(__dirname, '..');
+const distPath = path.join(rootDir, 'dist');
+const nodeModulesTsc = path.join(rootDir, 'node_modules', '.bin', 'tsc');
 
 // Check if dist folder exists and has files
 const distExists = fs.existsSync(distPath) && fs.readdirSync(distPath).length > 0;
@@ -16,11 +17,11 @@ if (fs.existsSync(nodeModulesTsc)) {
   tscCommand = nodeModulesTsc;
 } else {
   // Try to install dependencies first
-  const nodeModulesPath = path.join(__dirname, 'node_modules');
+  const nodeModulesPath = path.join(rootDir, 'node_modules');
   if (!fs.existsSync(nodeModulesPath)) {
     try {
       console.log('Installing frontend-services dependencies...');
-      execSync('npm install --include=dev', { stdio: 'inherit', cwd: __dirname });
+      execSync('npm install --include=dev', { stdio: 'inherit', cwd: rootDir });
       if (fs.existsSync(nodeModulesTsc)) {
         tscCommand = nodeModulesTsc;
       }
@@ -28,7 +29,7 @@ if (fs.existsSync(nodeModulesTsc)) {
       console.warn('Warning: Could not install dependencies');
     }
   }
-  
+
   // Try global tsc or npx
   if (!tscCommand) {
     try {
@@ -49,10 +50,9 @@ if (fs.existsSync(nodeModulesTsc)) {
 if (tscCommand && !distExists) {
   try {
     console.log('Building frontend-services...');
-    execSync(tscCommand, { stdio: 'inherit', cwd: __dirname });
+    execSync(tscCommand, { stdio: 'inherit', cwd: rootDir });
   } catch (e) {
     console.warn('Warning: Could not build frontend-services. Make sure TypeScript is installed.');
-    // Don't fail the install - dist might already exist from a previous build
     if (!distExists) {
       console.error('Error: dist folder does not exist and build failed.');
       process.exit(1);

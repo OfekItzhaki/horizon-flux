@@ -5,7 +5,7 @@ import {
   validateCustomReminderDate,
   validateDaysBefore,
   normalizeTime,
-} from './dateTimeValidation';
+} from '@tasks-management/frontend-services';
 
 describe('dateTimeValidation', () => {
   describe('validateDueDate', () => {

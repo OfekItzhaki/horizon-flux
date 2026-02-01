@@ -8,17 +8,16 @@
 const path = require('path');
 const fs = require('fs');
 
-console.log('Testing Metro package resolution...\n');
-
-// Check if package is in node_modules
-const nodeModulesPath = path.resolve(__dirname, 'node_modules/@tasks-management/frontend-services');
+const mobileAppRoot = path.resolve(__dirname, '..');
+const nodeModulesPath = path.resolve(mobileAppRoot, 'node_modules/@tasks-management/frontend-services');
 const packageJsonPath = path.join(nodeModulesPath, 'package.json');
 const distIndexPath = path.join(nodeModulesPath, 'dist/index.js');
+
+console.log('Testing Metro package resolution...\n');
 
 console.log('1. Checking node_modules location...');
 if (fs.existsSync(nodeModulesPath)) {
   console.log('   ✅ Package found in node_modules');
-  
   const stats = fs.lstatSync(nodeModulesPath);
   if (stats.isSymbolicLink()) {
     const realPath = fs.realpathSync(nodeModulesPath);
@@ -52,7 +51,6 @@ if (fs.existsSync(distIndexPath)) {
 
 console.log('\n4. Testing require resolution...');
 try {
-  // This simulates what Metro does
   const resolved = require.resolve('@tasks-management/frontend-services');
   console.log(`   ✅ Package resolves to: ${resolved}`);
 } catch (e) {

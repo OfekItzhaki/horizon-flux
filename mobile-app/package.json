@@ -10,9 +10,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:metro": "node test-metro-resolution.js && npx expo start --no-dev --minify",
-    "test:resolve": "node test-metro-resolution.js",
-    "postinstall": "node ensure-frontend-services-built.js"
+    "test:metro": "node scripts/test-metro-resolution.js && npx expo start --no-dev --minify",
+    "test:resolve": "node scripts/test-metro-resolution.js",
+    "postinstall": "node scripts/ensure-frontend-services-built.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -20,6 +20,7 @@
     "@react-navigation/bottom-tabs": "^7.8.12",
     "@react-navigation/native": "^7.1.25",
     "@react-navigation/native-stack": "^7.8.6",
+    "@sentry/react-native": "^7.11.0",
     "@tasks-management/frontend-services": "file:../frontend-services",
     "axios": "^1.13.2",
     "expo": "~54.0.31",

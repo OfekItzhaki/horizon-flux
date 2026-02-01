@@ -1,10 +1,12 @@
 import { Outlet, Link } from 'react-router-dom';
+import { ErrorBoundary } from 'react-error-boundary';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useCallback, useState } from 'react';
 import { supportedLanguages } from '../i18n';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
+import ErrorFallback from './ErrorFallback';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -169,7 +171,9 @@ export default function Layout() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-        <Outlet />
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

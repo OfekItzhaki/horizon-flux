@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -15,7 +16,7 @@ function AppContent() {
     const initializeNotifications = async () => {
       // Request notification permissions on app start (without guidance, as it may have been shown on login)
       const hasPermission = await requestNotificationPermissions(false);
-      
+
       if (hasPermission) {
         // Check if user is logged in before rescheduling reminders
         const hasToken = await TokenStorage.hasToken();
@@ -28,9 +29,10 @@ function AppContent() {
             await updateDailyTasksNotification();
           } catch (error: any) {
             // Silently ignore auth errors - background task shouldn't show alerts
-            const isAuthError = error?.response?.status === 401 || 
-                                error?.message?.toLowerCase()?.includes('unauthorized');
+            const isAuthError = error?.response?.status === 401 ||
+              error?.message?.toLowerCase()?.includes('unauthorized');
             if (!isAuthError) {
+              if (process.env.EXPO_PUBLIC_SENTRY_DSN) Sentry.captureException(error);
               throw error; // Re-throw non-auth errors
             }
           }
@@ -40,9 +42,10 @@ function AppContent() {
 
     initializeNotifications().catch((error) => {
       // Silently ignore auth errors during startup - user will login if needed
-      const isAuthError = error?.response?.status === 401 || 
-                          error?.message?.toLowerCase()?.includes('unauthorized');
+      const isAuthError = error?.response?.status === 401 ||
+        error?.message?.toLowerCase()?.includes('unauthorized');
       if (!isAuthError) {
+        if (process.env.EXPO_PUBLIC_SENTRY_DSN) Sentry.captureException(error);
         console.error('Error initializing notifications:', error);
       }
     });
@@ -51,12 +54,13 @@ function AppContent() {
     const responseSubscription = Notifications.addNotificationResponseReceivedListener(
       async (response) => {
         const data = response.notification.request.content.data;
-        
+
         // If it's the daily tasks update trigger, update the persistent notification
         if (data?.type === 'daily-tasks-update') {
           try {
             await updateDailyTasksNotification();
           } catch (error) {
+            if (process.env.EXPO_PUBLIC_SENTRY_DSN) Sentry.captureException(error);
             console.error('Error updating daily tasks notification:', error);
           }
         }
@@ -67,12 +71,13 @@ function AppContent() {
     const receivedSubscription = Notifications.addNotificationReceivedListener(
       async (notification) => {
         const data = notification.request.content.data;
-        
+
         // If it's the daily tasks update trigger, update the persistent notification
         if (data?.type === 'daily-tasks-update') {
           try {
             await updateDailyTasksNotification();
           } catch (error) {
+            if (process.env.EXPO_PUBLIC_SENTRY_DSN) Sentry.captureException(error);
             console.error('Error updating daily tasks notification:', error);
           }
         }
@@ -93,14 +98,18 @@ function AppContent() {
   );
 }
 
+import ErrorBoundary from './src/components/common/ErrorBoundary';
+
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

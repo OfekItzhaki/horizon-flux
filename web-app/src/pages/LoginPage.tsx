@@ -5,6 +5,7 @@ import { LoginDto } from '@tasks-management/frontend-services';
 import { extractErrorMessage } from '../utils/errorHandler';
 import { useTranslation } from 'react-i18next';
 import { isRtlLanguage } from '@tasks-management/frontend-services';
+import { loginSchema } from '../validation/schemas';
 
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -20,10 +21,16 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      const first = parsed.error.flatten().fieldErrors;
+      const msg = first.email?.[0] ?? first.password?.[0] ?? t('validation.invalidForm', { defaultValue: 'Please fix the errors below.' });
+      setError(msg);
+      return;
+    }
     setLoading(true);
-
     try {
-      const credentials: LoginDto = { email, password };
+      const credentials: LoginDto = parsed.data;
       await login(credentials);
       navigate('/lists');
     } catch (err: unknown) {
@@ -52,7 +59,11 @@ export default function LoginPage() {
         </div>
         <form className="premium-card p-8 space-y-6 animate-slide-up" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 animate-scale-in">
+            <div
+              role="alert"
+              aria-live="polite"
+              className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 animate-scale-in"
+            >
               <div className="text-sm text-red-800 dark:text-red-200 font-medium">{error}</div>
             </div>
           )}

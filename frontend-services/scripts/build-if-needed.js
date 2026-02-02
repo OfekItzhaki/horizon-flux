@@ -50,7 +50,7 @@ if (fs.existsSync(nodeModulesTsc)) {
 if (tscCommand && !distExists) {
   try {
     console.log('Building frontend-services...');
-    execSync(tscCommand, { stdio: 'inherit', cwd: rootDir });
+    execSync(`"${tscCommand}"`, { stdio: 'inherit', cwd: rootDir });
   } catch (e) {
     console.warn('Warning: Could not build frontend-services. Make sure TypeScript is installed.');
     if (!distExists) {

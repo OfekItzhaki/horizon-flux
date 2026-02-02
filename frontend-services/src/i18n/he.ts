@@ -189,7 +189,8 @@ export default {
   },
   reminders: {
     title: 'תזכורות',
-    add: 'הוסף',
+    add: 'הוסף', // Keep for backward compatibility if needed
+    addBtn: 'הוסף תזכורת',
     empty: 'לא הוגדרו תזכורות',
     edit: 'ערוך',
     configure: 'הגדר תזכורת',

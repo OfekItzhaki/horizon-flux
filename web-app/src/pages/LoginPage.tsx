@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { LoginDto } from '@tasks-management/frontend-services';
 import { extractErrorMessage } from '../utils/errorHandler';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import { loginSchema } from '../validation/schemas';
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
+  const { setThemeMode, isDark } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +49,25 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-purple-600 to-pink-600 opacity-10 dark:opacity-20 animate-pulse-slow" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.1),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.1),transparent_50%)]" />
-      
+
+      <div className="absolute top-4 right-4 z-20">
+        <button
+          onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
+          className="p-2 rounded-full glass-card hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all text-gray-900 dark:text-gray-200"
+          aria-label={t('nav.theme.auto')}
+        >
+          {isDark ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
+        </button>
+      </div>
+
       <div className="max-w-md w-full space-y-8 relative z-10 animate-fade-in">
         <div className="text-center">
           <h2 className="premium-header-main text-5xl mb-2">

@@ -53,8 +53,9 @@ export const createTasksStyles = (colors: typeof lightColors) => StyleSheet.crea
     fontSize: 32,
     fontWeight: '900',
     color: colors.primary,
-    flex: 1,
     letterSpacing: -1,
+    lineHeight: 38, // Ensure sufficient height for the font
+    textAlign: 'center',
   },
   headerActions: {
     flexDirection: 'row',
@@ -70,7 +71,7 @@ export const createTasksStyles = (colors: typeof lightColors) => StyleSheet.crea
     fontSize: 15,
     color: colors.textSecondary,
     fontWeight: '600',
-    marginTop: -4,
+    marginTop: 0,
   },
   searchSortRow: {
     flexDirection: 'row',
@@ -308,7 +309,7 @@ export const createTasksStyles = (colors: typeof lightColors) => StyleSheet.crea
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'transparent', // Transparent to let BlurView work
     justifyContent: 'flex-end',
   },
   modalContent: {

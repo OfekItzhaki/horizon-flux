@@ -12,7 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -426,6 +427,11 @@ export default function TasksScreen() {
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={styles.modalOverlay}>
+          <BlurView
+            intensity={25}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add New Task</Text>
 

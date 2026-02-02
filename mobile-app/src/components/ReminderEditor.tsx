@@ -15,6 +15,7 @@ import {
   ReminderSpecificDate,
 } from '@tasks-management/frontend-services';
 import DatePicker from './DatePicker';
+import TimePicker from './TimePicker';
 import { createTaskDetailsStyles } from '../screens/styles/TaskDetailsScreen.styles';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,26 +72,6 @@ export default function ReminderEditor({
     });
   };
 
-  const handleTimeChange = (input: string) => {
-    // Remove any non-numeric characters (in case user pastes something with colons)
-    const numbersOnly = input.replace(/\D/g, '');
-
-    // Limit to 4 digits (HHMM)
-    const limited = numbersOnly.slice(0, 4);
-
-    // Auto-format to HH:MM as user types
-    let formatted = limited;
-    if (limited.length >= 3) {
-      // Format as HH:MM when we have at least 3 digits
-      formatted = limited.slice(0, 2) + ':' + limited.slice(2);
-    } else if (limited.length === 2) {
-      // After 2 digits, add colon automatically
-      formatted = limited + ':';
-    }
-
-    // Update the config with the formatted time
-    setConfig({ ...config, time: formatted });
-  };
 
   const handleSave = () => {
     // Ensure time is valid (default to 09:00 if not set)
@@ -305,19 +286,12 @@ export default function ReminderEditor({
 
 
 
-          {/* Time Input (24-hour format) */}
+          {/* Time Picker */}
           <Text style={styles.label}>Time (24h, HH:mm):</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="09:00"
-            value={config.time}
-            onChangeText={handleTimeChange}
-            keyboardType="numeric"
-            maxLength={5}
+          <TimePicker
+            value={config.time || '09:00'}
+            onChange={(time) => setConfig({ ...config, time })}
           />
-          <Text style={styles.helperText}>
-            Enter time in 24-hour format (e.g. 09:00, 14:30)
-          </Text>
 
           {/* Alarm Toggle */}
           <View style={styles.alarmOption}>

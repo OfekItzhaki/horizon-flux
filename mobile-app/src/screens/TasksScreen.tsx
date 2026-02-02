@@ -428,7 +428,7 @@ export default function TasksScreen() {
       >
         <View style={styles.modalOverlay}>
           <BlurView
-            intensity={25}
+            intensity={100}
             tint="dark"
             style={StyleSheet.absoluteFill}
           />

@@ -671,16 +671,6 @@ export default function TasksPage() {
                 >
                   {t('tasks.deleteSelected')}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsBulkMode(false);
-                    setSelectedTasks(new Set());
-                  }}
-                  className="px-3 py-1 text-xs font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                >
-                  {t('common.cancel')}
-                </button>
               </div>
             </div>
           )}
@@ -754,56 +744,58 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {showCreate && (
-        <form
-          className="premium-card p-6 mb-8 animate-slide-down"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newTaskDescription.trim() || !numericListId || isFinishedList) return;
-            createTaskMutation.mutate({ description: newTaskDescription.trim() });
-          }}
-        >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
-            <div className="sm:col-span-10">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
-                {t('tasks.form.descriptionLabel')}
-              </label>
-              <input
-                value={newTaskDescription}
-                onChange={(e) => setNewTaskDescription(e.target.value)}
-                aria-label={t('tasks.form.descriptionLabel')}
-                className="premium-input w-full text-gray-900 dark:text-white"
-                placeholder={t('tasks.form.descriptionPlaceholder')}
-                autoFocus
-              />
+      {
+        showCreate && (
+          <form
+            className="premium-card p-6 mb-8 animate-slide-down"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newTaskDescription.trim() || !numericListId || isFinishedList) return;
+              createTaskMutation.mutate({ description: newTaskDescription.trim() });
+            }}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
+              <div className="sm:col-span-10">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                  {t('tasks.form.descriptionLabel')}
+                </label>
+                <input
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                  aria-label={t('tasks.form.descriptionLabel')}
+                  className="premium-input w-full text-gray-900 dark:text-white"
+                  placeholder={t('tasks.form.descriptionPlaceholder')}
+                  autoFocus
+                />
+              </div>
+              <div className={`sm:col-span-2 flex ${isRtl ? 'flex-row-reverse' : ''} gap-2`}>
+                <button
+                  type="submit"
+                  disabled={
+                    createTaskMutation.isPending ||
+                    !numericListId ||
+                    isFinishedList ||
+                    !newTaskDescription.trim()
+                  }
+                  className="inline-flex flex-1 justify-center rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-primary-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transition-all duration-200"
+                >
+                  {createTaskMutation.isPending ? t('common.loading') : t('common.create')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreate(false);
+                    setNewTaskDescription('');
+                  }}
+                  className="inline-flex justify-center rounded-xl glass-card px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
             </div>
-            <div className={`sm:col-span-2 flex ${isRtl ? 'flex-row-reverse' : ''} gap-2`}>
-              <button
-                type="submit"
-                disabled={
-                  createTaskMutation.isPending ||
-                  !numericListId ||
-                  isFinishedList ||
-                  !newTaskDescription.trim()
-                }
-                className="inline-flex flex-1 justify-center rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-primary-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transition-all duration-200"
-              >
-                {createTaskMutation.isPending ? t('common.loading') : t('common.create')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreate(false);
-                  setNewTaskDescription('');
-                }}
-                className="inline-flex justify-center rounded-xl glass-card px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200"
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
+          </form>
+        )
+      }
 
       <DndContext
         sensors={sensors}
@@ -816,29 +808,50 @@ export default function TasksPage() {
         >
           <div className="space-y-4 relative">
             {/* Floating Edit Button - positioned above first task */}
-            {!isBulkMode && paginatedTasks.length > 0 && (
+            {paginatedTasks.length > 0 && (
               <button
                 type="button"
-                onClick={() => setIsBulkMode(true)}
-                aria-label={t('tasks.selectMultiple')}
-                className={`group absolute ${isRtl ? 'right-0' : 'left-0'} -top-12 z-10 inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-glow hover:shadow-glow-lg hover:from-primary-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-300 hover:scale-110 active:scale-95`}
+                onClick={() => {
+                  setIsBulkMode(!isBulkMode);
+                  if (!isBulkMode) {
+                    setSelectedTasks(new Set());
+                  }
+                }}
+                aria-label={isBulkMode ? t('common.cancel') : t('tasks.selectMultiple')}
+                className={`group absolute ${isRtl ? 'right-0' : 'left-0'} -top-12 z-10 inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r ${isBulkMode ? 'from-red-600 to-red-700' : 'from-primary-600 to-purple-600'} text-white shadow-glow hover:shadow-glow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-300 hover:scale-110 active:scale-95`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-5 h-5"
-                >
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
+                {isBulkMode ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <polyline points="9 11 12 14 18 8" />
+                  </svg>
+                )}
                 {/* Hover tooltip */}
                 <span className={`absolute ${isRtl ? 'left-full ml-2' : 'right-full mr-2'} top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-white bg-gray-900 dark:bg-gray-800 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-20`}>
-                  {t('tasks.selectMultiple')}
+                  {isBulkMode ? t('common.cancel') : t('tasks.selectMultiple')}
                   <span className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-full' : 'left-full'} border-4 border-transparent ${isRtl ? 'border-l-gray-900 dark:border-l-gray-800' : 'border-r-gray-900 dark:border-r-gray-800'}`} />
                 </span>
               </button>
@@ -1070,35 +1083,39 @@ export default function TasksPage() {
         </SortableContext>
       </DndContext>
 
-      {tasksOrder.length > itemsPerPage && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          totalItems={tasksOrder.length}
-          onItemsPerPageChange={setItemsPerPage}
-        />
-      )}
+      {
+        tasksOrder.length > itemsPerPage && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={tasksOrder.length}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+        )
+      }
 
-      {tasks.length === 0 && (
-        <div className="text-center py-16">
-          <div className="premium-card p-12 max-w-md mx-auto">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+      {
+        tasks.length === 0 && (
+          <div className="text-center py-16">
+            <div className="premium-card p-12 max-w-md mx-auto">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">{t('tasks.empty')}</p>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">{t('tasks.empty')}</p>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <FloatingActionButton
         ariaLabel={t('tasks.createFab')}
         disabled={!numericListId || isFinishedList}
         onClick={() => setShowCreate(true)}
       />
-    </div>
+    </div >
   );
 }

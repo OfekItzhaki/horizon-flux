@@ -47,6 +47,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
     return true;
   }
 
+  // Check if we've already been denied by the browser
   if (Notification.permission === 'denied') {
     if (import.meta.env.DEV) {
       console.warn('Notification permission was denied. Please enable it in browser settings.');
@@ -54,8 +55,18 @@ export async function requestNotificationPermissions(): Promise<boolean> {
     return false;
   }
 
+  // Check user preference in localStorage
+  const storedPreference = localStorage.getItem('tasks_notifications_enabled');
+  if (storedPreference === 'false') {
+    return false;
+  }
+
   // Request permission
   const permission = await Notification.requestPermission();
+
+  // Remember the choice
+  localStorage.setItem('tasks_notifications_enabled', (permission === 'granted').toString());
+
   return permission === 'granted';
 }
 

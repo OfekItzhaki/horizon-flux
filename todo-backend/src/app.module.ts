@@ -19,20 +19,13 @@ import { RemindersModule } from './reminders/reminders.module';
 import { TaskSchedulerModule } from './task-scheduler/task-scheduler.module';
 import { EmailModule } from './email/email.module';
 
-function validateEnv(config: Record<string, unknown>) {
-  const required = ['DATABASE_URL'];
-  const missing = required.filter((key) => !config[key] || String(config[key]).trim() === '');
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-  return config;
-}
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: validateEnv,
+      validate,
     }),
     SentryModule.forRoot(),
     CqrsModule.forRoot(),
@@ -60,4 +53,4 @@ function validateEnv(config: Record<string, unknown>) {
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
   ],
 })
-export class AppModule {}
+export class AppModule { }

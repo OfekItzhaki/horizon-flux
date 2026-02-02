@@ -10,12 +10,26 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+import helmet from 'helmet';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
   app.useLogger(logger);
+
+  // Security Headers
+  app.use(helmet({
+    crossOriginResourcePolicy: false, // Allow cross-origin images (avatars)
+  }));
+
+  // API Versioning
+  app.setGlobalPrefix('api/v1');
+
+  // Standardized Error Responses
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // CORS: in production use ALLOWED_ORIGINS (comma-separated); in dev allow all
   const isProduction = process.env.NODE_ENV === 'production';

@@ -168,6 +168,14 @@ export const createTaskDetailsStyles = (colors: typeof lightColors) => StyleShee
     shadowRadius: 12,
     elevation: 8,
   },
+  headerEditButton: {
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: colors.primary + '15',
+    marginLeft: 12,
+    alignSelf: 'flex-start', // Align with top of title
+    marginTop: 4,
+  },
   editButtonText: {
     color: '#fff',
     fontSize: 16,
@@ -236,18 +244,15 @@ export const createTaskDetailsStyles = (colors: typeof lightColors) => StyleShee
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   infoValue: {
     fontSize: 17,
     color: colors.text,
     fontWeight: '600',
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
+    // Removed bulky box styling for cleaner look
+    marginTop: 2,
+    paddingVertical: 4,
   },
   datePickerContainer: {
     flex: 1,

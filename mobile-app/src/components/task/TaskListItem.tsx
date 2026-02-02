@@ -1,15 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types';
 import { formatDate } from '../../utils/helpers';
 import { isOverdue, isRepeatingTask as checkIsRepeatingTask } from '../../utils/taskHelpers';
-import { styles } from '../../screens/styles/TasksScreen.styles';
+import { createTasksStyles } from '../../screens/styles/TasksScreen.styles';
+import { useThemedStyles } from '../../utils/useThemedStyles';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TaskListItemProps {
   task: Task;
   onPress: () => void;
   onLongPress: () => void;
-  onToggle: (e: any) => void;
+  onToggle: () => void;
 }
 
 export function TaskListItem({
@@ -18,6 +21,8 @@ export function TaskListItem({
   onLongPress,
   onToggle,
 }: TaskListItemProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createTasksStyles);
   const isCompleted = Boolean(task.completed);
   const isOverdueTask = isOverdue(task);
   const isRepeating = checkIsRepeatingTask(task);
@@ -32,15 +37,18 @@ export function TaskListItem({
       ]}
       onPress={onPress}
       onLongPress={onLongPress}
+      activeOpacity={0.7}
     >
       <View style={styles.taskContent}>
         <TouchableOpacity
           style={[styles.taskCheckbox, isCompleted && styles.taskCheckboxCompleted]}
           onPress={onToggle}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.6}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+          {isCompleted && <Ionicons name="checkmark" size={18} color="#fff" />}
         </TouchableOpacity>
+
         <View style={styles.taskTextContainer}>
           <Text
             style={[
@@ -50,24 +58,46 @@ export function TaskListItem({
           >
             {task.description}
           </Text>
-          <View style={styles.taskMetaRow}>
-            {task.dueDate && (
-              <Text
-                style={[
-                  styles.dueDate,
-                  isOverdueTask && styles.dueDateOverdue,
-                ]}
-              >
-                Due: {formatDate(task.dueDate)}
-              </Text>
-            )}
-            {isRepeating && completionCount > 0 && (
-              <Text style={styles.completionCount}>
-                🔄 {completionCount}x completed
-              </Text>
-            )}
-          </View>
+
+          {(task.dueDate || (isRepeating && completionCount > 0)) && (
+            <View style={styles.taskMetaRow}>
+              {task.dueDate && (
+                <View style={styles.metaItem}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={12}
+                    color={isOverdueTask ? colors.error : colors.textSecondary}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text
+                    style={[
+                      styles.dueDate,
+                      isOverdueTask && styles.dueDateOverdue,
+                    ]}
+                  >
+                    {formatDate(task.dueDate)}
+                  </Text>
+                </View>
+              )}
+
+              {isRepeating && completionCount > 0 && (
+                <View style={[styles.metaItem, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons
+                    name="repeat-outline"
+                    size={12}
+                    color={colors.success}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.completionCount}>
+                    {completionCount}x
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
+
+        <Ionicons name="chevron-forward" size={18} color={colors.border} style={{ alignSelf: 'center' }} />
       </View>
     </TouchableOpacity>
   );

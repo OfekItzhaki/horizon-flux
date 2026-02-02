@@ -40,6 +40,7 @@ export function TaskHeader({
         >
           {isCompleted && <Ionicons name="checkmark" size={20} color="#fff" />}
         </TouchableOpacity>
+
         <View style={styles.headerText}>
           {isEditing ? (
             <TextInput
@@ -50,30 +51,28 @@ export function TaskHeader({
               autoFocus
             />
           ) : (
-            <>
-              <Text style={[styles.title, isCompleted && styles.titleCompleted]}>
-                {task.description}
-              </Text>
-              {/* Show completion count for repeating tasks */}
-              {isRepeatingTask && completionCount > 0 && (
-                <Text style={styles.completionCountBadge}>
-                  🔄 Completed {completionCount} time{completionCount !== 1 ? 's' : ''}
-                </Text>
-              )}
-            </>
+            <Text style={[styles.title, isCompleted && styles.titleCompleted]}>
+              {task.description}
+            </Text>
+          )}
+
+          {/* Show completion count for repeating tasks */}
+          {!isEditing && isRepeatingTask && completionCount > 0 && (
+            <Text style={styles.completionCountBadge}>
+              🔄 Completed {completionCount} time{completionCount !== 1 ? 's' : ''}
+            </Text>
           )}
         </View>
-      </View>
 
-      {!isEditing && (
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={onEditPress}
-        >
-          <Ionicons name="create-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.editButtonText}>Edit Task</Text>
-        </TouchableOpacity>
-      )}
+        {!isEditing && (
+          <TouchableOpacity
+            style={styles.headerEditButton}
+            onPress={onEditPress}
+          >
+            <Ionicons name="create-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }

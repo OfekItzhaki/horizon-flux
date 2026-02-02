@@ -35,7 +35,7 @@ export function TaskInfoSection({
         <View style={styles.iconContainer}>
           <Ionicons name="calendar-outline" size={24} color="#6366f1" />
         </View>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.infoLabel}>Due Date</Text>
           {isEditing ? (
             <View style={styles.datePickerContainer}>

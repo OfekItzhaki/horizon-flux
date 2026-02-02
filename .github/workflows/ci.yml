@@ -49,7 +49,7 @@ jobs:
   web:
     name: Web App CI
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('web-app/package.json') != '' }}
+    if: hashFiles('web-app/package-lock.json') != ''
     steps:
       - uses: actions/checkout@v4
 

@@ -12,6 +12,8 @@ import { ListType, Prisma } from '@prisma/client';
 import { TaskSchedulerService } from '../task-scheduler/task-scheduler.service';
 import { TaskAccessHelper } from './helpers/task-access.helper';
 
+import { TaskOccurrenceHelper } from './helpers/task-occurrence.helper';
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -158,11 +160,6 @@ export class TasksService {
   }
 
   async getTasksByDate(userId: number, date: Date = new Date()) {
-    // Normalize date to start of day
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
-
-    // Get all tasks from owned and shared lists
     const allTasks = await this.prisma.task.findMany({
       where: {
         deletedAt: null,
@@ -177,90 +174,14 @@ export class TasksService {
       },
       include: {
         todoList: true,
-        steps: {
-          where: {
-            deletedAt: null,
-          },
-        },
+        steps: { where: { deletedAt: null } },
       },
     });
 
-    // Filter tasks that should appear on this date
-    const tasksForDate = allTasks.filter((task) => {
-      const list = task.todoList;
-
-      // If task has a specific due date, check if it matches
-      if (task.dueDate) {
-        const dueDate = new Date(task.dueDate);
-        dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() === targetDate.getTime();
-      }
-
-      // If task has a specific day of week, check if today matches
-      if (task.specificDayOfWeek !== null) {
-        const dayOfWeek = targetDate.getDay();
-        if (dayOfWeek === task.specificDayOfWeek) {
-          return true;
-        }
-      }
-
-      // For list-based scheduling
-      switch (list.type) {
-        case ListType.DAILY:
-          return true; // Daily tasks appear every day
-
-        case ListType.WEEKLY:
-          // If no specific day, check if it's the first day of the week (Sunday)
-          if (task.specificDayOfWeek === null) {
-            return targetDate.getDay() === 0; // Sunday
-          }
-          return targetDate.getDay() === task.specificDayOfWeek;
-
-        case ListType.MONTHLY:
-          // If no specific day, check if it's the first day of the month
-          if (task.specificDayOfWeek === null && !task.dueDate) {
-            return targetDate.getDate() === 1;
-          }
-          // If has specific day of week, check if it's that day in the current month
-          if (task.specificDayOfWeek !== null) {
-            return targetDate.getDay() === task.specificDayOfWeek;
-          }
-          return false;
-
-        case ListType.YEARLY:
-          // If no specific date, check if it's January 1st
-          if (task.specificDayOfWeek === null && !task.dueDate) {
-            return targetDate.getMonth() === 0 && targetDate.getDate() === 1;
-          }
-          // If has specific day of week, check if it's that day
-          if (task.specificDayOfWeek !== null) {
-            return targetDate.getDay() === task.specificDayOfWeek;
-          }
-          return false;
-
-        case ListType.CUSTOM:
-        default:
-          // Custom lists: only show if there's a due date or specific day
-          if (task.dueDate) {
-            const dueDate = new Date(task.dueDate);
-            dueDate.setHours(0, 0, 0, 0);
-            return dueDate.getTime() === targetDate.getTime();
-          }
-          if (task.specificDayOfWeek !== null) {
-            return targetDate.getDay() === task.specificDayOfWeek;
-          }
-          return false;
-      }
-    });
-
-    return tasksForDate;
+    return allTasks.filter((task) => TaskOccurrenceHelper.shouldAppearOnDate(task as any, date));
   }
 
   async getTasksWithReminders(userId: number, date: Date = new Date()) {
-    // Get all tasks that have reminders set for this date
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
-
     const allTasks = await this.prisma.task.findMany({
       where: {
         deletedAt: null,
@@ -275,82 +196,11 @@ export class TasksService {
       },
       include: {
         todoList: true,
-        steps: {
-          where: {
-            deletedAt: null,
-          },
-        },
+        steps: { where: { deletedAt: null } },
       },
     });
 
-    const tasksWithReminders = allTasks.filter((task) => {
-      // Support both old single value and new array format for backward compatibility
-      const reminderDaysArray = Array.isArray(task.reminderDaysBefore)
-        ? task.reminderDaysBefore
-        : task.reminderDaysBefore
-          ? [task.reminderDaysBefore]
-          : [1];
-
-      // Calculate when the task is due
-      let taskDueDate: Date | null = null;
-
-      if (task.dueDate) {
-        taskDueDate = new Date(task.dueDate);
-        taskDueDate.setHours(0, 0, 0, 0);
-      } else if (task.specificDayOfWeek !== null) {
-        // Find next occurrence of this day of week
-        const daysUntil =
-          (task.specificDayOfWeek - targetDate.getDay() + 7) % 7;
-        taskDueDate = new Date(targetDate);
-        taskDueDate.setDate(taskDueDate.getDate() + (daysUntil || 7));
-        taskDueDate.setHours(0, 0, 0, 0);
-      } else {
-        // For list-based tasks, calculate based on list type
-        const list = task.todoList;
-        switch (list.type) {
-          case ListType.WEEKLY: {
-            // Next Sunday (start of week)
-            const daysUntilSunday = (7 - targetDate.getDay()) % 7 || 7;
-            taskDueDate = new Date(targetDate);
-            taskDueDate.setDate(taskDueDate.getDate() + daysUntilSunday);
-            taskDueDate.setHours(0, 0, 0, 0);
-            break;
-          }
-          case ListType.MONTHLY: {
-            // First day of next month
-            taskDueDate = new Date(
-              targetDate.getFullYear(),
-              targetDate.getMonth() + 1,
-              1,
-            );
-            taskDueDate.setHours(0, 0, 0, 0);
-            break;
-          }
-          case ListType.YEARLY: {
-            // January 1st of next year
-            taskDueDate = new Date(targetDate.getFullYear() + 1, 0, 1);
-            taskDueDate.setHours(0, 0, 0, 0);
-            break;
-          }
-          default:
-            return false;
-        }
-      }
-
-      if (!taskDueDate) {
-        return false;
-      }
-
-      // Check if any reminder date matches target date
-      return reminderDaysArray.some((reminderDays) => {
-        const reminderTargetDate = new Date(taskDueDate);
-        reminderTargetDate.setDate(reminderTargetDate.getDate() - reminderDays);
-        reminderTargetDate.setHours(0, 0, 0, 0);
-        return reminderTargetDate.getTime() === targetDate.getTime();
-      });
-    });
-
-    return tasksWithReminders;
+    return allTasks.filter((task) => TaskOccurrenceHelper.shouldRemindOnDate(task as any, date));
   }
 
   /**

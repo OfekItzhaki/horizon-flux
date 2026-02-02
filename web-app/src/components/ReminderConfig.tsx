@@ -46,6 +46,13 @@ const ReminderConfigComponent = memo(function ReminderConfigComponent({
     onRemindersChange(updated);
   }, [reminders, onRemindersChange]);
 
+  const toggleAlarm = useCallback((id: string) => {
+    const updated = reminders.map((r) =>
+      r.id === id ? { ...r, hasAlarm: !r.hasAlarm } : r
+    );
+    onRemindersChange(updated);
+  }, [reminders, onRemindersChange]);
+
   const removeReminder = useCallback((id: string) => {
     onRemindersChange(reminders.filter((r) => r.id !== id));
   }, [reminders, onRemindersChange]);
@@ -90,11 +97,16 @@ const ReminderConfigComponent = memo(function ReminderConfigComponent({
                   <span className="text-sm text-gray-700 dark:text-gray-200 flex-1">
                     {display.display}
                   </span>
-                  {display.hasAlarm && (
-                    <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">
-                      🔔 {t('reminders.alarm', { defaultValue: 'Alarm' })}
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleAlarm(reminder.id)}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium transition-all border ${display.hasAlarm
+                        ? 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200'
+                        : 'bg-gray-100 text-gray-400 border-gray-200 opacity-60 hover:opacity-100 hover:bg-gray-200'
+                      }`}
+                  >
+                    🔔 {t('reminders.alarm', { defaultValue: 'Alarm' })}
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <button

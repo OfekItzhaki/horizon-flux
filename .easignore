@@ -1,10 +1,11 @@
-# Unrelated Projects
+# Unrelated Projects and System Files
 todo-backend/
 web-app/
 instructions/
-
-# Version Control
 .git/
+.github/
+.husky/
+.vscode/
 
 # Dependencies and Build Artifacts
 **/node_modules/

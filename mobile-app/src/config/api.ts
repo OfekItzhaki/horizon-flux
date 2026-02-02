@@ -29,6 +29,11 @@ export const getApiUrl = (endpoint: string): string => {
     base = `${base}/api/v1`;
   }
 
+  // If endpoint is empty, return base without trailing slash
+  if (!endpoint) {
+    return base;
+  }
+
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${base}${path}`;
 };

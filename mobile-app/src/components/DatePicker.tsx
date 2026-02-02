@@ -218,7 +218,15 @@ export default function DatePicker({
   return (
     <View>
       <TouchableOpacity
-        style={styles.infoValue}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: 14,
+          borderWidth: 2,
+          borderColor: '#e2e8f0',
+          borderRadius: 12,
+          backgroundColor: '#f8fafc',
+        }}
         onPress={() => setShowPicker(true)}
         activeOpacity={0.7}
       >

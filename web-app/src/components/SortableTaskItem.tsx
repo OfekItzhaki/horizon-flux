@@ -53,19 +53,31 @@ export function SortableTaskItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group premium-card p-4 flex items-center gap-4 transition-all duration-300 ${isRtl ? 'flex-row-reverse' : ''} ${isBulkMode
-        ? isSelected
-          ? 'ring-2 ring-primary-500 shadow-glow bg-primary-50/50 dark:bg-primary-900/20'
-          : 'hover:shadow-premium cursor-pointer'
-        : isDragging
-          ? 'cursor-grabbing opacity-60 scale-95 shadow-2xl z-50'
-          : 'hover:shadow-premium cursor-pointer'
-        }`}
-      onClick={(e) => { e.stopPropagation(); isBulkMode ? onToggleSelect() : onClick(); }}
+      className={`group premium-card p-4 flex items-center gap-4 transition-all duration-300 ${isRtl ? 'flex-row-reverse' : ''} ${
+        isBulkMode
+          ? isSelected
+            ? 'ring-2 ring-primary-500 shadow-glow bg-primary-50/50 dark:bg-primary-900/20'
+            : 'hover:shadow-premium cursor-pointer'
+          : isDragging
+            ? 'cursor-grabbing opacity-60 scale-95 shadow-2xl z-50'
+            : 'hover:shadow-premium cursor-pointer'
+      }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isBulkMode) {
+          onToggleSelect();
+        } else {
+          onClick();
+        }
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          isBulkMode ? onToggleSelect() : onClick();
+          if (isBulkMode) {
+            onToggleSelect();
+          } else {
+            onClick();
+          }
         }
       }}
       role="button"
@@ -77,17 +89,24 @@ export function SortableTaskItem({
         <div
           className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary-500 border-primary-500 shadow-glow scale-110' : 'border-gray-300 dark:border-gray-600'}`}
         >
-          {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+          {isSelected && (
+            <span className="text-white text-xs font-bold">✓</span>
+          )}
         </div>
       )}
 
       {/* Completion Checkbox (Standard Mode) */}
       {!isBulkMode && !isFinishedList && !isDeleted && (
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleComplete(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete();
+          }}
           className={`shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isCompletedRow ? 'bg-green-500 border-green-500 shadow-glow-green' : 'border-gray-300 dark:border-gray-600 hover:border-primary-500'}`}
         >
-          {isCompletedRow && <span className="text-white text-xs font-bold">✓</span>}
+          {isCompletedRow && (
+            <span className="text-white text-xs font-bold">✓</span>
+          )}
         </button>
       )}
 
@@ -99,7 +118,14 @@ export function SortableTaskItem({
           className="shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded opacity-40 group-hover:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
-          <svg width="12" height="18" viewBox="0 0 12 18" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
+          <svg
+            width="12"
+            height="18"
+            viewBox="0 0 12 18"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-gray-400"
+          >
             <circle cx="2" cy="2" r="1.5" fill="currentColor" />
             <circle cx="2" cy="9" r="1.5" fill="currentColor" />
             <circle cx="2" cy="16" r="1.5" fill="currentColor" />
@@ -112,7 +138,9 @@ export function SortableTaskItem({
 
       {/* Task Content */}
       <div className={`flex-1 min-w-0 ${isRtl ? 'text-right' : 'text-left'}`}>
-        <p className={`text-base font-medium truncate transition-all ${isCompletedRow ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
+        <p
+          className={`text-base font-medium truncate transition-all ${isCompletedRow ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}
+        >
           {task.description}
         </p>
         <div className="flex items-center gap-3 mt-1">
@@ -123,7 +151,8 @@ export function SortableTaskItem({
           )}
           {task.steps && task.steps.length > 0 && (
             <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              📋 {task.steps.filter(s => s.completed).length}/{task.steps.length}
+              📋 {task.steps.filter((s) => s.completed).length}/
+              {task.steps.length}
             </span>
           )}
         </div>
@@ -131,18 +160,27 @@ export function SortableTaskItem({
 
       {/* Action Buttons */}
       {!isBulkMode && (
-        <div className={`flex items-center gap-2 transition-opacity ${isDragging ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`flex items-center gap-2 transition-opacity ${isDragging ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           {isDeleted ? (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); onRestore(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore();
+                }}
                 className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                 title={t('tasks.restore')}
               >
                 🔄
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPermanentDelete();
+                }}
                 className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 title={t('tasks.deleteForever')}
               >
@@ -151,7 +189,10 @@ export function SortableTaskItem({
             </>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               title={t('tasks.delete')}
             >

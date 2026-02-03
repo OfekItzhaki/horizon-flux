@@ -63,7 +63,13 @@ export default function TaskEditForm({
       />
 
       <div className={`flex gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-
+        <button
+          onClick={onCancel}
+          disabled={isSaving}
+          className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all disabled:opacity-50"
+        >
+          {t('common.cancel')}
+        </button>
         <button
           onClick={onSave}
           disabled={isSaving || !editDescription.trim()}

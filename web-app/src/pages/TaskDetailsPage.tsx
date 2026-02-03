@@ -241,8 +241,8 @@ export default function TaskDetailsPage() {
 
   if (isError || !task) {
     return (
-      <div className="premium-card bg-red-50 dark:bg-red-900/10 p-10 text-center animate-shake">
-        <p className="text-red-800 dark:text-red-400 font-black uppercase tracking-widest text-sm mb-6">
+      <div className="rounded-2xl bg-accent-danger/10 border border-accent-danger/20 p-10 text-center">
+        <p className="text-accent-danger font-bold uppercase tracking-wide text-sm mb-6">
           {isError
             ? formatApiError(error, t('taskDetails.loadFailed'))
             : t('taskDetails.notFound')}
@@ -261,9 +261,9 @@ export default function TaskDetailsPage() {
       <div className="mb-8 animate-slide-up">
         <Link
           to={task.todoListId ? `/lists/${task.todoListId}/tasks` : '/lists'}
-          className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-black uppercase tracking-widest text-xs transition-transform hover:-translate-x-1"
+          className="inline-flex items-center gap-2 text-accent hover:text-accent/80 font-semibold text-sm transition-all"
         >
-          {isRtl ? '→' : '←'} {t('taskDetails.backToTasks')}
+          {t('taskDetails.backToTasks')}
         </Link>
       </div>
 
@@ -282,7 +282,7 @@ export default function TaskDetailsPage() {
                   data: { completed: !task.completed },
                 })
               }
-              className="mt-2 w-6 h-6 rounded-lg text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+              className="mt-2 w-6 h-6 rounded-lg text-accent focus:ring-accent/20 border-border-subtle"
             />
             <div className="flex-1 min-w-0">
               {isEditingTask ? (
@@ -291,7 +291,7 @@ export default function TaskDetailsPage() {
                     value={taskDescriptionDraft}
                     onChange={(e) => setTaskDescriptionDraft(e.target.value)}
                     autoFocus
-                    className="w-full text-3xl font-black bg-transparent border-b-2 border-primary-500 focus:outline-none dark:text-white"
+                    className="w-full text-3xl font-bold bg-transparent border-b-2 border-accent focus:outline-none text-primary"
                   />
                   <div className="flex gap-2">
                     <button
@@ -304,13 +304,13 @@ export default function TaskDetailsPage() {
                           { onSuccess: () => setIsEditingTask(false) }
                         );
                       }}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                      className="premium-button"
                     >
                       {t('common.save')}
                     </button>
                     <button
                       onClick={() => setIsEditingTask(false)}
-                      className="px-4 py-2 bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                      className="px-4 py-2 bg-hover border border-border-subtle text-primary rounded-xl text-xs font-bold uppercase tracking-wide hover:scale-105 active:scale-95 transition-all"
                     >
                       {t('common.cancel')}
                     </button>
@@ -318,7 +318,7 @@ export default function TaskDetailsPage() {
                 </div>
               ) : (
                 <h1
-                  className={`text-4xl font-black truncate transition-all cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}
+                  className={`text-4xl font-bold truncate transition-all cursor-pointer hover:text-accent ${task.completed ? 'text-tertiary line-through' : 'text-primary'}`}
                   onClick={() => !isArchivedTask && setIsEditingTask(true)}
                 >
                   {task.description}
@@ -332,11 +332,11 @@ export default function TaskDetailsPage() {
               <>
                 <button
                   onClick={() => navigate(`/lists/${task.todoListId}/tasks`)} // Simplified for now
-                  className="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105"
+                  className="premium-button"
                 >
                   {t('tasks.restore')}
                 </button>
-                <button className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105">
+                <button className="px-4 py-2 bg-accent-danger text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:scale-105">
                   {t('tasks.deleteForever')}
                 </button>
               </>

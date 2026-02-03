@@ -23,34 +23,28 @@ export default function Layout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-500">
-      {/* Background Aura */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-600/5 dark:bg-violet-900/5 rounded-full blur-[120px] animate-pulse-slow"></div>
-        <div
-          className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-600/5 dark:bg-indigo-900/5 rounded-full blur-[100px] animate-pulse-slow"
-          style={{ animationDelay: '4s' }}
-        ></div>
-      </div>
-
-      <nav className="sticky top-0 z-50 glass-card mx-auto max-w-7xl mt-4 rounded-2xl border-white/20 dark:border-white/5 shadow-2xl backdrop-blur-xl">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-2">
-              <div className="flex-shrink-0 flex items-center mr-6">
-                <span className="text-xl font-black bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent transform hover:scale-105 transition-transform duration-300 cursor-default">
+    <div className="min-h-screen flex flex-col bg-app font-inter">
+      {/* Navigation Bar - Solid, Clean */}
+      <nav className="sticky top-0 z-50 bg-surface border-b border-border-subtle shadow-sm">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo & Links */}
+            <div className="flex items-center gap-8">
+              <Link to="/lists" className="flex items-center gap-2 group">
+                <span className="text-xl font-bold text-primary tracking-tight group-hover:text-accent transition-colors">
                   Horizon Tasks
                 </span>
-              </div>
-              <div className="hidden sm:flex sm:space-x-4">
+              </Link>
+
+              <div className="hidden sm:flex items-center gap-1">
                 {navLinks.map((link) => (
                   <Link
                     key={link.to}
                     to={link.to}
-                    className={`inline-flex items-center px-4 py-2 text-sm font-bold transition-all duration-300 rounded-xl ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                       location.pathname.startsWith(link.to)
-                        ? 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 shadow-lg shadow-violet-500/10'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1e293b]/50'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-secondary hover:text-primary hover:bg-hover'
                     }`}
                   >
                     {link.label}
@@ -59,17 +53,18 @@ export default function Layout() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-3">
               {/* Theme Toggle */}
-              <div className="flex bg-slate-100 dark:bg-[#1e293b] p-1 rounded-xl">
+              <div className="flex bg-hover rounded-lg p-1 border border-border-subtle">
                 {(['light', 'dark', 'auto'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setThemeMode(mode)}
-                    className={`p-1.5 rounded-lg transition-all duration-300 ${
+                    className={`p-1.5 rounded-md transition-all ${
                       themeMode === mode
-                        ? 'bg-white dark:bg-[#0f172a] shadow-sm text-violet-600 dark:text-violet-400 scale-110'
-                        : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        ? 'bg-surface text-accent shadow-sm'
+                        : 'text-tertiary hover:text-secondary'
                     }`}
                     title={t(`theme.${mode}`, {
                       defaultValue:
@@ -130,7 +125,7 @@ export default function Layout() {
                 aria-label={t('nav.language')}
                 value={(i18n.resolvedLanguage ?? i18n.language).split('-')[0]}
                 onChange={(e) => void i18n.changeLanguage(e.target.value)}
-                className="rounded-xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#1e293b] px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all duration-300"
+                className="px-3 py-1.5 text-sm font-medium text-secondary bg-hover border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 cursor-pointer transition-all"
               >
                 {supportedLanguages.map((lng) => (
                   <option key={lng} value={lng}>
@@ -141,39 +136,44 @@ export default function Layout() {
                 ))}
               </select>
 
-              {/* Profile/User Section */}
-              <div className="flex items-center space-x-2 pl-2 border-l border-slate-200 dark:border-white/5">
-                <Link to="/profile" className="flex items-center group">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center border-2 border-transparent group-hover:border-violet-500 transition-all duration-300 shadow-lg shadow-violet-500/20">
+              {/* Profile */}
+              <div className="flex items-center gap-3 pl-3 border-l border-border-subtle">
+                <Link to="/profile" className="flex items-center gap-2 group">
+                  <div className="w-8 h-8 rounded-full bg-accent/10 border-2 border-accent/20 group-hover:border-accent transition-all flex items-center justify-center overflow-hidden">
                     {user?.profilePicture ? (
                       <img
                         src={user.profilePicture}
-                        alt={user.name || ''}
+                        alt={user.name || user.email}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to initials if image fails to load
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
-                    ) : (
-                      <span className="text-xs font-black text-violet-600 dark:text-violet-400">
-                        {user?.name?.[0].toUpperCase() ||
-                          user?.email[0].toUpperCase()}
+                    ) : null}
+                    {!user?.profilePicture && (
+                      <span className="text-xs font-bold text-accent">
+                        {user?.name?.[0]?.toUpperCase() ||
+                          user?.email[0]?.toUpperCase()}
                       </span>
                     )}
                   </div>
-                  <div className="hidden md:ml-2 md:flex flex-col items-start leading-none">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors duration-300">
+
+                  <div className="hidden md:flex flex-col leading-none">
+                    <span className="text-sm font-semibold text-primary group-hover:text-accent transition-colors">
                       {user?.name || user?.email.split('@')[0]}
                     </span>
-                    <span className="text-[10px] text-violet-500 dark:text-violet-400 mt-1 uppercase tracking-wider font-black">
-                      {t('profile.proAccount', { defaultValue: 'Pro Account' })}
-                    </span>
+                    <span className="text-xs text-tertiary mt-0.5">Pro</span>
                   </div>
                 </Link>
+
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors duration-300"
+                  className="p-2 rounded-lg text-tertiary hover:text-accent-danger hover:bg-accent-danger/10 transition-all"
                   title={t('nav.logout')}
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -192,21 +192,19 @@ export default function Layout() {
         </div>
       </nav>
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in relative z-10 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full animate-fade-in">
         <Outlet />
       </main>
 
-      {/* Credits Footer */}
-      <footer className="mt-auto py-8 px-4 border-t border-slate-200/50 dark:border-white/5 bg-transparent backdrop-blur-sm z-10 relative">
-        <div className="max-w-7xl mx-auto flex flex-col items-center">
-          <span className="text-sm font-bold text-slate-400 dark:text-slate-500">
+      <footer className="mt-auto py-6 px-6 border-t border-border-subtle bg-surface">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm">
+          <span className="text-tertiary">
             &copy; {new Date().getFullYear()} Horizon Tasks.{' '}
-            {t('footer.allRightsReserved', {
-              defaultValue: 'All rights reserved.',
-            })}
+            {t('footer.allRightsReserved')}
           </span>
-          <span className="mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-slate-300 dark:text-slate-700 hover:text-violet-400 dark:hover:text-violet-500 transition-colors cursor-default select-none">
-            Developed by OfekLabs
+          <span className="text-tertiary">
+            Developed by{' '}
+            <span className="text-accent font-medium">OfekLabs</span>
           </span>
         </div>
       </footer>

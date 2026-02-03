@@ -56,11 +56,14 @@ export default function AnalyticsPage() {
             {t('tasks.backToLists')}
           </Link>
         </div>
-        <h1 className="premium-header-main text-center">
-          {t('analysis.title')}
-        </h1>
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4 text-center">
-          <div className="text-sm text-red-800 dark:text-red-200 mb-3">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-primary tracking-tight">
+            {t('analysis.title')}
+          </h1>
+          <p className="mt-2 text-secondary">Insights and statistics</p>
+        </div>
+        <div className="rounded-2xl bg-accent-danger/10 border border-accent-danger/20 p-6 text-center">
+          <div className="text-sm text-accent-danger mb-3">
             {listsError
               ? t('analysis.loadListsFailed')
               : t('analysis.loadTasksFailed')}
@@ -68,18 +71,12 @@ export default function AnalyticsPage() {
           </div>
           <div className="flex gap-3">
             {listsError && (
-              <button
-                onClick={() => refetchLists()}
-                className="premium-button bg-red-600"
-              >
+              <button onClick={() => refetchLists()} className="premium-button">
                 {t('analysis.retryLists')}
               </button>
             )}
             {tasksError && (
-              <button
-                onClick={() => refetchTasks()}
-                className="premium-button bg-red-600"
-              >
+              <button onClick={() => refetchTasks()} className="premium-button">
                 {t('analysis.retryTasks')}
               </button>
             )}
@@ -117,14 +114,16 @@ export default function AnalyticsPage() {
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       <div className="mb-6">
-        <Link
-          to="/lists"
-          className="text-secondary-600 dark:text-secondary-400 hover:underline"
-        >
+        <Link to="/lists" className="text-accent hover:underline font-medium">
           {t('tasks.backToLists')}
         </Link>
       </div>
-      <h1 className="premium-header-main">{t('analysis.title')}</h1>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-primary tracking-tight">
+          {t('analysis.title')}
+        </h1>
+        <p className="mt-2 text-secondary">Insights and statistics</p>
+      </div>
 
       {/* Overview Cards */}
       <div
@@ -144,7 +143,7 @@ export default function AnalyticsPage() {
         <StatCard
           title={t('analysis.completed')}
           value={stats.completedTasks.length}
-          colorClass="text-green-600 dark:text-green-400"
+          colorClass="text-accent-success"
           icon="✅"
         />
         <StatCard
@@ -356,16 +355,16 @@ function StatCard({
   colorClass?: string;
 }) {
   return (
-    <div className="premium-card p-6 group hover:translate-y-[-4px] transition-all flex flex-col items-center justify-center text-center">
+    <div className="premium-card p-6 group hover:-translate-y-1 transition-all flex flex-col items-center justify-center text-center">
       <div className="mb-3 flex flex-col items-center">
         <span className="text-3xl mb-2 group-hover:scale-110 transition-transform block">
           {icon}
         </span>
-        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+        <h3 className="text-xs font-semibold text-tertiary uppercase tracking-wider">
           {title}
         </h3>
       </div>
-      <p className={`text-3xl font-black ${colorClass}`}>{value}</p>
+      <p className={`text-3xl font-bold ${colorClass}`}>{value}</p>
     </div>
   );
 }
@@ -380,11 +379,11 @@ function StatRow({
   color?: string;
 }) {
   return (
-    <div className="glass-card p-4 rounded-xl text-center">
-      <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
+    <div className="bg-surface border border-border-subtle p-4 rounded-xl text-center">
+      <h4 className="text-xs font-semibold text-tertiary uppercase tracking-wide mb-1">
         {label}
       </h4>
-      <p className={`text-lg font-black ${color}`}>{value}</p>
+      <p className={`text-lg font-bold ${color}`}>{value}</p>
     </div>
   );
 }

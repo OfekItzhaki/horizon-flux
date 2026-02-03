@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { supportedLanguages } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
+import { getAssetUrl } from '@tasks-management/frontend-services';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -41,11 +42,10 @@ export default function Layout() {
                   <Link
                     key={link.to}
                     to={link.to}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      location.pathname.startsWith(link.to)
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-secondary hover:text-primary hover:bg-hover'
-                    }`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname.startsWith(link.to)
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-secondary hover:text-primary hover:bg-hover'
+                      }`}
                   >
                     {link.label}
                   </Link>
@@ -61,11 +61,10 @@ export default function Layout() {
                   <button
                     key={mode}
                     onClick={() => setThemeMode(mode)}
-                    className={`p-1.5 rounded-md transition-all ${
-                      themeMode === mode
-                        ? 'bg-surface text-accent shadow-sm'
-                        : 'text-tertiary hover:text-secondary'
-                    }`}
+                    className={`p-1.5 rounded-md transition-all ${themeMode === mode
+                      ? 'bg-surface text-accent shadow-sm'
+                      : 'text-tertiary hover:text-secondary'
+                      }`}
                     title={t(`theme.${mode}`, {
                       defaultValue:
                         mode.charAt(0).toUpperCase() + mode.slice(1),
@@ -142,7 +141,7 @@ export default function Layout() {
                   <div className="w-8 h-8 rounded-full bg-accent/10 border-2 border-accent/20 group-hover:border-accent transition-all flex items-center justify-center overflow-hidden">
                     {user?.profilePicture ? (
                       <img
-                        src={user.profilePicture}
+                        src={getAssetUrl(user.profilePicture)}
                         alt={user.name || user.email}
                         className="w-full h-full object-cover"
                         onError={(e) => {

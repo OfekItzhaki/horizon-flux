@@ -6,19 +6,19 @@ const getApiBaseUrl = (): string => {
     // 1. Direct access for Vite's static replacement (define in vite.config.ts)
     // We use bracket notation to handle Hermes/Expo without crashing, 
     // but Vite needs clear strings to replace.
-    const vUrl = (process.env as any).VITE_API_URL;
-    const aUrl = (process.env as any).API_BASE_URL;
-    const eUrl = (process.env as any).EXPO_PUBLIC_API_URL;
+    const pEnv = process.env as any;
+    const vUrl = pEnv['VITE_API_URL'];
+    const aUrl = pEnv['API_BASE_URL'];
+    const eUrl = pEnv['EXPO_PUBLIC_API_URL'];
 
     if (vUrl) url = vUrl;
     else if (aUrl) url = aUrl;
     else if (eUrl) url = eUrl;
     // 2. Fallback for Node/Jest where process.env is a real object
-    else if (process.env) {
-      const pEnv = process.env as any;
-      if (pEnv.VITE_API_URL) url = pEnv.VITE_API_URL;
-      else if (pEnv.API_BASE_URL) url = pEnv.API_BASE_URL;
-      else if (pEnv.EXPO_PUBLIC_API_URL) url = pEnv.EXPO_PUBLIC_API_URL;
+    else {
+      if (pEnv['VITE_API_URL']) url = pEnv['VITE_API_URL'];
+      else if (pEnv['API_BASE_URL']) url = pEnv['API_BASE_URL'];
+      else if (pEnv['EXPO_PUBLIC_API_URL']) url = pEnv['EXPO_PUBLIC_API_URL'];
     }
   }
 

@@ -2,13 +2,18 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { BUILD_INFO } from '../utils/buildInfo';
-import { usersService } from '@tasks-management/frontend-services';
+import {
+  usersService,
+  authService,
+  getAssetUrl,
+} from '@tasks-management/frontend-services';
 import Skeleton from '../components/Skeleton';
 
 export default function ProfilePage() {
   const { user, loading, refreshUser } = useAuth();
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
+  const [resendingVerify, setResendingVerify] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,6 +29,20 @@ export default function ProfilePage() {
       alert('Failed to upload profile picture');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return;
+    try {
+      setResendingVerify(true);
+      await authService.resendVerification(user.email);
+      alert(t('login.verificationResent'));
+    } catch (err) {
+      console.error('Failed to resend verification:', err);
+      alert(t('login.verificationFailed'));
+    } finally {
+      setResendingVerify(false);
     }
   };
 
@@ -64,7 +83,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <h1 className="premium-header-main animate-slide-up">
+      <h1 className="premium-header-main animate-slide-up w-full text-center">
         {t('profile.title')}
       </h1>
 
@@ -79,7 +98,7 @@ export default function ProfilePage() {
               <div className="w-32 h-32 rounded-3xl overflow-hidden bg-primary-100 dark:bg-primary-900/20 border-4 border-white dark:border-[#1a1a1a] shadow-2xl relative transition-transform duration-500 group-hover:scale-105">
                 {user.profilePicture ? (
                   <img
-                    src={user.profilePicture}
+                    src={getAssetUrl(user.profilePicture)}
                     alt={user.name || ''}
                     className="w-full h-full object-cover"
                   />
@@ -138,8 +157,12 @@ export default function ProfilePage() {
               {user.email}
             </p>
 
-            <div className="mt-6 w-full pt-6 border-t border-gray-100 dark:border-[#2a2a2a]">
-              <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-tighter bg-primary-50 dark:bg-primary-900/10 text-primary-600 dark:text-primary-400">
+            {/* Verified Badge */}
+            <div className="mt-6 w-full pt-6 border-t border-gray-100 dark:border-[#2a2a2a] flex flex-col gap-2 items-center">
+              <span
+                className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-tighter bg-primary-50 dark:bg-primary-900/10 text-primary-600 dark:text-primary-400 cursor-help"
+                title="Pro features coming soon"
+              >
                 {t('profile.proAccount', { defaultValue: 'Pro Account' })}
               </span>
             </div>
@@ -177,13 +200,26 @@ export default function ProfilePage() {
                 <label className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                   {t('profile.emailVerified')}
                 </label>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2 h-2 rounded-full ${user.emailVerified ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}
-                  ></span>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {user.emailVerified ? t('profile.yes') : t('profile.no')}
-                  </p>
+                <div className="flex flex-col items-start gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${user.emailVerified ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}
+                    ></span>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {user.emailVerified ? t('profile.yes') : t('profile.no')}
+                    </p>
+                  </div>
+                  {!user.emailVerified && (
+                    <button
+                      onClick={handleResendVerification}
+                      disabled={resendingVerify}
+                      className="text-[10px] font-bold text-violet-600 dark:text-violet-400 hover:underline uppercase tracking-wider disabled:opacity-50"
+                    >
+                      {resendingVerify
+                        ? t('common.loading')
+                        : t('login.resendVerification')}
+                    </button>
+                  )}
                 </div>
               </div>
 

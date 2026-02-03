@@ -3,10 +3,9 @@ const getApiBaseUrl = (): string => {
   let url = 'http://localhost:3000';
 
   if (typeof process !== 'undefined' && process.env) {
-    const env = process.env;
-    if (env.EXPO_PUBLIC_API_URL) url = env.EXPO_PUBLIC_API_URL;
-    else if (env.API_BASE_URL) url = env.API_BASE_URL;
-    else if ((env as any).VITE_API_URL) url = (env as any).VITE_API_URL;
+    if (process.env.EXPO_PUBLIC_API_URL) url = process.env.EXPO_PUBLIC_API_URL;
+    else if (process.env.API_BASE_URL) url = process.env.API_BASE_URL;
+    else if ((process.env as any).VITE_API_URL) url = (process.env as any).VITE_API_URL;
   }
 
   // Ensure /api/v1 prefix is present if it's a prod/render/custom URL

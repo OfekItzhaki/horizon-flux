@@ -496,7 +496,7 @@ export default function TasksPage() {
             </div>
           ) : (
             <h1
-              className="text-4xl font-black text-gray-900 dark:text-white truncate cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center gap-3"
+              className="text-4xl font-black text-gray-900 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center gap-3 break-words whitespace-normal leading-snug pb-2"
               onClick={() => !list?.isSystem && setIsEditingListName(true)}
             >
               {list?.name ?? t('tasks.defaultTitle')}

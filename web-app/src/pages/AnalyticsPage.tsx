@@ -56,8 +56,10 @@ export default function AnalyticsPage() {
             {t('tasks.backToLists')}
           </Link>
         </div>
-        <h1 className="premium-header-main">{t('analysis.title')}</h1>
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+        <h1 className="premium-header-main text-center">
+          {t('analysis.title')}
+        </h1>
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4 text-center">
           <div className="text-sm text-red-800 dark:text-red-200 mb-3">
             {listsError
               ? t('analysis.loadListsFailed')
@@ -354,14 +356,14 @@ function StatCard({
   colorClass?: string;
 }) {
   return (
-    <div className="premium-card p-6 group hover:translate-y-[-4px] transition-all">
-      <div className="flex items-center justify-between mb-2">
+    <div className="premium-card p-6 group hover:translate-y-[-4px] transition-all flex flex-col items-center justify-center text-center">
+      <div className="mb-3 flex flex-col items-center">
+        <span className="text-3xl mb-2 group-hover:scale-110 transition-transform block">
+          {icon}
+        </span>
         <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
           {title}
         </h3>
-        <span className="text-xl group-hover:scale-110 transition-transform">
-          {icon}
-        </span>
       </div>
       <p className={`text-3xl font-black ${colorClass}`}>{value}</p>
     </div>
@@ -378,7 +380,7 @@ function StatRow({
   color?: string;
 }) {
   return (
-    <div className="glass-card p-4 rounded-xl">
+    <div className="glass-card p-4 rounded-xl text-center">
       <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
         {label}
       </h4>

@@ -23,7 +23,7 @@ export default function Layout() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-500">
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-500">
       {/* Background Aura */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-600/5 dark:bg-violet-900/5 rounded-full blur-[120px] animate-pulse-slow"></div>
@@ -192,7 +192,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in relative z-10">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in relative z-10 w-full">
         <Outlet />
       </main>
 

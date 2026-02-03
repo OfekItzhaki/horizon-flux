@@ -65,7 +65,7 @@ async function bootstrap() {
 
   // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('Tasks Management API')
+    .setTitle('Horizon Tasks API')
     .setDescription(
       'API for managing to-do lists, tasks, and steps with user authentication',
     )

@@ -121,9 +121,8 @@ export default {
     about: 'אודות',
     version: 'גרסה',
     credits: 'קרדיטים',
-    creditsValue: 'צוות Tasks Management',
+    creditsValue: 'צוות Horizon Tasks',
     sourceCode: 'קוד מקור',
     openRepo: 'פתח מאגר',
   },
 } as const;
-

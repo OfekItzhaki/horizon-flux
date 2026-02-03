@@ -28,7 +28,7 @@ export default {
     edit: 'Edit',
   },
   login: {
-    title: 'Sign in to Tasks Management',
+    welcome: 'Welcome to Horizon Tasks',
     emailPlaceholder: 'Email address',
     passwordPlaceholder: 'Password',
     signIn: 'Sign in',

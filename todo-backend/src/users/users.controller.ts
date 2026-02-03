@@ -35,7 +35,7 @@ import { FileUploadInterceptor } from './interceptors/file-upload.interceptor';
 @ApiTags('Users')
 @Controller('users')
 class UsersController {
-  constructor(private userService: UsersService) { }
+  constructor(private userService: UsersService) {}
 
   @Post()
   @ApiOperation({ summary: 'Register a new user' })
@@ -107,7 +107,10 @@ class UsersController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Profile picture uploaded successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture uploaded successfully',
+  })
   @ApiResponse({ status: 400, description: 'Invalid file or file too large' })
   @ApiResponse({
     status: 403,

@@ -183,7 +183,11 @@ class UsersService {
 
     // Send verification email (don't await to avoid blocking user creation)
     this.emailService
-      .sendVerificationEmail(user.email, emailVerificationToken, user.name || undefined)
+      .sendVerificationEmail(
+        user.email,
+        emailVerificationToken,
+        user.name || undefined,
+      )
       .catch((error) => {
         console.error('Failed to send verification email:', error);
         // Don't throw - user creation should succeed even if email fails
@@ -252,7 +256,11 @@ class UsersService {
 
     // Send verification email (don't await to avoid blocking response)
     this.emailService
-      .sendVerificationEmail(updatedUser.email, emailVerificationToken, updatedUser.name || undefined)
+      .sendVerificationEmail(
+        updatedUser.email,
+        emailVerificationToken,
+        updatedUser.name || undefined,
+      )
       .catch((error) => {
         console.error('Failed to send verification email:', error);
         // Don't throw - token generation should succeed even if email fails

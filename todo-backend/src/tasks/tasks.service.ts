@@ -23,7 +23,7 @@ export class TasksService {
     private taskAccess: TaskAccessHelper,
     @Inject(forwardRef(() => TaskSchedulerService))
     private taskScheduler: TaskSchedulerService,
-  ) { }
+  ) {}
 
   async create(
     todoListId: number,
@@ -39,8 +39,10 @@ export class TasksService {
         specificDayOfWeek: createTaskDto.specificDayOfWeek,
         reminderDaysBefore: createTaskDto.reminderDaysBefore ?? [],
         reminderConfig: createTaskDto.reminderConfig
-          ? JSON.parse(JSON.stringify(createTaskDto.reminderConfig))
-          : undefined,
+          ? (JSON.parse(
+              JSON.stringify(createTaskDto.reminderConfig),
+            ) as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
         completed: createTaskDto.completed ?? false,
         todoListId,
       },
@@ -118,11 +120,13 @@ export class TasksService {
 
     // Reset completionCount if task has weekly reminder (specificDayOfWeek)
     // completionCount should only be tracked for daily tasks, not weekly ones
-    const finalSpecificDayOfWeek = updateTaskDto.specificDayOfWeek !== undefined
-      ? updateTaskDto.specificDayOfWeek
-      : existingTask.specificDayOfWeek;
+    const finalSpecificDayOfWeek =
+      updateTaskDto.specificDayOfWeek !== undefined
+        ? updateTaskDto.specificDayOfWeek
+        : existingTask.specificDayOfWeek;
 
-    const shouldResetCompletionCount = finalSpecificDayOfWeek !== null &&
+    const shouldResetCompletionCount =
+      finalSpecificDayOfWeek !== null &&
       finalSpecificDayOfWeek !== undefined &&
       existingTask.completionCount > 0;
 
@@ -135,7 +139,9 @@ export class TasksService {
         reminderDaysBefore: updateTaskDto.reminderDaysBefore,
         reminderConfig:
           updateTaskDto.reminderConfig !== undefined
-            ? JSON.parse(JSON.stringify(updateTaskDto.reminderConfig))
+            ? (JSON.parse(
+                JSON.stringify(updateTaskDto.reminderConfig),
+              ) as Prisma.InputJsonValue)
             : undefined,
         completed: updateTaskDto.completed,
         ...(completedAt !== undefined && { completedAt }),
@@ -178,7 +184,12 @@ export class TasksService {
       },
     });
 
-    return allTasks.filter((task) => TaskOccurrenceHelper.shouldAppearOnDate(task as any, date));
+    return allTasks.filter((task) =>
+      TaskOccurrenceHelper.shouldAppearOnDate(
+        task as Prisma.TaskGetPayload<{ include: { todoList: true } }>,
+        date,
+      ),
+    );
   }
 
   async getTasksWithReminders(userId: number, date: Date = new Date()) {
@@ -200,7 +211,12 @@ export class TasksService {
       },
     });
 
-    return allTasks.filter((task) => TaskOccurrenceHelper.shouldRemindOnDate(task as any, date));
+    return allTasks.filter((task) =>
+      TaskOccurrenceHelper.shouldRemindOnDate(
+        task as Prisma.TaskGetPayload<{ include: { todoList: true } }>,
+        date,
+      ),
+    );
   }
 
   /**

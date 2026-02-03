@@ -53,4 +53,4 @@ import { validate } from './config/env.validation';
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
   ],
 })
-export class AppModule { }
+export class AppModule {}

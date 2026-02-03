@@ -38,7 +38,7 @@ export class StepsController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-  ) { }
+  ) {}
 
   @Post('tasks/:taskId/steps')
   @ApiOperation({ summary: 'Create a new step (sub-task)' })

@@ -31,7 +31,7 @@ export class UpdateTaskDto {
     nullable: true,
   })
   @IsOptional()
-  @ValidateIf((o) => o.dueDate !== null)
+  @ValidateIf((o: UpdateTaskDto) => o.dueDate !== null)
   @IsDate()
   @Type(() => Date)
   dueDate?: Date | null;
@@ -45,7 +45,7 @@ export class UpdateTaskDto {
     nullable: true,
   })
   @IsOptional()
-  @ValidateIf((o) => o.specificDayOfWeek !== null)
+  @ValidateIf((o: UpdateTaskDto) => o.specificDayOfWeek !== null)
   @IsInt()
   @Min(0)
   @Max(6)

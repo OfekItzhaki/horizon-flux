@@ -31,7 +31,12 @@ const QueryHandlers = [
 @Module({
   imports: [PrismaModule, forwardRef(() => TaskSchedulerModule)],
   controllers: [TasksController],
-  providers: [TasksService, TaskAccessHelper, ...CommandHandlers, ...QueryHandlers],
+  providers: [
+    TasksService,
+    TaskAccessHelper,
+    ...CommandHandlers,
+    ...QueryHandlers,
+  ],
   exports: [TasksService],
 })
 export class TasksModule {}

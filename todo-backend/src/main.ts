@@ -21,9 +21,11 @@ async function bootstrap() {
   app.useLogger(logger);
 
   // Security Headers
-  app.use(helmet({
-    crossOriginResourcePolicy: false, // Allow cross-origin images (avatars)
-  }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false, // Allow cross-origin images (avatars)
+    }),
+  );
 
   // API Versioning
   app.setGlobalPrefix('api/v1');
@@ -34,9 +36,13 @@ async function bootstrap() {
   // CORS: in production use ALLOWED_ORIGINS (comma-separated); in dev allow all
   const isProduction = process.env.NODE_ENV === 'production';
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS?.trim();
-  const origin = isProduction && allowedOriginsEnv
-    ? allowedOriginsEnv.split(',').map((o) => o.trim()).filter(Boolean)
-    : true;
+  const origin =
+    isProduction && allowedOriginsEnv
+      ? allowedOriginsEnv
+          .split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : true;
 
   app.enableCors({
     origin,

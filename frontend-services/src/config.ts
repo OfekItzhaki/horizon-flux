@@ -6,13 +6,18 @@ const getApiBaseUrl = (): string => {
   }
 
   // Vite environment (browser)
-  // @ts-ignore - import.meta is not defined in all environments
+  // @ts-ignore
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
     // @ts-ignore
     return import.meta.env.VITE_API_URL;
   }
 
-  // Browser environment - use default (can be overridden via Vite env vars in web-app)
+  // Expo environment (mobile)
+  if (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // Browser environment - use default
   return 'http://localhost:3000';
 };
 

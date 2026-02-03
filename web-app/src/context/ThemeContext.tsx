@@ -13,18 +13,26 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { themeMode, setThemeMode, getTheme, isDark: checkIsDark } = useThemeStore();
+  const {
+    themeMode,
+    setThemeMode,
+    getTheme,
+    isDark: checkIsDark,
+  } = useThemeStore();
 
   const theme = getTheme();
   const isDark = checkIsDark();
 
-  // Apply theme class to document
+  // Apply theme class and data-attribute to document
   useEffect(() => {
     if (typeof document !== 'undefined') {
+      // Manage 'dark' class for legacy/Tailwind support
       if (isDark) {
         document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
       }
     }
   }, [isDark]);

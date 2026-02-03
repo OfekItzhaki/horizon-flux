@@ -49,7 +49,6 @@ export default function ListsPage() {
         name: data.name,
         ownerId: 0,
         order: Date.now(),
-        // User-created lists are always CUSTOM (type is an internal backend detail).
         type: ListType.CUSTOM,
         createdAt: now,
         updatedAt: now,
@@ -81,16 +80,16 @@ export default function ListsPage() {
 
   if (isLoading) {
     return (
-      <div>
-        <div className="flex justify-between items-center mb-6 gap-3">
-          <Skeleton className="h-8 w-48" />
+      <div className="space-y-8">
+        <div className="flex justify-center">
+          <Skeleton className="h-10 w-48 rounded-lg" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="p-6 bg-white rounded-lg shadow">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="mt-3 h-4 w-24" />
-            </div>
+            <div
+              key={i}
+              className="h-40 rounded-2xl bg-surface border border-border-subtle animate-pulse"
+            />
           ))}
         </div>
       </div>
@@ -99,8 +98,11 @@ export default function ListsPage() {
 
   if (isError) {
     return (
-      <div className="rounded-md bg-red-50 p-4">
-        <div className="text-sm text-red-800">
+      <div className="rounded-2xl bg-accent-danger/10 border border-accent-danger/20 p-6 text-center">
+        <p className="text-accent-danger font-semibold mb-1">
+          Error Loading Lists
+        </p>
+        <div className="text-sm text-accent-danger/80">
           {formatApiError(error, t('lists.loadFailed'))}
         </div>
       </div>
@@ -108,67 +110,74 @@ export default function ListsPage() {
   }
 
   return (
-    <div>
-      <div className="flex justify-center items-center mb-8">
-        <h1 className="premium-header-main text-center">{t('lists.title')}</h1>
+    <div className="pb-20">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-primary tracking-tight">
+          {t('lists.title')}
+        </h1>
+        <p className="mt-2 text-secondary">Organize your tasks into lists</p>
       </div>
 
+      {/* Create List Form */}
       {showCreate && (
-        <form
-          className="premium-card p-6 mb-8 animate-scale-in"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newListName.trim()) return;
-            createListMutation.mutate({
-              name: newListName.trim(),
-            });
-          }}
-        >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-end">
-            <div className="sm:col-span-10">
-              <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-1">
-                {t('lists.form.nameLabel')}
-              </label>
-              <input
-                value={newListName}
-                onChange={(e) => setNewListName(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                placeholder={t('lists.form.namePlaceholder')}
-              />
+        <div className="mb-6 animate-slide-down">
+          <form
+            className="premium-card p-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newListName.trim()) return;
+              createListMutation.mutate({
+                name: newListName.trim(),
+              });
+            }}
+          >
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-tertiary mb-2">
+                  {t('lists.form.nameLabel')}
+                </label>
+                <input
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  autoFocus
+                  className="premium-input w-full"
+                  placeholder={t('lists.form.namePlaceholder')}
+                />
+              </div>
+              <div className="flex gap-2 sm:items-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreate(false);
+                    setNewListName('');
+                  }}
+                  className="px-4 py-3 rounded-xl bg-hover border border-border-subtle text-secondary font-medium text-sm hover:bg-surface transition-all"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={createListMutation.isPending || !newListName.trim()}
+                  className="premium-button"
+                >
+                  {createListMutation.isPending
+                    ? t('common.loading')
+                    : t('common.create')}
+                </button>
+              </div>
             </div>
-            <div className="sm:col-span-2 flex gap-2">
-              <button
-                type="submit"
-                disabled={createListMutation.isPending || !newListName.trim()}
-                className="inline-flex flex-1 justify-center items-center rounded-xl bg-primary-600 px-4 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
-              >
-                {createListMutation.isPending
-                  ? t('common.loading')
-                  : t('common.create')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreate(false);
-                  setNewListName('');
-                }}
-                className="inline-flex justify-center items-center rounded-xl bg-gray-100 dark:bg-[#2a2a2a] px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#333] transition-all hover:scale-105 active:scale-95"
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-gray-500">{t('lists.form.tip')}</p>
-        </form>
+          </form>
+        </div>
       )}
 
+      {/* Lists Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {lists.map((list) => (
+        {lists.map((list, index) => (
           <Link
             key={list.id}
             to={`/lists/${list.id}/tasks`}
             onMouseEnter={() => {
-              // Prefetch tasks + list details for snappy navigation.
               void queryClient.prefetchQuery({
                 queryKey: ['tasks', list.id],
                 queryFn: () => tasksService.getTasksByList(list.id),
@@ -178,46 +187,76 @@ export default function ListsPage() {
                 queryFn: () => listsService.getListById(list.id),
               });
             }}
-            onFocus={() => {
-              // Keyboard navigation
-              void queryClient.prefetchQuery({
-                queryKey: ['tasks', list.id],
-                queryFn: () => tasksService.getTasksByList(list.id),
-              });
-              void queryClient.prefetchQuery({
-                queryKey: ['list', list.id],
-                queryFn: () => listsService.getListById(list.id),
-              });
-            }}
-            onPointerDown={() => {
-              // Touch devices (no hover)
-              void queryClient.prefetchQuery({
-                queryKey: ['tasks', list.id],
-                queryFn: () => tasksService.getTasksByList(list.id),
-              });
-              void queryClient.prefetchQuery({
-                queryKey: ['list', list.id],
-                queryFn: () => listsService.getListById(list.id),
-              });
-            }}
-            className="block premium-card p-8 hover:scale-[1.02] active:scale-[0.98] transition-all text-center group relative overflow-hidden"
+            className="group relative p-6 h-40 rounded-2xl border-2 border-border-subtle bg-surface hover:border-accent hover:shadow-lg transition-all duration-200 flex flex-col justify-between animate-slide-up"
+            style={{ animationDelay: `${index * 0.05}s` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary-500/5 group-hover:to-primary-500/10 transition-colors" />
-            <h3 className="text-lg font-black text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors break-words">
-              {list.name}
-            </h3>
-            <div className="mt-4 flex justify-center">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            {/* List Content */}
+            <div>
+              <h3 className="text-xl font-bold text-primary group-hover:text-accent transition-colors line-clamp-2 break-words">
+                {list.name}
+              </h3>
+            </div>
+
+            {/* Footer with Arrow */}
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold uppercase tracking-wider text-tertiary group-hover:text-accent transition-colors">
                 {t('common.open')}
               </span>
+              <div className="w-8 h-8 rounded-lg bg-hover group-hover:bg-accent group-hover:text-white flex items-center justify-center transition-all">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
             </div>
+
+            {/* Accent Bar */}
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
           </Link>
         ))}
+
+        {/* Add List Card */}
+        {!showCreate && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="group h-40 rounded-2xl border-2 border-dashed border-border-subtle hover:border-accent hover:bg-accent/5 flex flex-col items-center justify-center transition-all duration-200 animate-slide-up"
+            style={{ animationDelay: `${lists.length * 0.05}s` }}
+          >
+            <div className="w-12 h-12 rounded-full bg-hover group-hover:bg-accent group-hover:text-white flex items-center justify-center transition-all mb-3">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </div>
+            <span className="text-sm font-semibold uppercase tracking-wider text-tertiary group-hover:text-accent transition-colors">
+              {t('common.createList', { defaultValue: 'New List' })}
+            </span>
+          </button>
+        )}
       </div>
 
-      {lists.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">{t('lists.empty')}</p>
+      {/* Empty State */}
+      {lists.length === 0 && !showCreate && (
+        <div className="text-center py-16">
+          <p className="text-lg text-tertiary">{t('lists.empty')}</p>
         </div>
       )}
 

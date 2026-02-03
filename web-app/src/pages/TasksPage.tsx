@@ -441,8 +441,8 @@ export default function TasksPage() {
 
   if (isError) {
     return (
-      <div className="premium-card bg-red-50 dark:bg-red-900/10 p-6 text-center animate-shake">
-        <p className="text-red-800 dark:text-red-400 font-bold">
+      <div className="rounded-2xl bg-accent-danger/10 border border-accent-danger/20 p-6 text-center">
+        <p className="text-accent-danger font-bold">
           {formatApiError(error, t('tasks.loadFailed'))}
         </p>
       </div>
@@ -454,9 +454,9 @@ export default function TasksPage() {
       <div className="mb-8 animate-slide-up">
         <Link
           to="/lists"
-          className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-black uppercase tracking-widest text-xs transition-transform hover:-translate-x-1"
+          className="inline-flex items-center gap-2 text-accent hover:text-accent/80 font-semibold text-sm transition-all"
         >
-          {isRtl ? '→' : '←'} {t('tasks.backToLists')}
+          {t('tasks.backToLists')}
         </Link>
       </div>
 
@@ -471,7 +471,7 @@ export default function TasksPage() {
                 value={listNameDraft}
                 onChange={(e) => setListNameDraft(e.target.value)}
                 autoFocus
-                className="flex-1 text-2xl font-black bg-transparent border-b-2 border-primary-500 focus:outline-none dark:text-white"
+                className="flex-1 text-2xl font-bold bg-transparent border-b-2 border-accent focus:outline-none text-primary"
               />
               <div className="flex gap-2">
                 <button
@@ -482,13 +482,13 @@ export default function TasksPage() {
                       { onSuccess: () => setIsEditingListName(false) }
                     );
                   }}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                  className="premium-button"
                 >
                   {t('common.save')}
                 </button>
                 <button
                   onClick={() => setIsEditingListName(false)}
-                  className="px-4 py-2 bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                  className="px-4 py-2 bg-hover border border-border-subtle text-primary rounded-xl text-xs font-bold uppercase tracking-wide hover:scale-105 active:scale-95 transition-all"
                 >
                   {t('common.cancel')}
                 </button>
@@ -496,7 +496,7 @@ export default function TasksPage() {
             </div>
           ) : (
             <h1
-              className="text-4xl font-black text-gray-900 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center gap-3 break-words whitespace-normal leading-snug pb-2"
+              className="text-4xl font-bold text-primary cursor-pointer hover:text-accent transition-colors flex items-center gap-3 break-words whitespace-normal leading-snug pb-2"
               onClick={() => !list?.isSystem && setIsEditingListName(true)}
             >
               {list?.name ?? t('tasks.defaultTitle')}

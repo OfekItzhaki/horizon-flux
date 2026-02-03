@@ -16,11 +16,16 @@ export const fileStorageConfig = {
       // Generate unique filename: timestamp-userId-originalname
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const ext = extname(file.originalname);
-      const userId = (req as any).user?.userId || 'anonymous';
+      const user = (req as unknown as { user?: { userId: string } }).user;
+      const userId = user?.userId || 'anonymous';
       cb(null, `profile-${userId}-${uniqueSuffix}${ext}`);
     },
   }),
-  fileFilter: (req, file, cb) => {
+  fileFilter: (
+    req: unknown,
+    file: { mimetype: string },
+    cb: (error: Error | null, acceptFile: boolean) => void,
+  ) => {
     const allowedMimeTypes = [
       'image/jpeg',
       'image/jpg',

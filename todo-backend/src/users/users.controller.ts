@@ -50,7 +50,7 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get authenticated user' })
   @ApiResponse({ status: 200, description: 'Returns current user' })
   async getUsers(@CurrentUser() user: CurrentUserPayload) {
@@ -59,7 +59,7 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'Returns user data' })
   @ApiResponse({
@@ -76,7 +76,7 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user profile' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({
@@ -93,7 +93,7 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/upload-avatar')
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload profile picture' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -107,7 +107,10 @@ class UsersController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Profile picture uploaded successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture uploaded successfully',
+  })
   @ApiResponse({ status: 400, description: 'Invalid file or file too large' })
   @ApiResponse({
     status: 403,
@@ -130,11 +133,11 @@ class UsersController {
       throw new BadRequestException('No file uploaded');
     }
 
-    // Generate URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const fileUrl = `${baseUrl}/uploads/${file.filename}`;
+    // Generate relative path for the uploaded file
+    // Storing relative paths is better for multi-platform (web/mobile) and environments (dev/prod)
+    const fileUrl = `/uploads/${file.filename}`;
 
-    // Update user profile with new picture URL
+    // Update user profile with new picture relative path
     return this.userService.updateUser(
       id,
       { profilePicture: fileUrl },
@@ -144,7 +147,7 @@ class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete user account' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({

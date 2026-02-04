@@ -3,21 +3,18 @@ const getApiBaseUrl = (): string => {
   let url = 'http://localhost:3000';
 
   if (typeof process !== 'undefined') {
-    // Vite/Node/Babel will replace these direct references
-    const vUrl = process.env.VITE_API_URL;
-    const aUrl = process.env.API_BASE_URL;
-    const eUrl = process.env.EXPO_PUBLIC_API_URL;
+    // Use bracket notation to avoid aggressive Babel transformations (like babel-preset-expo)
+    // that try to replace process.env with virtual module imports.
+    const p = process as any;
+    const env = p['env'] || {};
+
+    const vUrl = env['VITE_API_URL'];
+    const aUrl = env['API_BASE_URL'];
+    const eUrl = env['EXPO_PUBLIC_API_URL'];
 
     if (vUrl) url = vUrl;
     else if (aUrl) url = aUrl;
     else if (eUrl) url = eUrl;
-    // Fallback for cases where process.env is a dynamic object (like Jest)
-    else {
-      const pEnv = process.env as any;
-      if (pEnv['VITE_API_URL']) url = pEnv['VITE_API_URL'];
-      else if (pEnv['API_BASE_URL']) url = pEnv['API_BASE_URL'];
-      else if (pEnv['EXPO_PUBLIC_API_URL']) url = pEnv['EXPO_PUBLIC_API_URL'];
-    }
   }
 
   // Final Safety Check: If we are on a production domain but still have localhost URL

@@ -34,14 +34,12 @@ const getApiBaseUrl = (): string => {
   }
 
   // Vite environment (browser) override check
-  // @ts-ignore - import.meta is not defined in all environments
   if (
     typeof import.meta !== 'undefined' &&
-    import.meta.env &&
-    import.meta.env.VITE_API_URL
+    (import.meta as any)['env'] &&
+    (import.meta as any)['env']['VITE_API_URL']
   ) {
-    // @ts-ignore
-    url = import.meta.env.VITE_API_URL;
+    url = (import.meta as any)['env']['VITE_API_URL'];
   }
 
   // Ensure /api/v1 prefix is present for ALL environments, including localhost

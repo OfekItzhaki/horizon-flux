@@ -21,6 +21,7 @@ model User {
   emailVerificationOtp    String?                @db.VarChar(6)
   emailVerificationSentAt DateTime?
   emailVerificationExpiresAt DateTime?
+  emailVerificationAttempts Int          @default(0)
   notificationFrequency   NotificationFrequency @default(NONE)
   shares                  ListShare[]
   lists                   ToDoList[]

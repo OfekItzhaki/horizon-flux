@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -12,10 +12,9 @@ import {
 import Skeleton from '../components/Skeleton';
 
 export default function ProfilePage() {
-  const { user, loading, setUser } = useAuth();
+  const { user, loading, setUser, isUploadingAvatar, setIsUploadingAvatar } = useAuth();
   const { t, i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
-  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,6 +22,7 @@ export default function ProfilePage() {
     if (!file || !user) return;
 
     try {
+      setIsUploadingAvatar(true);
       const updatedUser = await usersService.uploadAvatar(user.id, file);
       setUser(updatedUser);
       // No need to call refreshUser anymore as we updated state locally
@@ -30,20 +30,27 @@ export default function ProfilePage() {
       console.error('Failed to upload avatar:', error);
       alert('Failed to upload profile picture');
     } finally {
-      setUploading(false);
+      setIsUploadingAvatar(false);
     }
   };
 
-  const handleFrequencyChange = async (frequency: string) => {
+  const handleFrequencyChange = async (frequency: NotificationFrequency) => {
     if (!user) return;
+
+    // Optimistic Update
+    const previousFrequency = user.notificationFrequency;
+    setUser({ ...user, notificationFrequency: frequency });
+
     try {
       const updatedUser = await usersService.update(user.id, {
-        notificationFrequency: frequency as NotificationFrequency,
+        notificationFrequency: frequency,
       });
       setUser(updatedUser);
     } catch (error) {
       console.error('Failed to update notification frequency:', error);
-      alert('Failed to update notification frequency');
+      // Revert on error
+      setUser({ ...user, notificationFrequency: previousFrequency });
+      alert('Failed to update notification frequency. Please try again.');
     }
   };
 
@@ -123,7 +130,7 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {uploading && (
+                {isUploadingAvatar && (
                   <div className="absolute inset-0 bg-surface/90 flex items-center justify-center">
                     <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
                   </div>
@@ -132,7 +139,7 @@ export default function ProfilePage() {
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+                disabled={isUploadingAvatar}
                 className="absolute -bottom-2 -right-2 p-3 bg-accent hover:bg-accent/90 text-white rounded-xl shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50"
                 title={t('profile.profilePicture')}
               >
@@ -214,15 +221,14 @@ export default function ProfilePage() {
                   Task Updates Frequency
                 </label>
                 <div className="flex gap-4">
-                  {(['NONE', 'DAILY', 'WEEKLY'] as const).map((freq) => (
+                  {[NotificationFrequency.NONE, NotificationFrequency.DAILY, NotificationFrequency.WEEKLY].map((freq) => (
                     <button
                       key={freq}
                       onClick={() => handleFrequencyChange(freq)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                        user?.notificationFrequency === freq
-                          ? 'bg-accent text-white shadow-lg'
-                          : 'bg-hover text-secondary hover:bg-hover/80'
-                      }`}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${user?.notificationFrequency === freq
+                        ? 'bg-accent text-white shadow-lg'
+                        : 'bg-hover text-secondary hover:bg-hover/80'
+                        }`}
                     >
                       {freq.charAt(0) + freq.slice(1).toLowerCase()}
                     </button>

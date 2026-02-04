@@ -3,17 +3,19 @@ import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class EmailService {
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(private readonly mailerService: MailerService) { }
 
   async sendVerificationEmail(
     email: string,
     otp: string,
     name?: string,
   ): Promise<void> {
-    await this.mailerService.sendMail({
-      to: email,
-      subject: 'Welcome to Horizon Tasks',
-      html: `
+    console.log(`[EmailService] Attempting to send OTP email to: ${email}`);
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Welcome to Horizon Tasks',
+        html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -36,7 +38,7 @@ export class EmailService {
         </body>
         </html>
       `,
-      text: `
+        text: `
         Verify your email address
         
         Hello${name ? ` ${name}` : ''},
@@ -48,6 +50,9 @@ export class EmailService {
         
         If you didn't create an account, you can safely ignore this email.
       `,
-    });
+      });
+    } catch (error) {
+      console.error(`[EmailService] Failed to send email to ${email}:`, error);
+    }
   }
 }

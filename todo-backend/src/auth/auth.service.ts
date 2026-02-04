@@ -60,18 +60,18 @@ export class AuthService {
           user.name || undefined,
         );
       } catch (emailError) {
+        const message =
+          emailError instanceof Error ? emailError.message : String(emailError);
         this.logger.warn(
-          `Failed to send OTP email to ${email}, but proceeding: ${emailError.message}`,
+          `Failed to send OTP email to ${email}, but proceeding: ${message}`,
         );
       }
 
       this.logger.log(`Registration started: email=${email}`);
       return { message: 'OTP sent' };
     } catch (error) {
-      this.logger.error(
-        `registerStart failed for email=${email}:`,
-        error.stack,
-      );
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`registerStart failed for email=${email}:`, stack);
       throw error;
     }
   }
@@ -101,7 +101,11 @@ export class AuthService {
 
   async registerFinish(token: string, password: string) {
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify<{
+        sub: number;
+        purpose: string;
+        email: string;
+      }>(token);
       if (payload.purpose !== 'registration') {
         throw new BadRequestException('Invalid token');
       }

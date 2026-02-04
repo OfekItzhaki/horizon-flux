@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LoginDto, ApiError, authService } from '@tasks-management/frontend-services';
+import {
+  LoginDto,
+  ApiError,
+  authService,
+} from '@tasks-management/frontend-services';
 import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
@@ -34,7 +38,7 @@ export default function LoginPage() {
   // Timer effect
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+      const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
@@ -88,7 +92,10 @@ export default function LoginPage() {
   /* ... inside LoginPage component ... */
 
   // UPDATED: Accept otpValue directly to avoid race condition
-  const handleRegisterVerify = async (e?: React.FormEvent, otpValue?: string) => {
+  const handleRegisterVerify = async (
+    e?: React.FormEvent,
+    otpValue?: string
+  ) => {
     e?.preventDefault();
     const codeToVerify = otpValue || otp;
     if (!codeToVerify) return setError('OTP is required');
@@ -107,7 +114,6 @@ export default function LoginPage() {
   };
 
   /* ... */
-
 
   const handleRegisterComplete = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +171,15 @@ export default function LoginPage() {
         <div className="premium-card p-10 animate-slide-up bg-white/60 dark:bg-[#0f172a]/50">
           <form
             className="space-y-6"
-            onSubmit={!isRegistering ? handleLogin : (regStep === 1 ? handleRegisterStart : regStep === 2 ? handleRegisterVerify : handleRegisterComplete)}
+            onSubmit={
+              !isRegistering
+                ? handleLogin
+                : regStep === 1
+                  ? handleRegisterStart
+                  : regStep === 2
+                    ? handleRegisterVerify
+                    : handleRegisterComplete
+            }
           >
             {error && (
               <div
@@ -235,6 +249,7 @@ export default function LoginPage() {
                           type="button"
                           onClick={handleRegisterStart}
                           disabled={loading || !email.includes('@')}
+                          aria-label="Verify Email"
                           className="px-4 py-1.5 bg-accent hover:bg-accent/90 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-accent/20 transition-all disabled:opacity-50 disabled:grayscale active:scale-95"
                         >
                           {loading ? (
@@ -311,8 +326,18 @@ export default function LoginPage() {
                         <span>Wait {resendCooldown}s</span>
                       ) : (
                         <>
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
                           </svg>
                           Resend Code
                         </>
@@ -365,13 +390,38 @@ export default function LoginPage() {
                         className="p-1.5 text-slate-400 hover:text-violet-600 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                       >
                         {showPassword ? (
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
+                            />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
                           </svg>
                         )}
                       </button>
@@ -379,13 +429,24 @@ export default function LoginPage() {
                         <button
                           type="submit"
                           disabled={loading || !password}
+                          aria-label="Sign In"
                           className="p-2 bg-accent hover:bg-accent/90 text-white rounded-lg shadow-lg shadow-accent/20 transition-all disabled:opacity-50 disabled:grayscale active:scale-95"
                         >
                           {loading ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           ) : (
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d="M14 5l7 7m0 0l-7 7m7-7H3"
+                              />
                             </svg>
                           )}
                         </button>
@@ -435,13 +496,24 @@ export default function LoginPage() {
                       <button
                         type="submit"
                         disabled={loading || !passwordConfirm}
+                        aria-label="Complete Registration"
                         className="p-2 bg-accent hover:bg-accent/90 text-white rounded-lg shadow-lg shadow-accent/20 transition-all disabled:opacity-50 disabled:grayscale active:scale-95"
                       >
                         {loading ? (
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2.5}
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                         )}
                       </button>
@@ -452,7 +524,6 @@ export default function LoginPage() {
             </div>
 
             <div className="flex flex-col items-center text-center gap-6 mt-8">
-
               <button
                 type="button"
                 onClick={() => {
@@ -462,7 +533,9 @@ export default function LoginPage() {
                 }}
                 className="text-[11px] font-bold text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all uppercase tracking-[0.2em] py-2 px-4 rounded-xl hover:bg-violet-500/5"
               >
-                {isRegistering ? 'Back to Sign In' : "Don't have an account? Sign Up"}
+                {isRegistering
+                  ? 'Back to Sign In'
+                  : "Don't have an account? Sign Up"}
               </button>
             </div>
           </form>

@@ -24,11 +24,24 @@ const getApiBaseUrl = (): string => {
 
   // Final Safety Check: If we are on a production domain but still have localhost URL
   if (typeof window !== 'undefined' && window.location) {
-    const isProdDomain = window.location.hostname.includes('ofeklabs.dev') || window.location.hostname.includes('onrender.com');
+    const isProdDomain =
+      window.location.hostname.includes('ofeklabs.dev') ||
+      window.location.hostname.includes('onrender.com');
     if (isProdDomain && url.includes('localhost')) {
       // Force correct production API even if environment variables failed to bake in
       url = 'https://tasks-api.ofeklabs.dev';
     }
+  }
+
+  // Vite environment (browser) override check
+  // @ts-ignore - import.meta is not defined in all environments
+  if (
+    typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_URL
+  ) {
+    // @ts-ignore
+    url = import.meta.env.VITE_API_URL;
   }
 
   // Ensure /api/v1 prefix is present for ALL environments, including localhost

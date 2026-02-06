@@ -37,7 +37,7 @@ class UsersService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
-  ) {}
+  ) { }
 
   private sanitizeUser<
     T extends {
@@ -62,14 +62,23 @@ class UsersService {
     });
   }
 
-  async getAllUsers(requestingUserId: number): Promise<SanitizedUser[]> {
+  async findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async getAllUsers(requestingUserId: string): Promise<SanitizedUser[]> {
     const user = await this.getUser(requestingUserId, requestingUserId);
     return user ? [user] : [];
   }
 
   async getUser(
-    id: number,
-    requestingUserId: number,
+    id: string,
+    requestingUserId: string,
   ): Promise<Omit<UserWithRelations, 'passwordHash' | 'emailVerificationOtp'>> {
     if (id !== requestingUserId) {
       throw new ForbiddenException('You can only access your own profile');
@@ -136,19 +145,19 @@ class UsersService {
     return result;
   }
 
-  private async createDefaultLists(userId: number) {
+  private async createDefaultLists(userId: string) {
     const defaultLists: Array<{
       name: string;
       type: ListType;
       isSystem?: boolean;
     }> = [
-      { name: 'Daily', type: ListType.DAILY },
-      { name: 'Weekly', type: ListType.WEEKLY },
-      { name: 'Monthly', type: ListType.MONTHLY },
-      { name: 'Yearly', type: ListType.YEARLY },
-      // System list for archived completed tasks (created once per user)
-      { name: 'Finished Tasks', type: ListType.FINISHED, isSystem: true },
-    ];
+        { name: 'Daily', type: ListType.DAILY },
+        { name: 'Weekly', type: ListType.WEEKLY },
+        { name: 'Monthly', type: ListType.MONTHLY },
+        { name: 'Yearly', type: ListType.YEARLY },
+        // System list for archived completed tasks (created once per user)
+        { name: 'Finished Tasks', type: ListType.FINISHED, isSystem: true },
+      ];
 
     await this.prisma.toDoList.createMany({
       data: defaultLists.map((list) => ({
@@ -215,7 +224,7 @@ class UsersService {
     await this.emailService.sendVerificationEmail(email, otp, name);
   }
 
-  async setPassword(userId: number, passwordHash: string): Promise<User> {
+  async setPassword(userId: string, passwordHash: string): Promise<User> {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -358,9 +367,9 @@ class UsersService {
   }
 
   async updateUser(
-    id: number,
+    id: string,
     data: UpdateUserDto,
-    requestingUserId: number,
+    requestingUserId: string,
   ): Promise<SanitizedUser> {
     await this.getUser(id, requestingUserId); // This will throw if user doesn't exist or unauthorized
 
@@ -389,8 +398,8 @@ class UsersService {
   }
 
   async deleteUser(
-    id: number,
-    requestingUserId: number,
+    id: string,
+    requestingUserId: string,
   ): Promise<SanitizedUser> {
     await this.getUser(id, requestingUserId); // This will throw if user doesn't exist
 

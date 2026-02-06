@@ -2,16 +2,20 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateStepCommand } from '../create-step.command';
+import { EventsService } from '../../../events/events.service';
 
 @CommandHandler(CreateStepCommand)
 export class CreateStepHandler implements ICommandHandler<CreateStepCommand> {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsService: EventsService,
+  ) { }
 
   async execute(command: CreateStepCommand) {
     const { taskId, dto, userId } = command;
 
     // Ensure access to task
-    const task = await this.prisma.task.findFirst({
+    const task = await (this.prisma.task as any).findFirst({
       where: {
         id: taskId,
         deletedAt: null,
@@ -30,13 +34,13 @@ export class CreateStepHandler implements ICommandHandler<CreateStepCommand> {
     }
 
     // Get next order
-    const lastStep = await this.prisma.step.findFirst({
+    const lastStep = await (this.prisma.step as any).findFirst({
       where: { taskId, deletedAt: null },
       orderBy: { order: 'desc' },
     });
     const order = lastStep ? lastStep.order + 1 : 1;
 
-    return this.prisma.step.create({
+    const step = await (this.prisma.step as any).create({
       data: {
         description: dto.description,
         completed: dto.completed ?? false,
@@ -44,5 +48,9 @@ export class CreateStepHandler implements ICommandHandler<CreateStepCommand> {
         order,
       },
     });
+
+    await this.eventsService.broadcastStepEvent(taskId, 'step_created', { taskId, step });
+
+    return step;
   }
 }

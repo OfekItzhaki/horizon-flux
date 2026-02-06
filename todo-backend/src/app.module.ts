@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
+import { PrismaClientExceptionFilter } from './common/filters/prisma-exception.filter';
 import AppService from './app.service';
 import AppController from './app.controller';
 import { UsersModule } from './users/users.module';
@@ -18,6 +19,7 @@ import { MeModule } from './me/me.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { TaskSchedulerModule } from './task-scheduler/task-scheduler.module';
 import { EmailModule } from './email/email.module';
+import { EventsModule } from './events/events.module';
 
 import { validate } from './config/env.validation';
 
@@ -45,12 +47,14 @@ import { validate } from './config/env.validation';
     MeModule,
     RemindersModule,
     TaskSchedulerModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    { provide: APP_FILTER, useClass: PrismaClientExceptionFilter },
   ],
 })
-export class AppModule {}
+export class AppModule { }

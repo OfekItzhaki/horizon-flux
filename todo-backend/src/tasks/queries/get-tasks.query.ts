@@ -1,6 +1,6 @@
 export class GetTasksQuery {
   constructor(
-    public readonly userId: number,
-    public readonly todoListId?: number,
-  ) {}
+    public readonly userId: string,
+    public readonly todoListId?: string,
+  ) { }
 }

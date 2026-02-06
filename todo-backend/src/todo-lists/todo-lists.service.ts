@@ -1,6 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ListType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TaskAccessHelper } from '../tasks/helpers/task-access.helper';
+import { ShareRole } from '@prisma/client';
 import { CreateToDoListDto } from './dto/create-todo-list.dto';
 import { UpdateToDoListDto } from './dto/update-todo-list.dto';
 
@@ -8,10 +10,13 @@ import { UpdateToDoListDto } from './dto/update-todo-list.dto';
 export class TodoListsService {
   private readonly logger = new Logger(TodoListsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private taskAccess: TaskAccessHelper,
+  ) { }
 
-  async create(createToDoListDto: CreateToDoListDto, ownerId: number) {
-    const list = await this.prisma.toDoList.create({
+  async create(createToDoListDto: CreateToDoListDto, ownerId: string) {
+    const list = await (this.prisma.toDoList as any).create({
       data: {
         name: createToDoListDto.name,
         // List "type" is an internal scheduling/system detail.
@@ -24,8 +29,8 @@ export class TodoListsService {
     return list;
   }
 
-  async findAll(ownerId: number) {
-    return this.prisma.toDoList.findMany({
+  async findAll(ownerId: string) {
+    return (this.prisma.toDoList as any).findMany({
       where: {
         deletedAt: null,
         ownerId,
@@ -38,11 +43,12 @@ export class TodoListsService {
     });
   }
 
-  async findOne(id: number, ownerId: number) {
-    const list = await this.prisma.toDoList.findFirst({
+  async findOne(id: string, userId: string) {
+    await this.taskAccess.ensureListAccess(id, userId);
+
+    const list = await (this.prisma.toDoList as any).findFirst({
       where: {
         id,
-        ownerId,
         deletedAt: null,
       },
       include: {
@@ -75,24 +81,23 @@ export class TodoListsService {
   }
 
   async update(
-    id: number,
+    id: string,
     updateToDoListDto: UpdateToDoListDto,
-    ownerId: number,
+    userId: string,
   ) {
-    const list = await this.findOne(id, ownerId);
+    const list = await this.taskAccess.ensureListAccess(id, userId, ShareRole.EDITOR);
 
-    const updated = await this.prisma.toDoList.update({
+    const updated = await (this.prisma.toDoList as any).update({
       where: { id },
       data: {
-        name: updateToDoListDto.name ?? list.name,
-        // Type is not user-editable.
+        name: updateToDoListDto.name ?? (list as any).name,
       },
     });
-    this.logger.log(`List updated: listId=${id} userId=${ownerId}`);
+    this.logger.log(`List updated: listId=${id} userId=${userId}`);
     return updated;
   }
 
-  async remove(id: number, ownerId: number) {
+  async remove(id: string, ownerId: string) {
     const list = await this.findOne(id, ownerId);
 
     // Prevent deletion of system lists (like "Finished Tasks")
@@ -100,13 +105,51 @@ export class TodoListsService {
       throw new Error('System lists cannot be deleted');
     }
 
-    const result = await this.prisma.toDoList.update({
+    const result = await (this.prisma.toDoList as any).update({
       where: { id },
       data: {
         deletedAt: new Date(),
       },
     });
     this.logger.log(`List removed (soft): listId=${id} userId=${ownerId}`);
+    return result;
+  }
+
+  async restore(id: string, ownerId: string) {
+    const list = await (this.prisma.toDoList as any).findFirst({
+      where: { id, ownerId, deletedAt: { not: null } },
+    });
+    if (!list) {
+      throw new NotFoundException(`Deleted ToDoList with ID ${id} not found`);
+    }
+
+    const result = await (this.prisma.toDoList as any).update({
+      where: { id },
+      data: {
+        deletedAt: null,
+      },
+    });
+    this.logger.log(`List restored: listId=${id} userId=${ownerId}`);
+    return result;
+  }
+
+  async permanentDelete(id: string, ownerId: string) {
+    const list = await (this.prisma.toDoList as any).findFirst({
+      where: { id, ownerId, deletedAt: { not: null } },
+    });
+    if (!list) {
+      throw new NotFoundException(`Deleted ToDoList with ID ${id} not found`);
+    }
+
+    // Manual cleanup of relations if not cascading
+    await (this.prisma.step as any).deleteMany({ where: { task: { todoListId: id } } });
+    await (this.prisma.task as any).deleteMany({ where: { todoListId: id } });
+    await (this.prisma.listShare as any).deleteMany({ where: { toDoListId: id } });
+
+    const result = await (this.prisma.toDoList as any).delete({
+      where: { id },
+    });
+    this.logger.log(`List permanently deleted: listId=${id} userId=${ownerId}`);
     return result;
   }
 }

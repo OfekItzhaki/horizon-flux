@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -29,13 +28,16 @@ import {
   CurrentUser,
   CurrentUserPayload,
 } from '../auth/current-user.decorator';
-import { fileStorageConfig } from './utils/file-storage.config';
+import { CloudinaryService } from '../common/cloudinary/cloudinary.service';
 import { FileUploadInterceptor } from './interceptors/file-upload.interceptor';
 
 @ApiTags('Users')
 @Controller('users')
 class UsersController {
-  constructor(private userService: UsersService) {}
+  constructor(
+    private userService: UsersService,
+    private cloudinaryService: CloudinaryService,
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Register a new user' })
@@ -68,7 +70,7 @@ class UsersController {
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async getUser(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.userService.getUser(id, user.userId);
@@ -84,7 +86,7 @@ class UsersController {
     description: 'Forbidden - can only update own profile',
   })
   async updateUser(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() data: UpdateUserDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -116,12 +118,9 @@ class UsersController {
     status: 403,
     description: 'Forbidden - can only upload to own profile',
   })
-  @UseInterceptors(
-    FileInterceptor('file', fileStorageConfig),
-    FileUploadInterceptor,
-  )
+  @UseInterceptors(FileInterceptor('file'), FileUploadInterceptor)
   async uploadAvatar(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -133,13 +132,13 @@ class UsersController {
       throw new BadRequestException('No file uploaded');
     }
 
-    // Store only the filename. The frontend getAssetUrl will handle prepending /uploads/
-    const fileName = file.filename;
+    // Upload to Cloudinary
+    const result = await this.cloudinaryService.uploadFile(file);
 
-    // Update user profile with new picture filename
+    // Update user profile with the Cloudinary secure URL
     return this.userService.updateUser(
       id,
-      { profilePicture: fileName },
+      { profilePicture: result.secure_url },
       user.userId,
     );
   }
@@ -154,7 +153,7 @@ class UsersController {
     description: 'Forbidden - can only delete own account',
   })
   async deleteUser(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.userService.deleteUser(id, user.userId);

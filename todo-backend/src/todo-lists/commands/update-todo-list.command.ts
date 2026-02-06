@@ -2,8 +2,8 @@ import { UpdateToDoListDto } from '../dto/update-todo-list.dto';
 
 export class UpdateTodoListCommand {
   constructor(
-    public readonly id: number,
+    public readonly id: string,
     public readonly updateToDoListDto: UpdateToDoListDto,
-    public readonly userId: number,
-  ) {}
+    public readonly userId: string,
+  ) { }
 }

@@ -37,6 +37,6 @@ const QueryHandlers = [
     ...CommandHandlers,
     ...QueryHandlers,
   ],
-  exports: [TasksService],
+  exports: [TasksService, TaskAccessHelper],
 })
-export class TasksModule {}
+export class TasksModule { }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { StepsController } from './steps.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { TasksModule } from '../tasks/tasks.module';
 import { CreateStepHandler } from './commands/handlers/create-step.handler';
 import { UpdateStepHandler } from './commands/handlers/update-step.handler';
 import { RemoveStepHandler } from './commands/handlers/remove-step.handler';
@@ -17,8 +18,8 @@ const CommandHandlers = [
 const QueryHandlers = [GetStepsHandler];
 
 @Module({
-  imports: [PrismaModule, CqrsModule],
+  imports: [PrismaModule, CqrsModule, TasksModule],
   controllers: [StepsController],
   providers: [...CommandHandlers, ...QueryHandlers],
 })
-export class StepsModule {}
+export class StepsModule { }

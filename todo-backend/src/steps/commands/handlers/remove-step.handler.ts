@@ -2,15 +2,19 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { RemoveStepCommand } from '../remove-step.command';
+import { EventsService } from '../../../events/events.service';
 
 @CommandHandler(RemoveStepCommand)
 export class RemoveStepHandler implements ICommandHandler<RemoveStepCommand> {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsService: EventsService,
+  ) { }
 
   async execute(command: RemoveStepCommand) {
     const { stepId, userId } = command;
 
-    const step = await this.prisma.step.findFirst({
+    const step = await (this.prisma.step as any).findFirst({
       where: {
         id: stepId,
         deletedAt: null,
@@ -31,11 +35,18 @@ export class RemoveStepHandler implements ICommandHandler<RemoveStepCommand> {
       throw new NotFoundException(`Step with ID ${stepId} not found`);
     }
 
-    return this.prisma.step.update({
+    const result = await (this.prisma.step as any).update({
       where: { id: stepId },
       data: {
         deletedAt: new Date(),
       },
     });
+
+    await this.eventsService.broadcastStepEvent(step.taskId, 'step_deleted', {
+      taskId: step.taskId,
+      stepId,
+    });
+
+    return result;
   }
 }

@@ -3,9 +3,9 @@ import {
   Controller,
   Delete,
   Get,
-  Param,
-  ParseIntPipe,
   Post,
+  Patch,
+  Param,
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { ListSharesService } from './list-shares.service';
 import { ShareListDto } from './dto/share-list.dto';
+import { ShareRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   CurrentUser,
@@ -28,14 +29,14 @@ import {
 @UseGuards(JwtAuthGuard)
 @Controller('list-shares')
 export class ListSharesController {
-  constructor(private readonly listSharesService: ListSharesService) {}
+  constructor(private readonly listSharesService: ListSharesService) { }
 
   @Post('todo-list/:todoListId')
   @ApiOperation({ summary: 'Share a list with another user' })
   @ApiResponse({ status: 201, description: 'List shared successfully' })
   @ApiResponse({ status: 404, description: 'List or user not found' })
   shareList(
-    @Param('todoListId', ParseIntPipe) todoListId: number,
+    @Param('todoListId') todoListId: string,
     @Body() shareListDto: ShareListDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -54,7 +55,7 @@ export class ListSharesController {
     description: 'Forbidden - can only view own shares',
   })
   getSharedLists(
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('userId') userId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     if (user.userId !== userId) {
@@ -68,7 +69,7 @@ export class ListSharesController {
   @ApiResponse({ status: 200, description: 'Returns list of users' })
   @ApiResponse({ status: 404, description: 'List not found' })
   getListShares(
-    @Param('todoListId', ParseIntPipe) todoListId: number,
+    @Param('todoListId') todoListId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.listSharesService.getListShares(todoListId, user.userId);
@@ -79,10 +80,28 @@ export class ListSharesController {
   @ApiResponse({ status: 200, description: 'List unshared successfully' })
   @ApiResponse({ status: 404, description: 'List or share not found' })
   unshareList(
-    @Param('todoListId', ParseIntPipe) todoListId: number,
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('todoListId') todoListId: string,
+    @Param('userId') userId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.listSharesService.unshareList(todoListId, userId, user.userId);
+  }
+
+  @Patch('todo-list/:todoListId/user/:userId/role')
+  @ApiOperation({ summary: "Update a shared user's role" })
+  @ApiResponse({ status: 200, description: 'Role updated successfully' })
+  @ApiResponse({ status: 404, description: 'Share not found' })
+  updateShareRole(
+    @Param('todoListId') todoListId: string,
+    @Param('userId') userId: string,
+    @Body('role') role: ShareRole,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.listSharesService.updateShareRole(
+      todoListId,
+      userId,
+      role,
+      user.userId,
+    );
   }
 }

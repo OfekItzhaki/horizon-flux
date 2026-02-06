@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -38,14 +37,14 @@ export class StepsController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-  ) {}
+  ) { }
 
   @Post('tasks/:taskId/steps')
   @ApiOperation({ summary: 'Create a new step (sub-task)' })
   @ApiResponse({ status: 201, description: 'Step created successfully' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   create(
-    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('taskId') taskId: string,
     @Body() createStepDto: CreateStepDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -59,7 +58,7 @@ export class StepsController {
   @ApiResponse({ status: 200, description: 'Returns ordered steps' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   findAll(
-    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('taskId') taskId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.queryBus.execute(new GetStepsQuery(taskId, user.userId));
@@ -70,7 +69,7 @@ export class StepsController {
   @ApiResponse({ status: 200, description: 'Step updated successfully' })
   @ApiResponse({ status: 404, description: 'Step not found' })
   update(
-    @Param('id', ParseIntPipe) stepId: number,
+    @Param('id') stepId: string,
     @Body() updateStepDto: UpdateStepDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -84,7 +83,7 @@ export class StepsController {
   @ApiResponse({ status: 200, description: 'Step deleted successfully' })
   @ApiResponse({ status: 404, description: 'Step not found' })
   remove(
-    @Param('id', ParseIntPipe) stepId: number,
+    @Param('id') stepId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.commandBus.execute(new RemoveStepCommand(stepId, user.userId));
@@ -96,7 +95,7 @@ export class StepsController {
   @ApiResponse({ status: 400, description: 'Invalid step IDs or duplicates' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   reorder(
-    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('taskId') taskId: string,
     @Body() { stepIds }: ReorderStepsDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {

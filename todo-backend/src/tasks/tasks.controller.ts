@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -44,14 +43,14 @@ export class TasksController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-  ) {}
+  ) { }
 
   @Post('todo-list/:todoListId')
   @ApiOperation({ summary: 'Create a new task in a list' })
   @ApiResponse({ status: 201, description: 'Task created successfully' })
   @ApiResponse({ status: 404, description: 'List not found' })
   create(
-    @Param('todoListId', ParseIntPipe) todoListId: number,
+    @Param('todoListId') todoListId: string,
     @Body() createTaskDto: CreateTaskDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -65,7 +64,7 @@ export class TasksController {
   @ApiQuery({
     name: 'todoListId',
     required: false,
-    type: Number,
+    type: String,
     description: 'Filter tasks by list ID',
   })
   @ApiResponse({ status: 200, description: 'Returns tasks' })
@@ -73,8 +72,7 @@ export class TasksController {
     @CurrentUser() user: CurrentUserPayload,
     @Query('todoListId') todoListId?: string,
   ) {
-    const listId = todoListId ? parseInt(todoListId, 10) : undefined;
-    return this.queryBus.execute(new GetTasksQuery(user.userId, listId));
+    return this.queryBus.execute(new GetTasksQuery(user.userId, todoListId));
   }
 
   @Get('by-date')
@@ -109,7 +107,7 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'Returns task with steps' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   findOne(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.queryBus.execute(new GetTaskQuery(id, user.userId));
@@ -120,7 +118,7 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'Task updated successfully' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateTaskDto: UpdateTaskDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -134,7 +132,7 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'Task deleted successfully' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   remove(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.commandBus.execute(new RemoveTaskCommand(id, user.userId));
@@ -146,7 +144,7 @@ export class TasksController {
   @ApiResponse({ status: 400, description: 'Task cannot be restored' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   restore(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.commandBus.execute(new RestoreTaskCommand(id, user.userId));
@@ -161,7 +159,7 @@ export class TasksController {
   })
   @ApiResponse({ status: 404, description: 'Task not found' })
   permanentDelete(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.commandBus.execute(

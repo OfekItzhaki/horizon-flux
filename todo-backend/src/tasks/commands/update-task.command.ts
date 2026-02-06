@@ -2,8 +2,8 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 
 export class UpdateTaskCommand {
   constructor(
-    public readonly id: number,
+    public readonly id: string,
     public readonly updateTaskDto: UpdateTaskDto,
-    public readonly userId: number,
-  ) {}
+    public readonly userId: string,
+  ) { }
 }

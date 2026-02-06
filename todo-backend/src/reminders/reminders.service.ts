@@ -3,7 +3,7 @@ import { TasksService } from '../tasks/tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface ReminderNotification {
-  taskId: number;
+  taskId: string;
   taskDescription: string;
   dueDate: Date | null;
   reminderDate: Date;
@@ -15,7 +15,7 @@ export interface ReminderNotification {
 }
 
 type TaskWithList = {
-  id: number;
+  id: string;
   description: string;
   dueDate: Date | string | null;
   specificDayOfWeek: number | null;
@@ -28,14 +28,14 @@ export class RemindersService {
   constructor(
     private readonly tasksService: TasksService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Get reminders for a specific date and format them as notifications
    * Returns structured data that front-end can use for push notifications
    */
   async getReminderNotifications(
-    ownerId: number,
+    ownerId: string,
     date: Date = new Date(),
   ): Promise<ReminderNotification[]> {
     const tasksWithReminders = await this.tasksService.getTasksWithReminders(
@@ -45,7 +45,7 @@ export class RemindersService {
 
     const notifications: ReminderNotification[] = [];
 
-    tasksWithReminders.forEach((task: TaskWithList) => {
+    (tasksWithReminders as any).forEach((task: TaskWithList) => {
       // Support both old single value and new array format
       const reminderDaysArray = Array.isArray(task.reminderDaysBefore)
         ? task.reminderDaysBefore
@@ -86,7 +86,7 @@ export class RemindersService {
   /**
    * Get reminders for today
    */
-  async getTodayReminders(ownerId: number): Promise<ReminderNotification[]> {
+  async getTodayReminders(ownerId: string): Promise<ReminderNotification[]> {
     return this.getReminderNotifications(ownerId, new Date());
   }
 
@@ -94,7 +94,7 @@ export class RemindersService {
    * Get reminders for a date range (useful for scheduling notifications)
    */
   async getRemindersForDateRange(
-    ownerId: number,
+    ownerId: string,
     startDate: Date,
     endDate: Date,
   ): Promise<ReminderNotification[]> {
@@ -111,7 +111,7 @@ export class RemindersService {
     }
 
     // Remove duplicates (same task might appear on multiple days)
-    const uniqueReminders = new Map<number, ReminderNotification>();
+    const uniqueReminders = new Map<string, ReminderNotification>();
     allReminders.forEach((reminder) => {
       if (!uniqueReminders.has(reminder.taskId)) {
         uniqueReminders.set(reminder.taskId, reminder);
@@ -182,7 +182,7 @@ export class RemindersService {
     if (dueDate) {
       const daysUntilDue = Math.ceil(
         (dueDate.getTime() - new Date().setHours(0, 0, 0, 0)) /
-          (1000 * 60 * 60 * 24),
+        (1000 * 60 * 60 * 24),
       );
 
       if (daysUntilDue === 0) {

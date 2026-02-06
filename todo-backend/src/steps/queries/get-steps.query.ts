@@ -1,6 +1,6 @@
 export class GetStepsQuery {
   constructor(
-    public readonly taskId: number,
-    public readonly userId: number,
-  ) {}
+    public readonly taskId: string,
+    public readonly userId: string,
+  ) { }
 }

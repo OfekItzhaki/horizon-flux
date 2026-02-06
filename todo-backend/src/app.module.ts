@@ -20,6 +20,7 @@ import { RemindersModule } from './reminders/reminders.module';
 import { TaskSchedulerModule } from './task-scheduler/task-scheduler.module';
 import { EmailModule } from './email/email.module';
 import { EventsModule } from './events/events.module';
+import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
 
 import { validate } from './config/env.validation';
 
@@ -48,6 +49,7 @@ import { validate } from './config/env.validation';
     RemindersModule,
     TaskSchedulerModule,
     EventsModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [

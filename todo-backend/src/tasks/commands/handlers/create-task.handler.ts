@@ -18,7 +18,7 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
     );
 
     await this.eventsService.broadcastTaskEvent(
-      (result as any).id,
+      result.id,
       'task_created',
       result,
     );

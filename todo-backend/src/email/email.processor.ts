@@ -11,12 +11,21 @@ export class EmailProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any, any, string>): Promise<any> {
+  async process(job: Job<unknown, unknown, string>): Promise<unknown> {
     switch (job.name) {
       case 'sendVerificationEmail':
-        return this.handleSendVerificationEmail(job.data);
+        return this.handleSendVerificationEmail(
+          job.data as { email: string; otp: string; name?: string },
+        );
       case 'sendReminderEmail':
-        return this.handleSendReminderEmail(job.data);
+        return this.handleSendReminderEmail(
+          job.data as {
+            email: string;
+            taskDescription: string;
+            message: string;
+            title: string;
+          },
+        );
       default:
         this.logger.warn(`Unknown job name: ${job.name}`);
     }
@@ -60,11 +69,9 @@ export class EmailProcessor extends WorkerHost {
       `,
       });
       this.logger.log(`Successfully sent reminder email to: ${email}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send reminder email to ${email}:`,
-        error.stack,
-      );
+    } catch (error: unknown) {
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Failed to send reminder email to ${email}:`, stack);
       throw error;
     }
   }
@@ -118,8 +125,9 @@ export class EmailProcessor extends WorkerHost {
       `,
       });
       this.logger.log(`Successfully sent verification email to: ${email}`);
-    } catch (error) {
-      this.logger.error(`Failed to send email to ${email}:`, error.stack);
+    } catch (error: unknown) {
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Failed to send email to ${email}:`, stack);
       throw error; // BullMQ will retry based on config
     }
   }

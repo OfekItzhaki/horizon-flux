@@ -21,7 +21,7 @@ export class CloudinaryService {
           ],
         },
         (error, result) => {
-          if (error) return reject(error);
+          if (error) return reject(new Error(error.message));
           if (!result)
             return reject(new Error('Cloudinary upload result is undefined'));
           resolve(result);

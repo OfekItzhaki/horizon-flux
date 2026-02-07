@@ -70,7 +70,7 @@ export class AuthService {
   }
 
   async generateRefreshToken(userId: string): Promise<string> {
-    const token = uuidv4() as string;
+    const token = uuidv4();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 

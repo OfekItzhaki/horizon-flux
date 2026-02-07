@@ -1,17 +1,17 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UpdateProfilePictureCommand } from '../update-profile-picture.command';
 import { CloudinaryService } from '../../../common/cloudinary/cloudinary.service';
+import { UploadApiResponse } from 'cloudinary';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
 
 @CommandHandler(UpdateProfilePictureCommand)
 export class UpdateProfilePictureHandler
-  implements ICommandHandler<UpdateProfilePictureCommand>
-{
+  implements ICommandHandler<UpdateProfilePictureCommand> {
   constructor(
     private readonly cloudinaryService: CloudinaryService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async execute(command: UpdateProfilePictureCommand) {
     const { userId, file } = command;
@@ -30,7 +30,7 @@ export class UpdateProfilePictureHandler
     const uploadResult = await this.cloudinaryService.uploadFile(
       file,
       'profile_pictures',
-    );
+    ) as UploadApiResponse;
 
     // 3. Update database with the new URL
     const updatedUser = await this.prisma.user.update({

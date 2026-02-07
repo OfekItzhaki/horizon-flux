@@ -22,36 +22,38 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private userSockets = new Map<string, string[]>(); // userId -> socketIds
   private userPresence = new Map<string, string>(); // socketId -> listId
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) { }
 
-  async handleConnection(client: Socket) {
+  handleConnection(client: Socket) {
     try {
+      const auth = client.handshake.auth as { token?: string };
+      const headers = client.handshake.headers as { authorization?: string };
       const token =
-        client.handshake.auth.token ||
-        client.handshake.headers.authorization?.split(' ')[1];
+        auth.token || headers.authorization?.split(' ')[1];
       if (!token) {
         client.disconnect();
         return;
       }
 
       const payload = this.jwtService.verify(token);
-      const userId = payload.sub;
+      const userId = payload.sub as string;
 
-      client.data.userId = userId;
+      client.data = { ...client.data, userId };
 
       const sockets = this.userSockets.get(userId) || [];
       sockets.push(client.id);
       this.userSockets.set(userId, sockets);
 
       this.logger.log(`Client connected: ${client.id} (User: ${userId})`);
-    } catch (e) {
-      this.logger.error(`Connection failed: ${e.message}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      this.logger.error(`Connection failed: ${message}`);
       client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    const userId = client.data.userId;
+    const userId = (client.data as { userId?: string }).userId;
     if (userId) {
       const sockets = this.userSockets.get(userId) || [];
       const updatedSockets = sockets.filter((id) => id !== client.id);
@@ -76,8 +78,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('enter-list')
   handleEnterList(client: Socket, listId: string) {
-    const userId = client.data.userId;
-    client.join(`list:${listId}`);
+    const userId = (client.data as { userId?: string }).userId;
+    if (!userId) return;
+    void client.join(`list:${listId}`);
     this.userPresence.set(client.id, listId);
     this.logger.log(`User ${userId} entered list ${listId}`);
     this.server
@@ -87,15 +90,16 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('leave-list')
   handleLeaveList(client: Socket, listId: string) {
-    const userId = client.data.userId;
-    client.leave(`list:${listId}`);
+    const userId = (client.data as { userId?: string }).userId;
+    if (!userId) return;
+    void client.leave(`list:${listId}`);
     this.userPresence.delete(client.id);
     this.logger.log(`User ${userId} left list ${listId}`);
     this.server.to(`list:${listId}`).emit('user-left-list', { userId, listId });
   }
 
   @SubscribeMessage('ping')
-  handlePing(client: Socket) {
+  handlePing(_client: Socket) {
     return { event: 'pong', data: new Date().toISOString() };
   }
 

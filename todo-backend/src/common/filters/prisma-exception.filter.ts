@@ -18,7 +18,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
         const status = HttpStatus.BAD_REQUEST; // E2E tests expect 400 for duplicate email during registration
         response.status(status).json({
           statusCode: status,
-          message: `Unique constraint failed on the fields: ${((exception.meta as any)?.target || []).join(', ')}`,
+          message: `Unique constraint failed on the fields: ${((exception.meta as Record<string, string[]>)?.target || []).join(', ')}`,
           error: 'Bad Request',
         });
         break;

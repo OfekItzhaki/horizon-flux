@@ -82,7 +82,7 @@ export class TaskSchedulerService implements OnModuleInit {
    */
   private async getOrCreateFinishedList(ownerId: string) {
     // Try to find existing finished list
-    let finishedList = await (this.prisma.toDoList as any).findFirst({
+    let finishedList = await this.prisma.toDoList.findFirst({
       where: {
         ownerId,
         type: ListType.FINISHED,
@@ -93,7 +93,7 @@ export class TaskSchedulerService implements OnModuleInit {
 
     // Create if not exists
     if (!finishedList) {
-      finishedList = await (this.prisma.toDoList as any).create({
+      finishedList = await this.prisma.toDoList.create({
         data: {
           name: this.FINISHED_LIST_NAME,
           type: ListType.FINISHED,
@@ -121,7 +121,7 @@ export class TaskSchedulerService implements OnModuleInit {
       );
 
       // Find all completed tasks in CUSTOM lists that have been completed for more than ARCHIVE_DELAY_MINUTES
-      const tasksToArchive = await (this.prisma.task as any).findMany({
+      const tasksToArchive = await this.prisma.task.findMany({
         where: {
           completed: true,
           completedAt: {
@@ -146,7 +146,7 @@ export class TaskSchedulerService implements OnModuleInit {
 
       // Group tasks by owner
       const tasksByOwner = tasksToArchive.reduce(
-        (acc: any, task: any) => {
+        (acc, task) => {
           const ownerId = task.todoList.ownerId;
           if (!acc[ownerId]) {
             acc[ownerId] = [];
@@ -154,7 +154,7 @@ export class TaskSchedulerService implements OnModuleInit {
           acc[ownerId].push(task);
           return acc;
         },
-        {} as Record<string, any[]>,
+        {} as Record<string, typeof tasksToArchive>,
       );
 
       // Move tasks to their owner's Finished list
@@ -162,8 +162,8 @@ export class TaskSchedulerService implements OnModuleInit {
         const finishedList = await this.getOrCreateFinishedList(ownerId);
 
         // Update each task individually to preserve originalListId
-        for (const task of tasks as any[]) {
-          await (this.prisma.task as any).update({
+        for (const task of tasks) {
+          await this.prisma.task.update({
             where: { id: task.id },
             data: {
               todoListId: finishedList.id,
@@ -172,9 +172,7 @@ export class TaskSchedulerService implements OnModuleInit {
           });
         }
 
-        this.logger.log(
-          `Archived ${(tasks as any[]).length} tasks for user ${ownerId}`,
-        );
+        this.logger.log(`Archived ${tasks.length} tasks for user ${ownerId}`);
       }
     });
   }
@@ -200,7 +198,7 @@ export class TaskSchedulerService implements OnModuleInit {
       today.setHours(0, 0, 0, 0);
 
       // Find completed daily tasks that were completed before today
-      const tasksToReset = await (this.prisma.task as any).findMany({
+      const tasksToReset = await this.prisma.task.findMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -232,7 +230,7 @@ export class TaskSchedulerService implements OnModuleInit {
    */
   private async resetDailyTasksInternal() {
     // Get all completed daily tasks first
-    const completedDailyTasks = await (this.prisma.task as any).findMany({
+    const completedDailyTasks = await this.prisma.task.findMany({
       where: {
         completed: true,
         deletedAt: null,
@@ -251,7 +249,7 @@ export class TaskSchedulerService implements OnModuleInit {
       return;
     }
 
-    const taskIds = completedDailyTasks.map((t: any) => t.id);
+    const taskIds = completedDailyTasks.map((t) => t.id);
 
     // First, increment completion count for all completed daily tasks
     await this.prisma.$executeRaw`
@@ -261,7 +259,7 @@ export class TaskSchedulerService implements OnModuleInit {
     `;
 
     // Reset tasks
-    const result = await (this.prisma.task as any).updateMany({
+    const result = await this.prisma.task.updateMany({
       where: {
         id: { in: taskIds },
       },
@@ -278,7 +276,7 @@ export class TaskSchedulerService implements OnModuleInit {
     }
 
     // Reset steps for these specific tasks (more reliable than nested relation query)
-    const stepResult = await (this.prisma.step as any).updateMany({
+    const stepResult = await this.prisma.step.updateMany({
       where: {
         completed: true,
         deletedAt: null,
@@ -312,7 +310,7 @@ export class TaskSchedulerService implements OnModuleInit {
         )
       `;
 
-      const result = await (this.prisma.task as any).updateMany({
+      const result = await this.prisma.task.updateMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -334,7 +332,7 @@ export class TaskSchedulerService implements OnModuleInit {
       }
 
       // Also reset steps for these tasks
-      await (this.prisma.step as any).updateMany({
+      await this.prisma.step.updateMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -371,7 +369,7 @@ export class TaskSchedulerService implements OnModuleInit {
         )
       `;
 
-      const result = await (this.prisma.task as any).updateMany({
+      const result = await this.prisma.task.updateMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -393,7 +391,7 @@ export class TaskSchedulerService implements OnModuleInit {
       }
 
       // Also reset steps for these tasks
-      await (this.prisma.step as any).updateMany({
+      await this.prisma.step.updateMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -430,7 +428,7 @@ export class TaskSchedulerService implements OnModuleInit {
         )
       `;
 
-      const result = await (this.prisma.task as any).updateMany({
+      const result = await this.prisma.task.updateMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -452,7 +450,7 @@ export class TaskSchedulerService implements OnModuleInit {
       }
 
       // Also reset steps for these tasks
-      await (this.prisma.step as any).updateMany({
+      await this.prisma.step.updateMany({
         where: {
           completed: true,
           deletedAt: null,
@@ -481,7 +479,7 @@ export class TaskSchedulerService implements OnModuleInit {
       purgeThreshold.setDate(purgeThreshold.getDate() - 30);
 
       // 1. Purge old soft-deleted tasks
-      const tasksToPurge = await (this.prisma.task as any).findMany({
+      const tasksToPurge = await this.prisma.task.findMany({
         where: {
           deletedAt: { lte: purgeThreshold },
         },
@@ -489,12 +487,12 @@ export class TaskSchedulerService implements OnModuleInit {
       });
 
       if (tasksToPurge.length > 0) {
-        const taskIds = tasksToPurge.map((t: any) => t.id);
+        const taskIds = tasksToPurge.map((t) => t.id);
         // Manual cleanup if no cascade
-        await (this.prisma.step as any).deleteMany({
+        await this.prisma.step.deleteMany({
           where: { taskId: { in: taskIds } },
         });
-        await (this.prisma.task as any).deleteMany({
+        await this.prisma.task.deleteMany({
           where: { id: { in: taskIds } },
         });
         this.logger.log(
@@ -503,7 +501,7 @@ export class TaskSchedulerService implements OnModuleInit {
       }
 
       // 2. Purge old soft-deleted lists
-      const listsToPurge = await (this.prisma.toDoList as any).findMany({
+      const listsToPurge = await this.prisma.toDoList.findMany({
         where: {
           deletedAt: { lte: purgeThreshold },
         },
@@ -512,16 +510,16 @@ export class TaskSchedulerService implements OnModuleInit {
 
       if (listsToPurge.length > 0) {
         for (const list of listsToPurge) {
-          await (this.prisma.step as any).deleteMany({
+          await this.prisma.step.deleteMany({
             where: { task: { todoListId: list.id } },
           });
-          await (this.prisma.task as any).deleteMany({
+          await this.prisma.task.deleteMany({
             where: { todoListId: list.id },
           });
-          await (this.prisma.listShare as any).deleteMany({
+          await this.prisma.listShare.deleteMany({
             where: { toDoListId: list.id },
           });
-          await (this.prisma.toDoList as any).delete({
+          await this.prisma.toDoList.delete({
             where: { id: list.id },
           });
         }

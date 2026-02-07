@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   @Get()
   @ApiOperation({ summary: 'Check API and DB health status' })
@@ -40,7 +40,7 @@ export class HealthController {
 
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe' })
-  async readiness() {
+  readiness() {
     // Just returns ok if the app is bootstrapped
     return { status: 'ready' };
   }

@@ -13,7 +13,7 @@ export class TodoListsService {
   constructor(
     private prisma: PrismaService,
     private taskAccess: TaskAccessHelper,
-  ) {}
+  ) { }
 
   async create(createToDoListDto: CreateToDoListDto, ownerId: string) {
     const list = await this.prisma.toDoList.create({
@@ -116,7 +116,7 @@ export class TodoListsService {
   }
 
   async restore(id: string, ownerId: string) {
-    const list = await (this.prisma.toDoList as any).findFirst({
+    const list = await this.prisma.toDoList.findFirst({
       where: { id, ownerId, deletedAt: { not: null } },
     });
     if (!list) {
@@ -134,7 +134,7 @@ export class TodoListsService {
   }
 
   async permanentDelete(id: string, ownerId: string) {
-    const list = await (this.prisma.toDoList as any).findFirst({
+    const list = await this.prisma.toDoList.findFirst({
       where: { id, ownerId, deletedAt: { not: null } },
     });
     if (!list) {
@@ -142,11 +142,11 @@ export class TodoListsService {
     }
 
     // Manual cleanup of relations if not cascading
-    await (this.prisma.step as any).deleteMany({
+    await this.prisma.step.deleteMany({
       where: { task: { todoListId: id } },
     });
     await this.prisma.task.deleteMany({ where: { todoListId: id } });
-    await (this.prisma.listShare as any).deleteMany({
+    await this.prisma.listShare.deleteMany({
       where: { toDoListId: id },
     });
 

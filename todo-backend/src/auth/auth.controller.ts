@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { CurrentUser, CurrentUserPayload } from './current-user.decorator';
 import {
@@ -35,6 +36,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('login')
@@ -70,7 +72,7 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const refreshToken = request.cookies['refresh_token'];
+    const refreshToken = request.cookies['refresh_token'] as string | undefined;
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token missing');
     }
@@ -79,7 +81,7 @@ export class AuthController {
     this.setRefreshTokenCookie(response, result.refreshToken);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { refreshToken: _unused, ...rest } = result;
+    const { refreshToken: _rt, ...rest } = result;
     return rest;
   }
 
@@ -95,7 +97,7 @@ export class AuthController {
     await this.authService.logout(user.userId);
     response.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
       sameSite: 'strict',
       path: '/api/v1/auth/refresh',
     });
@@ -105,7 +107,7 @@ export class AuthController {
   private setRefreshTokenCookie(response: Response, token: string) {
     response.cookie('refresh_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
       sameSite: 'strict',
       path: '/api/v1/auth/refresh', // Only send to refresh endpoint
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days

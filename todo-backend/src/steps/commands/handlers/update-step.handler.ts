@@ -14,7 +14,7 @@ export class UpdateStepHandler implements ICommandHandler<UpdateStepCommand> {
   async execute(command: UpdateStepCommand) {
     const { stepId, dto, userId } = command;
 
-    const step = await (this.prisma.step as any).findFirst({
+    const step = await this.prisma.step.findFirst({
       where: {
         id: stepId,
         deletedAt: null,
@@ -35,7 +35,7 @@ export class UpdateStepHandler implements ICommandHandler<UpdateStepCommand> {
       throw new NotFoundException(`Step with ID ${stepId} not found`);
     }
 
-    const updatedStep = await (this.prisma.step as any).update({
+    const updatedStep = await this.prisma.step.update({
       where: { id: stepId },
       data: {
         description: dto.description,

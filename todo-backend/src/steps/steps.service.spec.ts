@@ -3,7 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StepsService } from './steps.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskAccessHelper } from '../tasks/helpers/task-access.helper';
-import { ShareRole } from '@prisma/client';
+import { Task, Step, ToDoList } from '@prisma/client';
 
 describe('StepsService', () => {
   let service: StepsService;

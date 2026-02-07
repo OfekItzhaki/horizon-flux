@@ -15,7 +15,7 @@ export class CreateStepHandler implements ICommandHandler<CreateStepCommand> {
     const { taskId, dto, userId } = command;
 
     // Ensure access to task
-    const task = await (this.prisma.task as any).findFirst({
+    const task = await this.prisma.task.findFirst({
       where: {
         id: taskId,
         deletedAt: null,
@@ -34,13 +34,13 @@ export class CreateStepHandler implements ICommandHandler<CreateStepCommand> {
     }
 
     // Get next order
-    const lastStep = await (this.prisma.step as any).findFirst({
+    const lastStep = await this.prisma.step.findFirst({
       where: { taskId, deletedAt: null },
       orderBy: { order: 'desc' },
     });
     const order = lastStep ? lastStep.order + 1 : 1;
 
-    const step = await (this.prisma.step as any).create({
+    const step = await this.prisma.step.create({
       data: {
         description: dto.description,
         completed: dto.completed ?? false,

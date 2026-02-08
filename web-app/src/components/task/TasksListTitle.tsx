@@ -39,7 +39,7 @@ export default function TasksListTitle({
             disabled={!list || !nameDraft.trim()}
             onClick={() => {
               if (!list) return;
-              onUpdateList(list.id, { name: nameDraft.trim() });
+              onUpdateList(Number(list.id), { name: nameDraft.trim() });
               setIsEditing(false);
               toast.success(t('tasks.listUpdated'));
             }}

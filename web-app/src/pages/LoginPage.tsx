@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -7,6 +7,8 @@ import {
   authService,
 } from '@tasks-management/frontend-services';
 import { useTranslation } from 'react-i18next';
+import TurnstileWidget from '../components/TurnstileWidget';
+import { type TurnstileInstance } from '@marsidev/react-turnstile';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -23,6 +25,8 @@ export default function LoginPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [resetStep, setResetStep] = useState(1);
   const [resetToken, setResetToken] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const { login } = useAuth();
 
@@ -36,6 +40,21 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // CAPTCHA handlers
+  const handleCaptchaSuccess = (token: string) => {
+    setCaptchaToken(token);
+    setError(''); // Clear any previous errors
+  };
+
+  const handleCaptchaError = (error: string) => {
+    setError(error);
+    setCaptchaToken('');
+  };
+
+  const handleCaptchaExpire = () => {
+    setCaptchaToken('');
+  };
 
   // Timer effect
   useEffect(() => {
@@ -62,13 +81,24 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Prevent submission if CAPTCHA token is missing when required
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const credentials: LoginDto = { email, password };
+      const credentials: LoginDto = { email, password, captchaToken };
       await login(credentials);
       navigate('/lists');
     } catch (err: unknown) {
+      // Reset turnstile widget on authentication failure
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
       setError(getErrorMessage(err, t('login.failed')));
     } finally {
       setLoading(false);
@@ -78,13 +108,24 @@ export default function LoginPage() {
   const handleRegisterStart = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!email) return setError('Email is required');
+
+    // Prevent submission if CAPTCHA token is missing when required
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      await authService.registerStart(email);
+      await authService.registerStart(email, captchaToken);
       setRegStep(2);
       setResendCooldown(30);
     } catch (err: unknown) {
+      // Reset turnstile widget on registration failure
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
       setError(getErrorMessage(err, 'Failed to start registration'));
     } finally {
       setLoading(false);
@@ -134,13 +175,24 @@ export default function LoginPage() {
   const handleForgotPasswordStart = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!email) return setError('Email is required');
+
+    // Prevent submission if CAPTCHA token is missing when required
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(email, captchaToken);
       setResetStep(2);
       setResendCooldown(30);
     } catch (err: unknown) {
+      // Reset turnstile widget on forgot password failure
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
       setError(getErrorMessage(err, 'Failed to initiate password reset'));
     } finally {
       setLoading(false);
@@ -267,6 +319,16 @@ export default function LoginPage() {
                 </div>
               </div>
             )}
+
+            {/* Turnstile CAPTCHA Widget */}
+            <div className="flex justify-center">
+              <TurnstileWidget
+                ref={turnstileRef}
+                onSuccess={handleCaptchaSuccess}
+                onError={handleCaptchaError}
+                onExpire={handleCaptchaExpire}
+              />
+            </div>
 
             <div className="space-y-5">
               {/* Step 1: Email (Login or register start) */}

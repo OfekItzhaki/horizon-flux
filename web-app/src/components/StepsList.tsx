@@ -205,17 +205,17 @@ export default function StepsList({
           {task.steps.map((step) => (
             <li
               key={step.id}
-              className={`flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-[#1a1a1a] rounded transition-all ${isBulkMode && selectedSteps.has(step.id) ? 'ring-2 ring-primary-500/50 bg-primary-50/30' : ''}`}
+              className={`flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-[#1a1a1a] rounded transition-all ${isBulkMode && selectedSteps.has(Number(step.id)) ? 'ring-2 ring-primary-500/50 bg-primary-50/30' : ''}`}
               onClick={() => {
-                if (isBulkMode) onToggleSelectStep(step.id);
+                if (isBulkMode) onToggleSelectStep(Number(step.id));
               }}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 {isBulkMode ? (
                   <input
                     type="checkbox"
-                    checked={selectedSteps.has(step.id)}
-                    onChange={() => onToggleSelectStep(step.id)}
+                    checked={selectedSteps.has(Number(step.id))}
+                    onChange={() => onToggleSelectStep(Number(step.id))}
                     onClick={(e) => e.stopPropagation()}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
@@ -227,7 +227,7 @@ export default function StepsList({
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
                 )}
-                {editingStepId === step.id ? (
+                {editingStepId === Number(step.id) ? (
                   <input
                     value={stepDescriptionDraft}
                     onChange={(e) =>
@@ -257,7 +257,7 @@ export default function StepsList({
               </div>
 
               {!isBulkMode &&
-                (editingStepId === step.id ? (
+                (editingStepId === Number(step.id) ? (
                   <div className="flex gap-2">
                     <button
                       type="button"

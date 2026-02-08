@@ -52,6 +52,12 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
+    if (loginDto.captchaToken) {
+      await this.authService.verifyTurnstile(loginDto.captchaToken);
+    } else if (process.env.TURNSTILE_SECRET_KEY) {
+      throw new BadRequestException('CAPTCHA token required');
+    }
+
     const result = await this.authService.login(
       loginDto.email,
       loginDto.password,
@@ -140,7 +146,13 @@ export class AuthController {
   @Post('register/start')
   @ApiOperation({ summary: 'Start registration by sending OTP' })
   @ApiResponse({ status: 201, description: 'OTP sent successfully' })
-  registerStart(@Body() dto: RegisterStartDto) {
+  async registerStart(@Body() dto: RegisterStartDto) {
+    if (dto.captchaToken) {
+      await this.authService.verifyTurnstile(dto.captchaToken);
+    } else if (process.env.TURNSTILE_SECRET_KEY) {
+      throw new BadRequestException('CAPTCHA token required');
+    }
+
     return this.authService.registerStart(dto.email);
   }
 
@@ -177,6 +189,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Request password reset OTP' })
   @ApiResponse({ status: 200, description: 'OTP sent if user exists' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    // Verify CAPTCHA if token provided or if secret key is configured
+    if (dto.captchaToken) {
+      await this.authService.verifyTurnstile(dto.captchaToken);
+    } else if (process.env.TURNSTILE_SECRET_KEY) {
+      throw new BadRequestException('CAPTCHA token required');
+    }
+
     return this.authService.forgotPassword(dto.email);
   }
 

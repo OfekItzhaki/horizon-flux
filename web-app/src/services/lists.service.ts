@@ -11,7 +11,7 @@ class ListsService {
   }
 
   async getListById(id: string | number): Promise<ToDoList> {
-    return frontendListsService.getById(id);
+    return frontendListsService.getById(Number(id));
   }
 
   async createList(data: CreateToDoListDto): Promise<ToDoList> {
@@ -22,11 +22,11 @@ class ListsService {
     id: string | number,
     data: UpdateToDoListDto
   ): Promise<ToDoList> {
-    return frontendListsService.update(id, data);
+    return frontendListsService.update(Number(id), data);
   }
 
   async deleteList(id: string | number): Promise<ToDoList> {
-    return frontendListsService.delete(id);
+    return frontendListsService.delete(Number(id));
   }
 }
 

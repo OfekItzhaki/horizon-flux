@@ -67,7 +67,7 @@ export default {
       behaviorOneOff: 'One-off',
       policyLabel: 'Completion Policy',
       policyKeep: 'Keep tasks',
-      policyDelete: 'Delete immediately',
+      policyDelete: 'Delete forever',
     },
   },
   tasks: {
@@ -90,6 +90,9 @@ export default {
     selectMultiple: 'Select Multiple',
     deleteSelected: 'Delete',
     deleteSelectedConfirm: 'Delete {{count}} task{{plural}}?',
+    unknownList: 'Unknown List',
+    oneOffTasks: 'One-off Tasks',
+    recurringTasks: 'Recurring Tasks',
     form: {
       descriptionLabel: 'Description',
       descriptionPlaceholder: 'e.g. Buy milk',

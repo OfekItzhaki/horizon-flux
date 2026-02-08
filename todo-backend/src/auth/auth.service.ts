@@ -3,6 +3,7 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -10,6 +11,7 @@ import UsersService from '../users/users.service';
 import { TodoListsService } from '../todo-lists/todo-lists.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface JwtPayload {
@@ -28,10 +30,10 @@ export class AuthService {
     private readonly todoListsService: TodoListsService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   async validateUser(email: string, password: string) {
-    this.logger.error(`Validating user: ${email}`);
+    this.logger.debug(`Validating user: ${email}`);
     try {
       const user = await this.usersService.findByEmail(email);
       if (!user) {
@@ -111,16 +113,19 @@ export class AuthService {
 
   async refreshAccessToken(token: string) {
     try {
-      const payload = this.jwtService.verify(token, {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const payload: any = this.jwtService.verify(token, {
         secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (!payload.sub || !payload.jti) {
         throw new UnauthorizedException('Invalid payload structure');
       }
 
       const refreshTokenRecord = await this.prisma.refreshToken.findFirst({
         where: {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           userId: payload.sub,
           revokedAt: null,
           expiresAt: { gt: new Date() },
@@ -133,6 +138,7 @@ export class AuthService {
 
       // Check if the token matches (hashing)
       const isMatch = await bcrypt.compare(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         payload.jti,
         refreshTokenRecord.token,
       );
@@ -146,6 +152,7 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       const user = await this.usersService.findById(payload.sub);
       if (!user) {
         throw new UnauthorizedException('User not found');
@@ -153,7 +160,6 @@ export class AuthService {
 
       return this.createAuthSession(user);
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const error = e instanceof Error ? e : new Error(String(e));
       this.logger.error('Refresh token failed:', error.stack);
       throw new UnauthorizedException('Invalid or expired refresh token');
@@ -294,6 +300,42 @@ export class AuthService {
       const err = e instanceof Error ? e : new Error(String(e));
       this.logger.error('Password reset failed:', err.stack);
       throw new BadRequestException('Invalid or expired reset token');
+    }
+  }
+
+  async verifyTurnstile(token: string) {
+    const secretKey = process.env.TURNSTILE_SECRET_KEY;
+    if (!secretKey) {
+      this.logger.warn('TURNSTILE_SECRET_KEY not set. Skipping verification.');
+      return;
+    }
+
+    try {
+      // Cloudflare Turnstile verification
+      const response = await axios.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        {
+          secret: secretKey,
+          response: token,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const data = response.data as { success: boolean };
+      if (!data.success) {
+        this.logger.warn(
+          `Turnstile verification failed: ${JSON.stringify(data)}`,
+        );
+        throw new ForbiddenException('CAPTCHA verification failed');
+      }
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
+      this.logger.error('Error verifying Turnstile token', error);
+      throw new ForbiddenException('CAPTCHA verification failed');
     }
   }
 }

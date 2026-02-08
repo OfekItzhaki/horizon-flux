@@ -6,17 +6,18 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
 
 @Injectable()
 export class WsJwtGuard implements CanActivate {
   private logger = new Logger('WsJwtGuard');
 
-  constructor(private readonly jwtService: JwtService) { }
+  constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
-      const client = context.switchToWs().getClient();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const client: any = context.switchToWs().getClient();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const handshake = client.handshake as unknown as {
         auth: { token?: string };
         headers: { authorization?: string };
@@ -32,12 +33,10 @@ export class WsJwtGuard implements CanActivate {
         throw new WsException('No token provided');
       }
 
-      const payload = (await this.jwtService.verifyAsync(token)) as unknown as {
-        sub: string;
-        email: string;
-      };
+      const payload: unknown = await this.jwtService.verifyAsync(token);
 
-      const clientData = client.data as unknown as { user: unknown };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const clientData = client.data as unknown as { user?: unknown };
       clientData.user = payload;
 
       return true;

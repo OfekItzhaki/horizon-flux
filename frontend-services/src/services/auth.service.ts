@@ -64,8 +64,11 @@ export class AuthService {
   /**
    * Start registration (send OTP)
    */
-  async registerStart(email: string): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/register/start', { email });
+  async registerStart(email: string, captchaToken?: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/register/start', { 
+      email,
+      captchaToken 
+    });
   }
 
   /**
@@ -100,9 +103,10 @@ export class AuthService {
   /**
    * Request password reset OTP
    */
-  async forgotPassword(email: string): Promise<{ message: string }> {
+  async forgotPassword(email: string, captchaToken?: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>('/auth/forgot-password', {
       email,
+      captchaToken,
     });
   }
 

@@ -22,7 +22,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private userSockets = new Map<string, string[]>(); // userId -> socketIds
   private userPresence = new Map<string, string>(); // socketId -> listId
 
-  constructor(private readonly jwtService: JwtService) { }
+  constructor(private readonly jwtService: JwtService) {}
 
   handleConnection(client: Socket) {
     try {
@@ -34,13 +34,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      const payload = this.jwtService.verify(token);
-      const userId = payload.sub;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const payload: any = this.jwtService.verify(token);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const userId = payload.sub as string;
 
-      /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
-      const dataContainer = client as any;
+      const dataContainer = client as unknown as {
+        data: { userId?: string };
+      };
       dataContainer.data = { ...dataContainer.data, userId };
-      /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
 
       const sockets = this.userSockets.get(userId) || [];
       sockets.push(client.id);

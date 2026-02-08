@@ -42,7 +42,8 @@ export class EmailProcessor extends WorkerHost {
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Tasks Management <onboarding@resend.dev>',
+        from: 'Horizon Tasks <noreply@ofeklabs.dev>',
+        replyTo: 'horizon-tasks@ofeklabs.dev',
         to: email,
         subject: title,
         html: `
@@ -59,6 +60,8 @@ export class EmailProcessor extends WorkerHost {
             <h2 style="color: #333;">Task Reminder</h2>
             <p><strong>Task:</strong> ${taskDescription}</p>
             <p>${message}</p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            <p style="font-size: 12px; color: #666;">This is an automated reminder. For support, contact <a href="mailto:horizon-tasks@ofeklabs.dev" style="color: #4f46e5;">horizon-tasks@ofeklabs.dev</a></p>
           </div>
         </body>
         </html>
@@ -94,7 +97,8 @@ export class EmailProcessor extends WorkerHost {
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Tasks Management <onboarding@resend.dev>',
+        from: 'Horizon Tasks <noreply@ofeklabs.dev>',
+        replyTo: 'horizon-tasks@ofeklabs.dev',
         to: email,
         subject: 'Welcome to Horizon Tasks',
         html: `
@@ -116,6 +120,8 @@ export class EmailProcessor extends WorkerHost {
             </div>
             <p>This code will expire in 5 minutes.</p>
             <p>If you didn't create an account, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            <p style="font-size: 12px; color: #666;">This is an automated message. For support, contact <a href="mailto:horizon-tasks@ofeklabs.dev" style="color: #4f46e5;">horizon-tasks@ofeklabs.dev</a></p>
           </div>
         </body>
         </html>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listsService } from '../services/lists.service';
@@ -26,6 +26,13 @@ export default function ListsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+
+  // Automatically set completion policy to KEEP when task behavior is RECURRING
+  useEffect(() => {
+    if (taskBehavior === TaskBehavior.RECURRING) {
+      setCompletionPolicy(CompletionPolicy.KEEP);
+    }
+  }, [taskBehavior]);
 
   const {
     data: lists = [],
@@ -190,7 +197,13 @@ export default function ListsPage() {
                   onChange={(e) =>
                     setCompletionPolicy(e.target.value as CompletionPolicy)
                   }
-                  className="premium-input w-full"
+                  disabled={taskBehavior === TaskBehavior.RECURRING}
+                  className="premium-input w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    taskBehavior === TaskBehavior.RECURRING
+                      ? 'Recurring tasks must use "Keep tasks" policy'
+                      : ''
+                  }
                 >
                   <option value={CompletionPolicy.MOVE_TO_DONE}>
                     {t('lists.form.policyMoveToDone', {

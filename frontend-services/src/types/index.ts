@@ -36,6 +36,17 @@ export interface UpdateUserDto {
 export interface LoginDto {
   email: string;
   password: string;
+  captchaToken?: string;
+}
+
+export interface RegisterStartDto {
+  email: string;
+  captchaToken?: string;
+}
+
+export interface ForgotPasswordDto {
+  email: string;
+  captchaToken?: string;
 }
 
 export interface LoginResponse {
@@ -66,9 +77,9 @@ export enum CompletionPolicy {
 }
 
 export interface ToDoList {
-  id: string | number;
+  id: number;
   name: string;
-  ownerId: number | string;
+  ownerId: number;
   order: number;
   type: ListType;
   taskBehavior: TaskBehavior;
@@ -93,12 +104,12 @@ export interface UpdateToDoListDto {
 
 // Task Types
 export interface Task {
-  id: number | string;
+  id: number;
   description: string;
   completed: boolean;
   completedAt: string | null; // When the task was marked complete
-  todoListId: number | string;
-  originalListId?: number | string | null;
+  todoListId: number;
+  originalListId?: number | null;
   order: number;
   dueDate: string | null;
   reminderDaysBefore: number[];
@@ -132,10 +143,10 @@ export interface UpdateTaskDto {
 
 // Step Types
 export interface Step {
-  id: number | string;
+  id: number;
   description: string;
   completed: boolean;
-  taskId: number | string;
+  taskId: number;
   order: number;
   createdAt: string;
   updatedAt: string;

@@ -67,7 +67,7 @@ export default {
       behaviorOneOff: 'חד פעמיות',
       policyLabel: 'מדיניות סיום',
       policyKeep: 'השאר משימות',
-      policyDelete: 'מחק מיד',
+      policyDelete: 'מחק לצמיתות',
     },
   },
   tasks: {
@@ -90,6 +90,9 @@ export default {
     selectMultiple: 'בחר מספר',
     deleteSelected: 'מחק',
     deleteSelectedConfirm: 'למחוק {{count}} משימה{{plural}}?',
+    unknownList: 'רשימה לא ידועה',
+    oneOffTasks: 'משימות חד פעמיות',
+    recurringTasks: 'משימות חוזרות',
     form: {
       descriptionLabel: 'תיאור',
       descriptionPlaceholder: 'לדוגמה: לקנות חלב',

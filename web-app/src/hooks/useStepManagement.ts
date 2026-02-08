@@ -94,7 +94,8 @@ export function useStepManagement(task: Task | undefined | null) {
     { task: Task; data: CreateStepDto },
     { previousTask?: Task }
   >({
-    mutationFn: ({ task, data }) => stepsService.createStep(task.id, data),
+    mutationFn: ({ task, data }) =>
+      stepsService.createStep(Number(task.id), data),
     onMutate: async (vars) => {
       const previousTask = queryClient.getQueryData<Task>([
         'task',
@@ -107,7 +108,7 @@ export function useStepManagement(task: Task | undefined | null) {
         id: tempId,
         description: vars.data.description,
         completed: Boolean(vars.data.completed ?? false),
-        taskId: vars.task.id,
+        taskId: Number(vars.task.id),
         order: Date.now(),
         createdAt: now,
         updatedAt: now,
@@ -194,13 +195,13 @@ export function useStepManagement(task: Task | undefined | null) {
     if (!task) return;
     updateStepMutation.mutate({
       task,
-      stepId: step.id,
+      stepId: Number(step.id),
       data: { completed: !step.completed },
     });
   };
 
   const handleEditStep = (step: Step) => {
-    setEditingStepId(step.id);
+    setEditingStepId(Number(step.id));
     setStepDescriptionDraft(step.description);
   };
 
@@ -228,7 +229,7 @@ export function useStepManagement(task: Task | undefined | null) {
       t('taskDetails.deleteStepConfirm', { description: step.description })
     );
     if (!ok) return;
-    deleteStepMutation.mutate({ task, id: step.id });
+    deleteStepMutation.mutate({ task, id: Number(step.id) });
   };
 
   const handleCreateStep = () => {

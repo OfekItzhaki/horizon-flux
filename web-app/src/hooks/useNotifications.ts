@@ -72,7 +72,13 @@ export function useNotifications() {
 
     const scheduleReminders = async () => {
       try {
-        await rescheduleAllReminders(allTasks);
+        // Convert all task IDs to numbers for the notification service
+        const tasksWithNumericIds = allTasks.map((task) => ({
+          ...task,
+          id: Number(task.id),
+          todoListId: Number(task.todoListId),
+        }));
+        await rescheduleAllReminders(tasksWithNumericIds);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error('Error rescheduling reminders:', error);

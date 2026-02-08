@@ -1,9 +1,4 @@
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -101,12 +96,13 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
   const {
     data: tasks = [],
     isLoading,
+    isRefetching,
     isError,
     error,
   } = useQuery<Task[], ApiError>({
     queryKey: ['tasks', effectiveListId],
     enabled: effectiveListId !== null && effectiveListId !== undefined,
-    placeholderData: keepPreviousData,
+    // Don't show stale data - show loading state instead
     queryFn: () => tasksService.getTasksByList(effectiveListId!),
   });
 
@@ -154,6 +150,13 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
   useEffect(() => {
     if (list) setListNameDraft(list.name);
   }, [list]);
+
+  // Automatically set completion policy to KEEP when task behavior is RECURRING
+  useEffect(() => {
+    if (taskBehaviorDraft === TaskBehavior.RECURRING) {
+      setCompletionPolicyDraft(CompletionPolicy.KEEP);
+    }
+  }, [taskBehaviorDraft]);
 
   const isFinishedList = list?.type === ListType.FINISHED;
 
@@ -279,6 +282,11 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     mutationFn: (data) => tasksService.createTask(effectiveListId!, data),
     onMutate: async (data) => {
       if (!effectiveListId) return { previousTasks: undefined };
+
+      // Hide the create form immediately when user submits
+      setShowCreate(false);
+      setNewTaskDescription('');
+
       await queryClient.cancelQueries({ queryKey: ['tasks', effectiveListId] });
 
       const previousTasks = queryClient.getQueryData<Task[]>([
@@ -293,7 +301,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
         description: data.description,
         completed: false,
         completedAt: null,
-        todoListId: effectiveListId as string, // Cast to string as Task expects string ID
+        todoListId: Number(effectiveListId),
         order: Date.now(),
         dueDate: null,
         reminderDaysBefore: [],
@@ -315,6 +323,8 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       if (effectiveListId && ctx?.previousTasks) {
         queryClient.setQueryData(['tasks', effectiveListId], ctx.previousTasks);
       }
+      // Show the create form again on error so user can retry
+      setShowCreate(true);
       toast.error(formatApiError(err, t('tasks.createFailed')));
     },
     onSuccess: (newTask, _vars, ctx) => {
@@ -329,8 +339,6 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
           }
         );
       }
-      setNewTaskDescription('');
-      setShowCreate(false);
 
       // Process Pending Actions
       if (ctx?.tempId && pendingActions.current[ctx.tempId]) {
@@ -551,6 +559,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     }
   };
 
+  // Show loading skeleton ONLY during initial load (not during background refetches)
   if (isLoading) {
     return (
       <div className="animate-fade-in space-y-8">
@@ -580,6 +589,16 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
 
   return (
     <div className={`max-w-4xl mx-auto pb-24 ${isRtl ? 'rtl' : 'ltr'}`}>
+      {/* Subtle loading indicator during background refetches */}
+      {isRefetching && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-accent/20">
+          <div
+            className="h-full bg-accent animate-pulse"
+            style={{ width: '30%' }}
+          ></div>
+        </div>
+      )}
+
       <div className="mb-8 animate-slide-up">
         <Link
           to="/lists"
@@ -669,7 +688,13 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                         e.target.value as CompletionPolicy
                       )
                     }
-                    className="premium-input w-full text-sm"
+                    disabled={taskBehaviorDraft === TaskBehavior.RECURRING}
+                    className="premium-input w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={
+                      taskBehaviorDraft === TaskBehavior.RECURRING
+                        ? 'Recurring tasks must use "Keep tasks" policy'
+                        : ''
+                    }
                   >
                     <option value={CompletionPolicy.MOVE_TO_DONE}>
                       {t('lists.form.policyMoveToDone', {
@@ -897,10 +922,6 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                   sortedTasks.reduce(
                     (groups, task) => {
                       // For Done list, group by originalListId. for Trash, group by todoListId
-                      // Note: In Trash, todoListId points to the list it was deleted from (soft delete remains in list until permanent)
-                      // Wait, soft delete in backend: deletedAt is set. todoListId remains same.
-                      // For Done list: todoListId is DoneList, originalListId is source.
-
                       const sourceListId = isFinishedList
                         ? task.originalListId || 'unknown'
                         : task.todoListId;
@@ -912,66 +933,162 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                         });
 
                       if (!groups[listName]) {
-                        groups[listName] = [];
+                        groups[listName] = { oneOff: [], recurring: [] };
                       }
-                      groups[listName].push(task);
+
+                      // Get the source list to check task behavior
+                      const sourceList = allLists.find(
+                        (l) => l.id === sourceListId
+                      );
+                      const isRecurring =
+                        sourceList?.taskBehavior === 'RECURRING';
+
+                      if (isRecurring) {
+                        groups[listName].recurring.push(task);
+                      } else {
+                        groups[listName].oneOff.push(task);
+                      }
                       return groups;
                     },
-                    {} as Record<string, Task[]>
+                    {} as Record<string, { oneOff: Task[]; recurring: Task[] }>
                   )
                 ).map(([listName, groupTasks]) => (
-                  <div key={listName} className="mb-6 animate-slide-up">
-                    <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-3 px-1">
+                  <div key={listName} className="mb-8 animate-slide-up">
+                    <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 px-1">
                       {listName}
                     </h3>
-                    <div className="space-y-2">
-                      {groupTasks.map((task) => (
-                        <SortableTaskItem
-                          key={task.id}
-                          task={task}
-                          isBulkMode={isBulkMode}
-                          isSelected={selectedTasks.has(task.id)}
-                          isFinishedList={isFinishedList}
-                          isRtl={isRtl}
-                          isOptimistic={
-                            typeof task.id === 'number' && task.id < 0
-                          }
-                          onToggleSelect={() => handleToggleSelect(task.id)}
-                          onToggleComplete={() =>
-                            handleOptimisticAction(task.id, (id) =>
-                              updateTaskMutation.mutate({
-                                id,
-                                data: { completed: !task.completed },
-                              })
-                            )
-                          }
-                          onDelete={() =>
-                            handleOptimisticAction(task.id, (id) =>
-                              deleteTaskMutation.mutate({ id })
-                            )
-                          }
-                          onRestore={() =>
-                            handleOptimisticAction(task.id, (id) =>
-                              restoreTaskMutation.mutate(id)
-                            )
-                          }
-                          onPermanentDelete={() => {
-                            if (
-                              window.confirm(
-                                t('tasks.deleteForeverConfirm', {
-                                  description: task.description,
-                                })
-                              )
-                            ) {
-                              handleOptimisticAction(task.id, (id) =>
-                                permanentDeleteTaskMutation.mutate(id)
-                              );
-                            }
-                          }}
-                          onClick={() => navigate(`/tasks/${task.id}`)}
-                        />
-                      ))}
-                    </div>
+
+                    {/* One-off Tasks Section */}
+                    {groupTasks.oneOff.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 px-1 opacity-70">
+                          {t('tasks.oneOffTasks')}
+                        </h4>
+                        <div className="space-y-2">
+                          {groupTasks.oneOff.map((task) => (
+                            <SortableTaskItem
+                              key={task.id}
+                              task={task}
+                              isBulkMode={isBulkMode}
+                              isSelected={selectedTasks.has(task.id)}
+                              isFinishedList={isFinishedList}
+                              isRtl={isRtl}
+                              isOptimistic={
+                                typeof task.id === 'number' && task.id < 0
+                              }
+                              onToggleSelect={() => handleToggleSelect(task.id)}
+                              onToggleComplete={() =>
+                                handleOptimisticAction(task.id, (id) =>
+                                  updateTaskMutation.mutate({
+                                    id,
+                                    data: { completed: !task.completed },
+                                  })
+                                )
+                              }
+                              onDelete={() =>
+                                handleOptimisticAction(task.id, (id) =>
+                                  deleteTaskMutation.mutate({ id })
+                                )
+                              }
+                              onRestore={() =>
+                                handleOptimisticAction(task.id, (id) =>
+                                  restoreTaskMutation.mutate(id)
+                                )
+                              }
+                              onPermanentDelete={() => {
+                                if (
+                                  window.confirm(
+                                    t('tasks.deleteForeverConfirm', {
+                                      description: task.description,
+                                    })
+                                  )
+                                ) {
+                                  handleOptimisticAction(task.id, (id) =>
+                                    permanentDeleteTaskMutation.mutate(id)
+                                  );
+                                }
+                              }}
+                              onClick={() => {
+                                // Prevent navigation for optimistic tasks
+                                if (
+                                  typeof task.id === 'number' &&
+                                  task.id < 0
+                                ) {
+                                  return;
+                                }
+                                navigate(`/tasks/${task.id}`);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recurring Tasks Section */}
+                    {groupTasks.recurring.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 px-1 opacity-70">
+                          {t('tasks.recurringTasks')}
+                        </h4>
+                        <div className="space-y-2">
+                          {groupTasks.recurring.map((task) => (
+                            <SortableTaskItem
+                              key={task.id}
+                              task={task}
+                              isBulkMode={isBulkMode}
+                              isSelected={selectedTasks.has(task.id)}
+                              isFinishedList={isFinishedList}
+                              isRtl={isRtl}
+                              isOptimistic={
+                                typeof task.id === 'number' && task.id < 0
+                              }
+                              onToggleSelect={() => handleToggleSelect(task.id)}
+                              onToggleComplete={() =>
+                                handleOptimisticAction(task.id, (id) =>
+                                  updateTaskMutation.mutate({
+                                    id,
+                                    data: { completed: !task.completed },
+                                  })
+                                )
+                              }
+                              onDelete={() =>
+                                handleOptimisticAction(task.id, (id) =>
+                                  deleteTaskMutation.mutate({ id })
+                                )
+                              }
+                              onRestore={() =>
+                                handleOptimisticAction(task.id, (id) =>
+                                  restoreTaskMutation.mutate(id)
+                                )
+                              }
+                              onPermanentDelete={() => {
+                                if (
+                                  window.confirm(
+                                    t('tasks.deleteForeverConfirm', {
+                                      description: task.description,
+                                    })
+                                  )
+                                ) {
+                                  handleOptimisticAction(task.id, (id) =>
+                                    permanentDeleteTaskMutation.mutate(id)
+                                  );
+                                }
+                              }}
+                              onClick={() => {
+                                // Prevent navigation for optimistic tasks
+                                if (
+                                  typeof task.id === 'number' &&
+                                  task.id < 0
+                                ) {
+                                  return;
+                                }
+                                navigate(`/tasks/${task.id}`);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               : // Standard View (No Grouping)

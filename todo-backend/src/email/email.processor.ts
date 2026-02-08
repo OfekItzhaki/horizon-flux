@@ -52,6 +52,11 @@ export class EmailProcessor extends WorkerHost {
     const { email, taskDescription, message, title } = data;
     this.logger.log(`Processing reminder email for: ${email}`);
 
+    if (!this.resend) {
+      this.logger.warn('Resend client not configured, skipping email');
+      return;
+    }
+
     try {
       const { data: result, error } = await this.resend.emails.send({
         from: 'Horizon Flux <noreply@ofeklabs.dev>',
@@ -106,6 +111,11 @@ export class EmailProcessor extends WorkerHost {
   }) {
     const { email, otp, name } = data;
     this.logger.log(`Processing verification email for: ${email}`);
+
+    if (!this.resend) {
+      this.logger.warn('Resend client not configured, skipping email');
+      return;
+    }
 
     try {
       const { data: result, error } = await this.resend.emails.send({

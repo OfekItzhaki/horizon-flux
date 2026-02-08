@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document specifies the requirements for implementing Cloudflare Turnstile CAPTCHA protection on the login and registration forms of the Horizon Tasks application. Cloudflare Turnstile is a privacy-focused, user-friendly CAPTCHA alternative that protects against automated attacks while minimizing friction for legitimate users.
+This document specifies the requirements for implementing Cloudflare Turnstile CAPTCHA protection on the login and registration forms of the Horizon Flux application. Cloudflare Turnstile is a privacy-focused, user-friendly CAPTCHA alternative that protects against automated attacks while minimizing friction for legitimate users.
 
 The implementation will protect authentication endpoints from credential stuffing attacks, spam registrations, and bot abuse by requiring CAPTCHA verification before allowing login or registration attempts.
 

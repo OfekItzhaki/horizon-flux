@@ -270,7 +270,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-sm tracking-tight text-center">
-            Horizon Tasks
+            Horizon Flux
           </h1>
           <p className="mt-3 text-sm font-bold tracking-widest uppercase text-slate-400 dark:text-slate-500 text-center">
             {t('login.title')}

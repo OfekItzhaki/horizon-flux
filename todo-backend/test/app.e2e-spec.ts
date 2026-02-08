@@ -36,7 +36,7 @@ describe('AppController (e2e)', () => {
       .get('/')
       .expect(200)
       .expect((res) => {
-        expect(res.text).toContain('Horizon Tasks API');
+        expect(res.text).toContain('Horizon Flux API');
       });
   });
 });

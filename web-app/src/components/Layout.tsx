@@ -56,7 +56,7 @@ export default function Layout() {
             <div className="flex items-center gap-8">
               <Link to="/lists" className="flex items-center gap-2 group">
                 <span className="text-xl font-bold text-primary tracking-tight group-hover:text-accent transition-colors">
-                  Horizon Tasks
+                  Horizon Flux
                 </span>
               </Link>
 
@@ -332,7 +332,7 @@ export default function Layout() {
       <footer className="mt-auto py-6 px-6 border-t border-border-subtle bg-surface">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm">
           <span className="text-tertiary">
-            &copy; {new Date().getFullYear()} Horizon Tasks.{' '}
+            &copy; {new Date().getFullYear()} Horizon Flux.{' '}
             {t('footer.allRightsReserved')}
           </span>
           <span className="text-tertiary">

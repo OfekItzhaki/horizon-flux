@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the implementation of Cloudflare Turnstile CAPTCHA protection for the Horizon Tasks application's authentication flows. The implementation will integrate Turnstile widgets into the web frontend's login and registration forms, and add server-side token verification to the NestJS backend.
+This design document outlines the implementation of Cloudflare Turnstile CAPTCHA protection for the Horizon Flux application's authentication flows. The implementation will integrate Turnstile widgets into the web frontend's login and registration forms, and add server-side token verification to the NestJS backend.
 
 Cloudflare Turnstile is a privacy-focused CAPTCHA alternative that provides bot protection with minimal user friction. The implementation will use "managed" mode, which automatically adapts between invisible verification and interactive challenges based on risk assessment.
 
@@ -555,7 +555,7 @@ The backend's flexible design (optional CAPTCHA when secret key not set) allows 
 4. Configure widget:
    - **Widget Mode**: Managed (recommended)
    - **Domain**: Add your domain(s)
-   - **Widget Name**: "Horizon Tasks - Login/Registration"
+   - **Widget Name**: "Horizon Flux - Login/Registration"
 5. Copy Site Key and Secret Key
 6. Add keys to environment variables
 

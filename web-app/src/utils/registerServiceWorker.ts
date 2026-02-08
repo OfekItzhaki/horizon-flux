@@ -43,7 +43,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
           // Optionally show a notification to the user
           if (
             window.confirm(
-              'A new version of Horizon Tasks is available. Reload to update?'
+              'A new version of Horizon Flux is available. Reload to update?'
             )
           ) {
             window.location.reload();

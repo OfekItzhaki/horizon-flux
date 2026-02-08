@@ -15,7 +15,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt'],
       manifest: {
-        name: 'Horizon Tasks',
+        name: 'Horizon Flux',
         short_name: 'Horizon',
         description: 'Modern task management application by OfekLabs',
         theme_color: '#6366f1',

@@ -42,8 +42,8 @@ export class EmailProcessor extends WorkerHost {
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Horizon Tasks <noreply@ofeklabs.dev>',
-        replyTo: 'horizon-tasks@ofeklabs.dev',
+        from: 'Horizon Flux <noreply@ofeklabs.dev>',
+        replyTo: 'horizon-flux@ofeklabs.dev',
         to: email,
         subject: title,
         html: `
@@ -56,12 +56,12 @@ export class EmailProcessor extends WorkerHost {
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px;">
-            <h1 style="color: #4f46e5;">Horizon Tasks</h1>
+            <h1 style="color: #4f46e5;">Horizon Flux</h1>
             <h2 style="color: #333;">Task Reminder</h2>
             <p><strong>Task:</strong> ${taskDescription}</p>
             <p>${message}</p>
             <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-            <p style="font-size: 12px; color: #666;">This is an automated reminder. For support, contact <a href="mailto:horizon-tasks@ofeklabs.dev" style="color: #4f46e5;">horizon-tasks@ofeklabs.dev</a></p>
+            <p style="font-size: 12px; color: #666;">This is an automated reminder. For support, contact <a href="mailto:horizon-flux@ofeklabs.dev" style="color: #4f46e5;">horizon-flux@ofeklabs.dev</a></p>
           </div>
         </body>
         </html>
@@ -97,10 +97,10 @@ export class EmailProcessor extends WorkerHost {
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Horizon Tasks <noreply@ofeklabs.dev>',
-        replyTo: 'horizon-tasks@ofeklabs.dev',
+        from: 'Horizon Flux <noreply@ofeklabs.dev>',
+        replyTo: 'horizon-flux@ofeklabs.dev>',
         to: email,
-        subject: 'Welcome to Horizon Tasks',
+        subject: 'Welcome to Horizon Flux',
         html: `
         <!DOCTYPE html>
         <html>
@@ -111,7 +111,7 @@ export class EmailProcessor extends WorkerHost {
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px;">
-            <h1 style="color: #4f46e5;">Horizon Tasks</h1>
+            <h1 style="color: #4f46e5;">Horizon Flux</h1>
             <h2 style="color: #333;">Verify your email address</h2>
             ${name ? `<p>Hello ${name},</p>` : '<p>Hello,</p>'}
             <p>Thank you for signing up! Please verify your email address by entering the 6-digit code below:</p>
@@ -121,7 +121,7 @@ export class EmailProcessor extends WorkerHost {
             <p>This code will expire in 5 minutes.</p>
             <p>If you didn't create an account, you can safely ignore this email.</p>
             <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-            <p style="font-size: 12px; color: #666;">This is an automated message. For support, contact <a href="mailto:horizon-tasks@ofeklabs.dev" style="color: #4f46e5;">horizon-tasks@ofeklabs.dev</a></p>
+            <p style="font-size: 12px; color: #666;">This is an automated message. For support, contact <a href="mailto:horizon-flux@ofeklabs.dev" style="color: #4f46e5;">horizon-flux@ofeklabs.dev</a></p>
           </div>
         </body>
         </html>

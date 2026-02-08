@@ -3,7 +3,7 @@
 // Service Worker for Horizon Tasks PWA
 // Handles caching, offline support, and push notifications
 
-const CACHE_NAME = 'horizon-tasks-v1';
+const CACHE_NAME = 'horizon-flux-v1';
 const RUNTIME_CACHE = 'horizon-runtime-v1';
 
 // Assets to cache on install
@@ -107,7 +107,7 @@ sw.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-        sw.registration.showNotification(data.title || 'Horizon Tasks', options)
+        sw.registration.showNotification(data.title || 'Horizon Flux', options)
     );
 });
 

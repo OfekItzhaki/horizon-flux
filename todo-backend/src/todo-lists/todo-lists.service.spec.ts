@@ -77,6 +77,8 @@ describe('TodoListsService', () => {
           name: 'Test List',
           type: ListType.CUSTOM,
           ownerId,
+          taskBehavior: 'ONE_OFF',
+          completionPolicy: 'KEEP',
         },
       });
       expect(result).toEqual(mockList);

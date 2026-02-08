@@ -38,6 +38,10 @@ describe('AuthService', () => {
     },
   };
 
+  const mockTodoListsService = {
+    seedDefaultLists: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,7 +52,7 @@ describe('AuthService', () => {
         },
         {
           provide: TodoListsService,
-          useValue: {}, // Mock TodoListsService
+          useValue: mockTodoListsService,
         },
         {
           provide: JwtService,
@@ -317,6 +321,9 @@ describe('AuthService', () => {
       mockJwtService.verify = jest.fn().mockReturnValue(mockPayload);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       mockUsersService.setPassword = jest.fn().mockResolvedValue(mockUser);
+      mockTodoListsService.seedDefaultLists = jest
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Mock login internal call
       mockUsersService.findByEmail.mockResolvedValue({
@@ -330,6 +337,7 @@ describe('AuthService', () => {
 
       expect(result).toHaveProperty('accessToken', 'final-jwt');
       expect(mockUsersService.setPassword).toHaveBeenCalled();
+      expect(mockTodoListsService.seedDefaultLists).toHaveBeenCalledWith(1);
     });
   });
 });

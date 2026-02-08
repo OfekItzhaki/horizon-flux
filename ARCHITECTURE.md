@@ -114,6 +114,30 @@ pytest                # Tests
 - **Rules**: A feature is only "Done" when it passes health checks in the container mesh. All infrastructure MUST be ephemeral-ready.
 - **Applies to**: Any containerized application.
 
+### Automated Pre-Commit Testing
+- **Goal**: Catch errors before they reach CI/CD, ensuring code quality at commit time.
+- **Implementation**: Use Git hooks (Husky) with lint-staged to automatically run tests on changed files.
+- **What Runs Automatically**:
+  - **Linting**: Auto-fix code style issues
+  - **Formatting**: Apply Prettier formatting
+  - **Testing**: Run tests for modified files only (`--findRelatedTests`)
+- **Benefits**:
+  - Prevents broken code from being committed
+  - Catches test failures immediately
+  - Faster feedback loop than waiting for CI/CD
+  - Reduces CI/CD failures and build times
+- **Configuration Example** (package.json):
+```json
+"lint-staged": {
+  "src/**/*.{ts,tsx}": [
+    "prettier --write",
+    "eslint --fix",
+    "npm test -- --bail --findRelatedTests"
+  ]
+}
+```
+- **Applies to**: Any project with automated testing
+
 ---
 
 ## 🌿 Git & Collaboration

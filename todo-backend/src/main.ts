@@ -11,6 +11,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
@@ -26,6 +27,7 @@ async function bootstrap() {
       crossOriginResourcePolicy: false, // Allow cross-origin images (avatars)
     }),
   );
+  app.use(cookieParser());
 
   // API Versioning
   app.setGlobalPrefix('api/v1', {
@@ -53,12 +55,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Serve static files from public/uploads
-  app.useStaticAssets(join(process.cwd(), 'public', 'uploads'), {
-    prefix: '/uploads/',
-  });
-
-  // Serve privacy policy from public root
+  // Serve privacy policy and other static files from public root
   app.useStaticAssets(join(process.cwd(), 'public'), {
     prefix: '/',
   });
@@ -67,7 +64,7 @@ async function bootstrap() {
 
   // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('Horizon Tasks API')
+    .setTitle('Horizon Flux API')
     .setDescription(
       'API for managing to-do lists, tasks, and steps with user authentication',
     )

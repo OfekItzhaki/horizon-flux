@@ -96,7 +96,9 @@ export default function TaskDetailsPage() {
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['task', id] });
       const previousTask = queryClient.getQueryData<Task>(['task', id]);
-      const todoListId = previousTask?.todoListId;
+      const todoListId = previousTask?.todoListId
+        ? Number(previousTask.todoListId)
+        : undefined;
       const previousTasks =
         typeof todoListId === 'number'
           ? queryClient.getQueryData<Task[]>(['tasks', todoListId])
@@ -137,7 +139,7 @@ export default function TaskDetailsPage() {
     );
 
     updateTaskMutation.mutate({
-      id: task.id,
+      id: Number(task.id),
       data: backendData,
     });
 
@@ -154,7 +156,7 @@ export default function TaskDetailsPage() {
     );
 
     updateTaskMutation.mutate({
-      id: task.id,
+      id: Number(task.id),
       data: backendData,
     });
   };
@@ -167,16 +169,18 @@ export default function TaskDetailsPage() {
   >({
     mutationFn: ({ stepId, data }) => stepsService.updateStep(stepId, data),
     onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: ['task', vars.task.id] });
+      await queryClient.cancelQueries({
+        queryKey: ['task', Number(vars.task.id)],
+      });
       const previousTask = queryClient.getQueryData<Task>([
         'task',
-        vars.task.id,
+        Number(vars.task.id),
       ]);
       if (previousTask) {
-        queryClient.setQueryData<Task>(['task', vars.task.id], {
+        queryClient.setQueryData<Task>(['task', Number(vars.task.id)], {
           ...previousTask,
           steps: (previousTask.steps ?? []).map((s) =>
-            s.id === vars.stepId ? { ...s, ...vars.data } : s
+            Number(s.id) === vars.stepId ? { ...s, ...vars.data } : s
           ),
         });
       }
@@ -184,11 +188,16 @@ export default function TaskDetailsPage() {
     },
     onError: (err, vars, ctx) => {
       if (ctx?.previousTask)
-        queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
+        queryClient.setQueryData(
+          ['task', Number(vars.task.id)],
+          ctx.previousTask
+        );
       toast.error(formatApiError(err, t('taskDetails.updateStepFailed')));
     },
     onSettled: async (_data, _err, vars) => {
-      await queryClient.invalidateQueries({ queryKey: ['task', vars.task.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ['task', Number(vars.task.id)],
+      });
     },
   });
 
@@ -197,12 +206,15 @@ export default function TaskDetailsPage() {
     ApiError,
     { task: Task; data: CreateStepDto }
   >({
-    mutationFn: ({ task, data }) => stepsService.createStep(task.id, data),
+    mutationFn: ({ task, data }) =>
+      stepsService.createStep(Number(task.id), data),
     onSuccess: (_created, vars) => {
       setNewStepDescription('');
       setShowAddStep(false);
       toast.success(t('taskDetails.stepAdded'));
-      queryClient.invalidateQueries({ queryKey: ['task', vars.task.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['task', Number(vars.task.id)],
+      });
     },
   });
 
@@ -214,7 +226,9 @@ export default function TaskDetailsPage() {
     mutationFn: ({ id }) => stepsService.deleteStep(id),
     onSuccess: (_data, vars) => {
       toast.success(t('taskDetails.stepDeleted'));
-      queryClient.invalidateQueries({ queryKey: ['task', vars.task.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['task', Number(vars.task.id)],
+      });
     },
   });
 
@@ -279,7 +293,7 @@ export default function TaskDetailsPage() {
               checked={task.completed}
               onChange={() =>
                 updateTaskMutation.mutate({
-                  id: task.id,
+                  id: Number(task.id),
                   data: { completed: !task.completed },
                 })
               }
@@ -299,7 +313,7 @@ export default function TaskDetailsPage() {
                       onClick={() => {
                         updateTaskMutation.mutate(
                           {
-                            id: task.id,
+                            id: Number(task.id),
                             data: { description: taskDescriptionDraft.trim() },
                           },
                           { onSuccess: () => setIsEditingTask(false) }
@@ -602,13 +616,13 @@ export default function TaskDetailsPage() {
                         onChange={() =>
                           updateStepMutation.mutate({
                             task: task as Task,
-                            stepId: step.id,
+                            stepId: Number(step.id),
                             data: { completed: !step.completed },
                           })
                         }
                         className="w-5 h-5 rounded text-accent focus:ring-accent/20 border-border-subtle"
                       />
-                      {editingStepId === step.id ? (
+                      {editingStepId === Number(step.id) ? (
                         <input
                           value={stepDescriptionDraft}
                           onChange={(e) =>
@@ -622,7 +636,7 @@ export default function TaskDetailsPage() {
                             ) {
                               updateStepMutation.mutate({
                                 task: task as Task,
-                                stepId: step.id,
+                                stepId: Number(step.id),
                                 data: {
                                   description: stepDescriptionDraft.trim(),
                                 },
@@ -636,7 +650,7 @@ export default function TaskDetailsPage() {
                         <span
                           className={`flex-1 truncate cursor-pointer ${step.completed ? 'text-tertiary line-through' : 'text-primary font-medium'}`}
                           onClick={() => {
-                            setEditingStepId(step.id);
+                            setEditingStepId(Number(step.id));
                             setStepDescriptionDraft(step.description);
                           }}
                         >
@@ -648,7 +662,7 @@ export default function TaskDetailsPage() {
                       onClick={() =>
                         deleteStepMutation.mutate({
                           task: task as Task,
-                          id: step.id,
+                          id: Number(step.id),
                         })
                       }
                       className="opacity-0 group-hover:opacity-100 p-2 text-accent-danger hover:bg-accent-danger/10 rounded-lg transition-all"

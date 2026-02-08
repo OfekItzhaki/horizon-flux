@@ -15,6 +15,35 @@ React Native mobile app built with Expo for managing to-do lists, tasks, and rem
 
 ⚠️ **Notification Testing Note:** Android push notifications are **not supported in Expo Go**. To test notifications on Android, you'll need to build a development build or production build.
 
+## CAPTCHA / Bot Protection
+
+**Current Status:** The mobile app does NOT implement CAPTCHA verification for authentication flows.
+
+**Web App:** The web application uses Cloudflare Turnstile CAPTCHA to protect login, registration, and forgot password endpoints from bot attacks and credential stuffing.
+
+**Mobile Implementation Strategy:**
+
+The backend is configured to allow authentication without CAPTCHA when the `TURNSTILE_SECRET_KEY` environment variable is not set. This allows the mobile app to function without CAPTCHA protection during development.
+
+**Future Implementation Options:**
+
+1. **WebView Integration (Recommended):**
+   - Render Turnstile widget in a WebView component
+   - Use WebView message passing to communicate token to React Native
+   - Provides full Turnstile functionality with additional complexity
+
+2. **Deferred Implementation:**
+   - Continue allowing mobile authentication without CAPTCHA
+   - Backend already supports optional CAPTCHA verification
+   - Implement mobile CAPTCHA in a future iteration
+
+3. **Alternative CAPTCHA Provider:**
+   - Use a different CAPTCHA provider with better React Native support
+   - Maintain Turnstile for web, use alternative for mobile
+   - Backend would need to support multiple verification methods
+
+**Note:** The @marsidev/react-turnstile library is designed for web browsers and has limited React Native support. Cloudflare Turnstile relies on browser APIs that are not available in React Native.
+
 ## Prerequisites
 
 - Node.js (v20.4.0 or higher recommended)

@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -26,6 +25,8 @@ import {
 import { CreateTodoListCommand } from './commands/create-todo-list.command';
 import { UpdateTodoListCommand } from './commands/update-todo-list.command';
 import { RemoveTodoListCommand } from './commands/remove-todo-list.command';
+import { RestoreTodoListCommand } from './commands/restore-todo-list.command';
+import { PermanentDeleteTodoListCommand } from './commands/permanent-delete-todo-list.command';
 import { GetTodoListsQuery } from './queries/get-todo-lists.query';
 import { GetTodoListByIdQuery } from './queries/get-todo-list-by-id.query';
 
@@ -62,10 +63,7 @@ export class TodoListsController {
   @ApiOperation({ summary: 'Get list by ID' })
   @ApiResponse({ status: 200, description: 'Returns list with tasks' })
   @ApiResponse({ status: 404, description: 'List not found' })
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: CurrentUserPayload,
-  ) {
+  findOne(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     return this.queryBus.execute(new GetTodoListByIdQuery(id, user.userId));
   }
 
@@ -74,7 +72,7 @@ export class TodoListsController {
   @ApiResponse({ status: 200, description: 'List updated successfully' })
   @ApiResponse({ status: 404, description: 'List not found' })
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateToDoListDto: UpdateToDoListDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
@@ -87,10 +85,28 @@ export class TodoListsController {
   @ApiOperation({ summary: 'Soft delete list' })
   @ApiResponse({ status: 200, description: 'List deleted successfully' })
   @ApiResponse({ status: 404, description: 'List not found' })
-  remove(
-    @Param('id', ParseIntPipe) id: number,
+  remove(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.commandBus.execute(new RemoveTodoListCommand(id, user.userId));
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({ summary: 'Restore soft-deleted list' })
+  @ApiResponse({ status: 200, description: 'List restored successfully' })
+  @ApiResponse({ status: 404, description: 'List not found' })
+  restore(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.commandBus.execute(new RestoreTodoListCommand(id, user.userId));
+  }
+
+  @Delete(':id/permanent')
+  @ApiOperation({ summary: 'Permanently delete list from trash' })
+  @ApiResponse({ status: 200, description: 'List permanently deleted' })
+  @ApiResponse({ status: 404, description: 'List not found' })
+  permanentDelete(
+    @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.commandBus.execute(new RemoveTodoListCommand(id, user.userId));
+    return this.commandBus.execute(
+      new PermanentDeleteTodoListCommand(id, user.userId),
+    );
   }
 }

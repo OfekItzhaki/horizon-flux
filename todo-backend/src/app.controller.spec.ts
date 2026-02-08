@@ -25,7 +25,7 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return branded HTML', () => {
-      expect(appController.getHello()).toContain('Horizon Tasks API');
+      expect(appController.getHello()).toContain('Horizon Flux API');
     });
   });
 });

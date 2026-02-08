@@ -17,7 +17,7 @@ class AppController {
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Horizon Tasks API | OfekLabs</title>
+          <title>Horizon Flux API | OfekLabs</title>
           <style>
               body {
                   margin: 0;
@@ -103,7 +103,7 @@ class AppController {
       </head>
       <body>
           <div class="container">
-              <h1>Horizon Tasks API</h1>
+              <h1>Horizon Flux API</h1>
               <p>The core engine powering your productivity. Premium task management services by OfekLabs.</p>
               
               <div class="status">

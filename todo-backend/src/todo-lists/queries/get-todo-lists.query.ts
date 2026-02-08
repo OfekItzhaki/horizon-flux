@@ -1,3 +1,3 @@
 export class GetTodoListsQuery {
-  constructor(public readonly userId: number) {}
+  constructor(public readonly userId: string) {}
 }

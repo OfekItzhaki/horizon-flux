@@ -23,6 +23,29 @@ services:
         generateValue: true
       - key: PORT
         value: 3000
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: tasks-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: tasks-redis
+          property: port
+
+  # Redis Service for BullMQ
+  - type: redis
+    name: tasks-redis
+    region: oregon
+    plan: free
+    ipAllowList: [] # Only allow internal connections
 
   # Frontend Web App Service
   - type: web

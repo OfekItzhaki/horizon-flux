@@ -1,6 +1,6 @@
 export class GetTasksByDateQuery {
   constructor(
-    public readonly userId: number,
+    public readonly userId: string,
     public readonly date: Date,
   ) {}
 }

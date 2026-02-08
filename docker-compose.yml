@@ -1,0 +1,42 @@
+services:
+  # Database - PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: horizon-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: horizon_tasks
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - horizon-network
+
+  # Redis - for BullMQ Background Jobs
+  redis:
+    image: redis:7-alpine
+    container_name: horizon-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - horizon-network
+
+  # Seq - for structured logging
+  seq:
+    image: datalust/seq:2024.3
+    container_name: horizon-seq
+    environment:
+      ACCEPT_EULA: Y
+    ports:
+      - "${SEQ_PORT:-5341}:80"
+    networks:
+      - horizon-network
+
+networks:
+  horizon-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

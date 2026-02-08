@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListType } from '@prisma/client';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class TaskSchedulerService implements OnModuleInit {
@@ -17,7 +19,10 @@ export class TaskSchedulerService implements OnModuleInit {
   private lastDbErrorLogAtMs = 0;
   private readonly DB_ERROR_LOG_COOLDOWN_MS = 60_000; // 1 minute
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @InjectQueue('reminders') private remindersQueue: Queue,
+  ) {}
 
   private isSchedulerDisabled(): boolean {
     return process.env.DISABLE_SCHEDULER === 'true';
@@ -75,7 +80,7 @@ export class TaskSchedulerService implements OnModuleInit {
   /**
    * Get or create the system "Finished Tasks" list for a user
    */
-  private async getOrCreateFinishedList(ownerId: number) {
+  private async getOrCreateFinishedList(ownerId: string) {
     // Try to find existing finished list
     let finishedList = await this.prisma.toDoList.findFirst({
       where: {
@@ -149,14 +154,12 @@ export class TaskSchedulerService implements OnModuleInit {
           acc[ownerId].push(task);
           return acc;
         },
-        {} as Record<number, typeof tasksToArchive>,
+        {} as Record<string, typeof tasksToArchive>,
       );
 
       // Move tasks to their owner's Finished list
       for (const [ownerId, tasks] of Object.entries(tasksByOwner)) {
-        const finishedList = await this.getOrCreateFinishedList(
-          Number(ownerId),
-        );
+        const finishedList = await this.getOrCreateFinishedList(ownerId);
 
         // Update each task individually to preserve originalListId
         for (const task of tasks) {
@@ -252,7 +255,7 @@ export class TaskSchedulerService implements OnModuleInit {
     await this.prisma.$executeRaw`
       UPDATE "Task" 
       SET "completionCount" = "completionCount" + 1
-      WHERE "id" = ANY(${taskIds}::int[])
+      WHERE "id" = ANY(${taskIds}::text[])
     `;
 
     // Reset tasks
@@ -463,6 +466,78 @@ export class TaskSchedulerService implements OnModuleInit {
           completed: false,
         },
       });
+    });
+  }
+
+  /**
+   * Runs daily at 1 AM to permanently delete items that have been in the trash for more than 30 days
+   */
+  @Cron('0 1 * * *')
+  async purgeRecycleBin() {
+    await this.runIfDbAvailable('purgeRecycleBin', async () => {
+      const purgeThreshold = new Date();
+      purgeThreshold.setDate(purgeThreshold.getDate() - 30);
+
+      // 1. Purge old soft-deleted tasks
+      const tasksToPurge = await this.prisma.task.findMany({
+        where: {
+          deletedAt: { lte: purgeThreshold },
+        },
+        select: { id: true },
+      });
+
+      if (tasksToPurge.length > 0) {
+        const taskIds = tasksToPurge.map((t) => t.id);
+        // Manual cleanup if no cascade
+        await this.prisma.step.deleteMany({
+          where: { taskId: { in: taskIds } },
+        });
+        await this.prisma.task.deleteMany({
+          where: { id: { in: taskIds } },
+        });
+        this.logger.log(
+          `Purged ${tasksToPurge.length} old tasks from recycle bin`,
+        );
+      }
+
+      // 2. Purge old soft-deleted lists
+      const listsToPurge = await this.prisma.toDoList.findMany({
+        where: {
+          deletedAt: { lte: purgeThreshold },
+        },
+        select: { id: true },
+      });
+
+      if (listsToPurge.length > 0) {
+        for (const list of listsToPurge) {
+          await this.prisma.step.deleteMany({
+            where: { task: { todoListId: list.id } },
+          });
+          await this.prisma.task.deleteMany({
+            where: { todoListId: list.id },
+          });
+          await this.prisma.listShare.deleteMany({
+            where: { toDoListId: list.id },
+          });
+          await this.prisma.toDoList.delete({
+            where: { id: list.id },
+          });
+        }
+        this.logger.log(
+          `Purged ${listsToPurge.length} old lists from recycle bin`,
+        );
+      }
+    });
+  }
+
+  /**
+   * Runs daily at 9 AM to trigger reminder processing for all users
+   */
+  @Cron('0 9 * * *')
+  async triggerReminders() {
+    await this.runIfDbAvailable('triggerReminders', async () => {
+      this.logger.log('Queueing daily reminder processing job');
+      await this.remindersQueue.add('processAllReminders', {});
     });
   }
 }

@@ -5,12 +5,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ShareListDto } from './dto/share-list.dto';
+import { EventsGateway } from '../events/events.gateway';
+import { ShareRole } from '@prisma/client';
 
 @Injectable()
 export class ListSharesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway,
+  ) {}
 
-  private async ensureOwnedList(todoListId: number, ownerId: number) {
+  private async ensureOwnedList(todoListId: string, ownerId: string) {
     const list = await this.prisma.toDoList.findFirst({
       where: {
         id: todoListId,
@@ -27,9 +32,9 @@ export class ListSharesService {
   }
 
   async shareList(
-    todoListId: number,
+    todoListId: string,
     shareListDto: ShareListDto,
-    ownerId: number,
+    ownerId: string,
   ) {
     // Verify list exists and user owns it
     await this.ensureOwnedList(todoListId, ownerId);
@@ -63,10 +68,11 @@ export class ListSharesService {
     }
 
     // Create share
-    return this.prisma.listShare.create({
+    const share = await this.prisma.listShare.create({
       data: {
         sharedWithId: shareListDto.sharedWithId,
         toDoListId: todoListId,
+        role: shareListDto.role ?? ShareRole.EDITOR,
       },
       include: {
         sharedWith: {
@@ -77,12 +83,29 @@ export class ListSharesService {
             profilePicture: true,
           },
         },
-        toDoList: true,
+        toDoList: {
+          include: {
+            tasks: {
+              where: { deletedAt: null },
+              orderBy: { order: 'asc' },
+              include: { steps: { where: { deletedAt: null } } },
+            },
+          },
+        },
       },
     });
+
+    // Notify the shared user
+    this.eventsGateway.sendToUser(
+      shareListDto.sharedWithId,
+      'list_shared',
+      share.toDoList,
+    );
+
+    return share;
   }
 
-  async getSharedLists(userId: number) {
+  async getSharedLists(userId: string) {
     // Get all lists shared with this user
     const shares = await this.prisma.listShare.findMany({
       where: {
@@ -118,7 +141,7 @@ export class ListSharesService {
       .filter((list) => list !== null && list.deletedAt === null);
   }
 
-  async getListShares(todoListId: number, ownerId: number) {
+  async getListShares(todoListId: string, ownerId: string) {
     await this.ensureOwnedList(todoListId, ownerId);
 
     return this.prisma.listShare.findMany({
@@ -138,7 +161,7 @@ export class ListSharesService {
     });
   }
 
-  async unshareList(todoListId: number, userId: number, ownerId: number) {
+  async unshareList(todoListId: string, userId: string, ownerId: string) {
     await this.ensureOwnedList(todoListId, ownerId);
 
     // Verify share exists
@@ -155,10 +178,55 @@ export class ListSharesService {
       throw new NotFoundException('List share not found');
     }
 
-    return this.prisma.listShare.delete({
+    const result = await this.prisma.listShare.delete({
       where: {
         id: share.id,
       },
     });
+
+    // Notify the unshared user
+    this.eventsGateway.sendToUser(userId, 'list_unshared', { id: todoListId });
+
+    return result;
+  }
+
+  async updateShareRole(
+    todoListId: string,
+    userId: string,
+    role: ShareRole,
+    ownerId: string,
+  ) {
+    await this.ensureOwnedList(todoListId, ownerId);
+
+    const share = await this.prisma.listShare.findUnique({
+      where: {
+        sharedWithId_toDoListId: {
+          sharedWithId: userId,
+          toDoListId: todoListId,
+        },
+      },
+    });
+
+    if (!share) {
+      throw new NotFoundException('List share not found');
+    }
+
+    const updated = await this.prisma.listShare.update({
+      where: { id: share.id },
+      data: { role },
+      include: {
+        sharedWith: {
+          select: { id: true, email: true, name: true, profilePicture: true },
+        },
+      },
+    });
+
+    // Notify the shared user about their new role
+    this.eventsGateway.sendToUser(userId, 'share_role_updated', {
+      todoListId,
+      role,
+    });
+
+    return updated;
   }
 }

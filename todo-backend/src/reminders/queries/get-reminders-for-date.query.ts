@@ -1,6 +1,6 @@
 export class GetRemindersForDateQuery {
   constructor(
-    public readonly userId: number,
+    public readonly userId: string,
     public readonly date: Date,
   ) {}
 }

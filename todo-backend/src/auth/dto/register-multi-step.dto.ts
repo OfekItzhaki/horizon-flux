@@ -1,10 +1,24 @@
-import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Length,
+  IsOptional,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterStartDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsEmail()
   email: string;
+
+  @ApiProperty({
+    description: 'Cloudflare Turnstile token',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  captchaToken?: string;
 }
 
 export class RegisterVerifyDto {

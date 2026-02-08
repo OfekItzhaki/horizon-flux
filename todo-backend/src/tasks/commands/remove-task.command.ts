@@ -1,6 +1,6 @@
 export class RemoveTaskCommand {
   constructor(
-    public readonly id: number,
-    public readonly userId: number,
+    public readonly id: string,
+    public readonly userId: string,
   ) {}
 }

@@ -2,10 +2,14 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UpdateStepCommand } from '../update-step.command';
+import { EventsService } from '../../../events/events.service';
 
 @CommandHandler(UpdateStepCommand)
 export class UpdateStepHandler implements ICommandHandler<UpdateStepCommand> {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsService: EventsService,
+  ) {}
 
   async execute(command: UpdateStepCommand) {
     const { stepId, dto, userId } = command;
@@ -31,12 +35,19 @@ export class UpdateStepHandler implements ICommandHandler<UpdateStepCommand> {
       throw new NotFoundException(`Step with ID ${stepId} not found`);
     }
 
-    return this.prisma.step.update({
+    const updatedStep = await this.prisma.step.update({
       where: { id: stepId },
       data: {
         description: dto.description,
         completed: dto.completed,
       },
     });
+
+    await this.eventsService.broadcastStepEvent(step.taskId, 'step_updated', {
+      taskId: step.taskId,
+      step: updatedStep,
+    });
+
+    return updatedStep;
   }
 }

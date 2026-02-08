@@ -6,8 +6,14 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'react-hot-toast';
 import App from './App.tsx';
 import ErrorFallback from './components/ErrorFallback';
+import { registerServiceWorker } from './utils/registerServiceWorker';
 import './i18n';
 import './index.css';
+
+// Register service worker for PWA features
+if (import.meta.env.PROD) {
+  registerServiceWorker();
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +34,12 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <App />
         </BrowserRouter>
       </ErrorBoundary>

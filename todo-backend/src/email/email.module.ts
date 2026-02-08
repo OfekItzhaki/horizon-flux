@@ -1,25 +1,42 @@
 import { Module } from '@nestjs/common';
-import { MailerModule } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { BullModule, getQueueToken } from '@nestjs/bullmq';
+import { Resend } from 'resend';
 import { EmailService } from './email.service';
+import { EmailProcessor } from './email.processor';
 
 @Module({
   imports: [
-    MailerModule.forRoot({
-      transport: {
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      },
-      defaults: {
-        from: `"Tasks Management" <${process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@tasksmanagement.com'}>`,
-      },
-    }),
+    ...(process.env.REDIS_HOST
+      ? [
+          BullModule.registerQueue({
+            name: 'email',
+          }),
+        ]
+      : []),
   ],
-  providers: [EmailService],
+  providers: [
+    EmailService,
+    EmailProcessor,
+    {
+      provide: 'RESEND_CLIENT',
+      useFactory: (config: ConfigService) => {
+        return new Resend(config.get('RESEND_API_KEY'));
+      },
+      inject: [ConfigService],
+    },
+    ...(process.env.REDIS_HOST
+      ? []
+      : [
+          {
+            provide: getQueueToken('email'),
+            useValue: {
+              add: async () => {},
+              process: async () => {},
+            },
+          },
+        ]),
+  ],
   exports: [EmailService],
 })
 export class EmailModule {}

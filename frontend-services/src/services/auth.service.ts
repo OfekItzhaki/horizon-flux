@@ -16,6 +16,15 @@ export class AuthService {
   }
 
   /**
+   * Refresh access token
+   */
+  async refresh(): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/auth/refresh');
+    TokenStorage.setToken(response.accessToken);
+    return response;
+  }
+
+  /**
    * Logout (removes token from storage)
    */
   logout(): void {
@@ -55,8 +64,11 @@ export class AuthService {
   /**
    * Start registration (send OTP)
    */
-  async registerStart(email: string): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/register/start', { email });
+  async registerStart(email: string, captchaToken?: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/register/start', { 
+      email,
+      captchaToken 
+    });
   }
 
   /**
@@ -87,8 +99,47 @@ export class AuthService {
     TokenStorage.setToken(response.accessToken);
     return response;
   }
+
+  /**
+   * Request password reset OTP
+   */
+  async forgotPassword(email: string, captchaToken?: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/forgot-password', {
+      email,
+      captchaToken,
+    });
+  }
+
+  /**
+   * Verify reset OTP
+   */
+  async verifyResetOtp(
+    email: string,
+    otp: string,
+  ): Promise<{ resetToken: string }> {
+    return apiClient.post<{ resetToken: string }>(
+      '/auth/reset-password/verify',
+      {
+        email,
+        otp,
+      },
+    );
+  }
+
+  /**
+   * Finish password reset
+   */
+  async resetPassword(data: {
+    email: string;
+    token: string;
+    password: string;
+    passwordConfirm: string;
+  }): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>(
+      '/auth/reset-password/finish',
+      data,
+    );
+  }
 }
 
 export const authService = new AuthService();
-
-

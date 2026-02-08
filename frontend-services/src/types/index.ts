@@ -36,6 +36,17 @@ export interface UpdateUserDto {
 export interface LoginDto {
   email: string;
   password: string;
+  captchaToken?: string;
+}
+
+export interface RegisterStartDto {
+  email: string;
+  captchaToken?: string;
+}
+
+export interface ForgotPasswordDto {
+  email: string;
+  captchaToken?: string;
 }
 
 export interface LoginResponse {
@@ -51,6 +62,18 @@ export enum ListType {
   YEARLY = 'YEARLY',
   CUSTOM = 'CUSTOM',
   FINISHED = 'FINISHED',
+  TRASH = 'TRASH',
+}
+
+export enum TaskBehavior {
+  RECURRING = 'RECURRING',
+  ONE_OFF = 'ONE_OFF',
+}
+
+export enum CompletionPolicy {
+  AUTO_DELETE = 'AUTO_DELETE',
+  KEEP = 'KEEP',
+  MOVE_TO_DONE = 'MOVE_TO_DONE',
 }
 
 export interface ToDoList {
@@ -59,6 +82,8 @@ export interface ToDoList {
   ownerId: number;
   order: number;
   type: ListType;
+  taskBehavior: TaskBehavior;
+  completionPolicy: CompletionPolicy;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -67,10 +92,14 @@ export interface ToDoList {
 
 export interface CreateToDoListDto {
   name: string;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 export interface UpdateToDoListDto {
   name?: string;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 // Task Types
@@ -80,6 +109,7 @@ export interface Task {
   completed: boolean;
   completedAt: string | null; // When the task was marked complete
   todoListId: number;
+  originalListId?: number | null;
   order: number;
   dueDate: string | null;
   reminderDaysBefore: number[];
@@ -161,6 +191,16 @@ export interface ListShare {
   toDoListId: number;
   sharedWith?: User;
   toDoList?: ToDoList;
+}
+
+export interface TrashResponse {
+  lists: ToDoList[];
+  tasks: Task[];
+}
+
+export interface UpdateProfilePictureResponse {
+  message: string;
+  profilePicture: string;
 }
 
 // API Error Types

@@ -1,3 +1,3 @@
 export class GetTodayRemindersQuery {
-  constructor(public readonly userId: number) {}
+  constructor(public readonly userId: string) {}
 }

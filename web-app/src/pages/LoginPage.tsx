@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -7,6 +7,8 @@ import {
   authService,
 } from '@tasks-management/frontend-services';
 import { useTranslation } from 'react-i18next';
+import TurnstileWidget from '../components/TurnstileWidget';
+import { type TurnstileInstance } from '@marsidev/react-turnstile';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -20,6 +22,11 @@ export default function LoginPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [regStep, setRegStep] = useState(1);
   const [regToken, setRegToken] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetStep, setResetStep] = useState(1);
+  const [resetToken, setResetToken] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const { login } = useAuth();
 
@@ -32,8 +39,22 @@ export default function LoginPage() {
   };
   const navigate = useNavigate();
 
-  /* ... */
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // CAPTCHA handlers
+  const handleCaptchaSuccess = (token: string) => {
+    setCaptchaToken(token);
+    setError(''); // Clear any previous errors
+  };
+
+  const handleCaptchaError = (error: string) => {
+    setError(error);
+    setCaptchaToken('');
+  };
+
+  const handleCaptchaExpire = () => {
+    setCaptchaToken('');
+  };
 
   // Timer effect
   useEffect(() => {
@@ -48,7 +69,7 @@ export default function LoginPage() {
     try {
       setLoading(true);
       await authService.resendVerification(email);
-      setResendCooldown(5); // 5 seconds cooldown
+      setResendCooldown(30); // 30 seconds cooldown
       setError('');
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to resend code'));
@@ -58,16 +79,26 @@ export default function LoginPage() {
   };
 
   const handleLogin = async (e: React.FormEvent) => {
-    /* ... */
     e.preventDefault();
     setError('');
+
+    // Prevent submission if CAPTCHA token is missing when required
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const credentials: LoginDto = { email, password };
+      const credentials: LoginDto = { email, password, captchaToken };
       await login(credentials);
       navigate('/lists');
     } catch (err: unknown) {
+      // Reset turnstile widget on authentication failure
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
       setError(getErrorMessage(err, t('login.failed')));
     } finally {
       setLoading(false);
@@ -77,21 +108,30 @@ export default function LoginPage() {
   const handleRegisterStart = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!email) return setError('Email is required');
+
+    // Prevent submission if CAPTCHA token is missing when required
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      await authService.registerStart(email);
+      await authService.registerStart(email, captchaToken);
       setRegStep(2);
+      setResendCooldown(30);
     } catch (err: unknown) {
+      // Reset turnstile widget on registration failure
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
       setError(getErrorMessage(err, 'Failed to start registration'));
     } finally {
       setLoading(false);
     }
   };
 
-  /* ... inside LoginPage component ... */
-
-  // UPDATED: Accept otpValue directly to avoid race condition
   const handleRegisterVerify = async (
     e?: React.FormEvent,
     otpValue?: string
@@ -113,8 +153,6 @@ export default function LoginPage() {
     }
   };
 
-  /* ... */
-
   const handleRegisterComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== passwordConfirm) return setError('Passwords do not match');
@@ -129,6 +167,77 @@ export default function LoginPage() {
       navigate('/lists');
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Registration failed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordStart = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!email) return setError('Email is required');
+
+    // Prevent submission if CAPTCHA token is missing when required
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await authService.forgotPassword(email, captchaToken);
+      setResetStep(2);
+      setResendCooldown(30);
+    } catch (err: unknown) {
+      // Reset turnstile widget on forgot password failure
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
+      setError(getErrorMessage(err, 'Failed to initiate password reset'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordVerify = async (
+    e?: React.FormEvent,
+    otpValue?: string
+  ) => {
+    e?.preventDefault();
+    const codeToVerify = otpValue || otp;
+    if (!codeToVerify) return setError('OTP is required');
+
+    setLoading(true);
+    setError('');
+    try {
+      const response = await authService.verifyResetOtp(email, codeToVerify);
+      setResetToken(response.resetToken);
+      setResetStep(3);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Invalid OTP'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== passwordConfirm) return setError('Passwords do not match');
+    setLoading(true);
+    setError('');
+    try {
+      await authService.resetPassword({
+        email,
+        token: resetToken,
+        password: password,
+        passwordConfirm: passwordConfirm,
+      });
+
+      // Automatically login after reset
+      await login({ email, password });
+      navigate('/lists');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Password reset failed'));
     } finally {
       setLoading(false);
     }
@@ -161,7 +270,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-sm tracking-tight text-center">
-            Horizon Tasks
+            Horizon Flux
           </h1>
           <p className="mt-3 text-sm font-bold tracking-widest uppercase text-slate-400 dark:text-slate-500 text-center">
             {t('login.title')}
@@ -172,13 +281,19 @@ export default function LoginPage() {
           <form
             className="space-y-6"
             onSubmit={
-              !isRegistering
-                ? handleLogin
-                : regStep === 1
+              isRegistering
+                ? regStep === 1
                   ? handleRegisterStart
                   : regStep === 2
                     ? handleRegisterVerify
                     : handleRegisterComplete
+                : isResettingPassword
+                  ? resetStep === 1
+                    ? handleForgotPasswordStart
+                    : resetStep === 2
+                      ? handleForgotPasswordVerify
+                      : handleForgotPasswordComplete
+                  : handleLogin
             }
           >
             {error && (
@@ -204,6 +319,16 @@ export default function LoginPage() {
                 </div>
               </div>
             )}
+
+            {/* Turnstile CAPTCHA Widget */}
+            <div className="flex justify-center">
+              <TurnstileWidget
+                ref={turnstileRef}
+                onSuccess={handleCaptchaSuccess}
+                onError={handleCaptchaError}
+                onExpire={handleCaptchaExpire}
+              />
+            </div>
 
             <div className="space-y-5">
               {/* Step 1: Email (Login or register start) */}
@@ -320,35 +445,81 @@ export default function LoginPage() {
                       type="button"
                       onClick={handleResendCode}
                       disabled={loading || resendCooldown > 0}
-                      className="text-[10px] font-bold text-slate-400 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest flex items-center gap-2"
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-50"
                     >
-                      {resendCooldown > 0 ? (
-                        <span>Wait {resendCooldown}s</span>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
-                          Resend Code
-                        </>
-                      )}
+                      {resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : 'Resend Code'}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Login or Step 3: Password */}
-              {(!isRegistering || regStep === 3) && (
+              {/* Reset Password: Step 2 OTP */}
+              {isResettingPassword && resetStep === 2 && (
+                <div className="group animate-scale-in">
+                  <label
+                    htmlFor="otp"
+                    className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 ml-1 transition-colors group-focus-within:text-violet-600 dark:group-focus-within:text-violet-400"
+                  >
+                    Reset Code
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="otp"
+                      name="otp"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      required
+                      value={otp}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setOtp(val);
+                        if (val.length === 6) {
+                          void handleForgotPasswordVerify(undefined, val);
+                        }
+                      }}
+                      className="premium-input px-11 tracking-[0.5em] text-center font-bold text-lg"
+                      placeholder="000000"
+                    />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-violet-500 transition-colors">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  {/* Resend Code Button */}
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={loading || resendCooldown > 0}
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all disabled:opacity-50"
+                    >
+                      {resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Login, Registration Step 3, or Reset Step 3: Password */}
+              {((!isRegistering && !isResettingPassword) ||
+                (isRegistering && regStep === 3) ||
+                (isResettingPassword && resetStep === 3)) && (
                 <div className="group">
                   <label
                     htmlFor="password"
@@ -366,7 +537,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="premium-input px-11 pr-24"
-                      placeholder="••••••••"
+                      placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
                     />
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-violet-500 transition-colors">
                       <svg
@@ -453,11 +624,28 @@ export default function LoginPage() {
                       )}
                     </div>
                   </div>
+
+                  {!isRegistering && !isResettingPassword && (
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsResettingPassword(true);
+                          setResetStep(1);
+                          setError('');
+                        }}
+                        className="text-[10px] font-bold text-slate-400 hover:text-violet-600 transition-colors uppercase tracking-widest"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Step 3 only: Confirm Password */}
-              {isRegistering && regStep === 3 && (
+              {/* Registration Step 3 or Reset Step 3 only: Confirm Password */}
+              {((isRegistering && regStep === 3) ||
+                (isResettingPassword && resetStep === 3)) && (
                 <div className="group">
                   <label
                     htmlFor="passwordConfirm"
@@ -474,7 +662,7 @@ export default function LoginPage() {
                       value={passwordConfirm}
                       onChange={(e) => setPasswordConfirm(e.target.value)}
                       className="premium-input px-11 pr-14"
-                      placeholder="••••••••"
+                      placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
                     />
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-violet-500 transition-colors">
                       <svg
@@ -527,15 +715,22 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setIsRegistering(!isRegistering);
-                  setRegStep(1);
+                  if (isResettingPassword) {
+                    setIsResettingPassword(false);
+                    setResetStep(1);
+                  } else {
+                    setIsRegistering(!isRegistering);
+                    setRegStep(1);
+                  }
                   setError('');
                 }}
                 className="text-[11px] font-bold text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all uppercase tracking-[0.2em] py-2 px-4 rounded-xl hover:bg-violet-500/5"
               >
-                {isRegistering
+                {isResettingPassword
                   ? 'Back to Sign In'
-                  : "Don't have an account? Sign Up"}
+                  : isRegistering
+                    ? 'Back to Sign In'
+                    : "Don't have an account? Sign Up"}
               </button>
             </div>
           </form>

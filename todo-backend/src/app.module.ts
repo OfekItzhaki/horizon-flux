@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bullmq';
 import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
+import { PrismaClientExceptionFilter } from './common/filters/prisma-exception.filter';
 import AppService from './app.service';
 import AppController from './app.controller';
 import { UsersModule } from './users/users.module';
@@ -18,6 +20,9 @@ import { MeModule } from './me/me.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { TaskSchedulerModule } from './task-scheduler/task-scheduler.module';
 import { EmailModule } from './email/email.module';
+import { EventsModule } from './events/events.module';
+import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
+import { HealthModule } from './health/health.module';
 
 import { validate } from './config/env.validation';
 
@@ -34,6 +39,17 @@ import { validate } from './config/env.validation';
       { name: 'long', ttl: 60000, limit: 100 },
     ]),
     ScheduleModule.forRoot(),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get('REDIS_HOST'),
+          port: config.get('REDIS_PORT'),
+          password: config.get('REDIS_PASSWORD'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     PrismaModule,
     EmailModule,
     UsersModule,
@@ -45,12 +61,16 @@ import { validate } from './config/env.validation';
     MeModule,
     RemindersModule,
     TaskSchedulerModule,
+    EventsModule,
+    CloudinaryModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    { provide: APP_FILTER, useClass: PrismaClientExceptionFilter },
   ],
 })
 export class AppModule {}

@@ -24,7 +24,9 @@ export function useNotifications() {
     queryFn: async () => {
       // Get all tasks across all lists
       const lists = await listsService.getAllLists();
-      const tasksPromises = lists.map((list) => tasksService.getTasksByList(list.id));
+      const tasksPromises = lists.map((list) =>
+        tasksService.getTasksByList(list.id)
+      );
       const tasksArrays = await Promise.all(tasksPromises);
       return tasksArrays.flat();
     },
@@ -45,8 +47,11 @@ export function useNotifications() {
       try {
         await requestNotificationPermissions();
         if (import.meta.env.DEV && typeof window !== 'undefined') {
-          (window as Window & { __tasksTestNotification?: () => Promise<boolean> }).__tasksTestNotification =
-            triggerTestNotification;
+          (
+            window as Window & {
+              __tasksTestNotification?: () => Promise<boolean>;
+            }
+          ).__tasksTestNotification = triggerTestNotification;
         }
       } catch (error) {
         if (import.meta.env.DEV) {
@@ -67,7 +72,13 @@ export function useNotifications() {
 
     const scheduleReminders = async () => {
       try {
-        await rescheduleAllReminders(allTasks);
+        // Convert all task IDs to numbers for the notification service
+        const tasksWithNumericIds = allTasks.map((task) => ({
+          ...task,
+          id: Number(task.id),
+          todoListId: Number(task.todoListId),
+        }));
+        await rescheduleAllReminders(tasksWithNumericIds);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error('Error rescheduling reminders:', error);

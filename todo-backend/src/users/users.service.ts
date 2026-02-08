@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -34,6 +35,8 @@ type SanitizedUser = Omit<User, 'passwordHash' | 'emailVerificationOtp'>;
 
 @Injectable()
 class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
@@ -53,23 +56,44 @@ class UsersService {
     return rest;
   }
 
-  async findByEmail(email: string) {
-    return this.prisma.user.findFirst({
+  async findByEmail(email: string): Promise<User | null> {
+    try {
+      this.logger.log(`Finding user by email: ${email}`);
+      const user = await this.prisma.user.findFirst({
+        where: {
+          email,
+          deletedAt: null,
+        },
+      });
+      this.logger.log(`User found: ${user ? user.id : 'null'}`);
+      return user;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `Error finding user by email=${email}: ${err.message}`,
+        err.stack,
+      );
+      throw error;
+    }
+  }
+
+  async findById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
       where: {
-        email,
+        id,
         deletedAt: null,
       },
     });
   }
 
-  async getAllUsers(requestingUserId: number): Promise<SanitizedUser[]> {
+  async getAllUsers(requestingUserId: string): Promise<SanitizedUser[]> {
     const user = await this.getUser(requestingUserId, requestingUserId);
     return user ? [user] : [];
   }
 
   async getUser(
-    id: number,
-    requestingUserId: number,
+    id: string,
+    requestingUserId: string,
   ): Promise<Omit<UserWithRelations, 'passwordHash' | 'emailVerificationOtp'>> {
     if (id !== requestingUserId) {
       throw new ForbiddenException('You can only access your own profile');
@@ -136,7 +160,7 @@ class UsersService {
     return result;
   }
 
-  private async createDefaultLists(userId: number) {
+  private async createDefaultLists(userId: string) {
     const defaultLists: Array<{
       name: string;
       type: ListType;
@@ -215,7 +239,53 @@ class UsersService {
     await this.emailService.sendVerificationEmail(email, otp, name);
   }
 
-  async setPassword(userId: number, passwordHash: string): Promise<User> {
+  async generatePasswordResetOtp(email: string) {
+    const user = await this.findByEmail(email);
+    if (!user) {
+      // Don't leak user existence? Actually for personal apps it's usually fine,
+      // but let's be professional and throw 404 if we want, or just return success either way.
+      // For this spec, we'll throw 404 to be clear.
+      throw new NotFoundException('User not found');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetOtp: otp,
+        passwordResetExpiresAt: expiresAt,
+      },
+    });
+
+    console.log(`[DEV] Password Reset OTP for ${email}: ${otp}`);
+    // Reuse verification email template for now or add a new one if needed
+    await this.emailService.sendVerificationEmail(
+      email,
+      otp,
+      user.name || undefined,
+    );
+
+    return { message: 'Password reset OTP sent' };
+  }
+
+  async verifyPasswordResetOtp(email: string, otp: string) {
+    const user = await this.findByEmail(email);
+    if (!user || user.passwordResetOtp !== otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    const now = new Date();
+    if (user.passwordResetExpiresAt && user.passwordResetExpiresAt < now) {
+      throw new BadRequestException('OTP expired');
+    }
+
+    return user;
+  }
+
+  async setPassword(userId: string, passwordHash: string): Promise<User> {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -358,9 +428,9 @@ class UsersService {
   }
 
   async updateUser(
-    id: number,
+    id: string,
     data: UpdateUserDto,
-    requestingUserId: number,
+    requestingUserId: string,
   ): Promise<SanitizedUser> {
     await this.getUser(id, requestingUserId); // This will throw if user doesn't exist or unauthorized
 
@@ -389,8 +459,8 @@ class UsersService {
   }
 
   async deleteUser(
-    id: number,
-    requestingUserId: number,
+    id: string,
+    requestingUserId: string,
   ): Promise<SanitizedUser> {
     await this.getUser(id, requestingUserId); // This will throw if user doesn't exist
 

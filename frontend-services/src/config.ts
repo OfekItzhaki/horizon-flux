@@ -1,5 +1,15 @@
+let internalBaseUrl: string | null = null;
+let internalTurnstileSiteKey: string | null = null;
+
+export const configure = (config: { baseURL?: string; turnstileSiteKey?: string }) => {
+  if (config.baseURL) internalBaseUrl = config.baseURL;
+  if (config.turnstileSiteKey) internalTurnstileSiteKey = config.turnstileSiteKey;
+};
+
 // Get API base URL - works in both Node.js and browser environments
 const getApiBaseUrl = (): string => {
+  if (internalBaseUrl) return internalBaseUrl;
+
   let url = '';
 
   // Check for Vite environment variables (import.meta.env is injected at build time)
@@ -28,12 +38,20 @@ const getApiBaseUrl = (): string => {
   // We check for /api/v1, /api/v1/, etc.
   const hasPrefix = url.toLowerCase().includes('/api/v1');
 
-  if (!hasPrefix) {
+  if (!hasPrefix && url) {
     return `${url}/api/v1`;
   }
 
   return url;
 };
+
+export const getTurnstileSiteKey = (): string | null => {
+  if (internalTurnstileSiteKey) return internalTurnstileSiteKey;
+  if (typeof window !== 'undefined') {
+    return (window as any).__VITE_TURNSTILE_SITE_KEY__ || null;
+  }
+  return null;
+}
 
 export const API_CONFIG = {
   get baseURL() {

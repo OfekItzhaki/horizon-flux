@@ -110,11 +110,12 @@ export class AuthController {
   }
 
   private setRefreshTokenCookie(response: Response, token: string) {
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
     response.cookie('refresh_token', token, {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'strict',
-      path: '/api/v1/auth/refresh', // Only send to refresh endpoint
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax', // Use lax in dev for better cross-port support
+      path: '/api/v1/auth/refresh',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
   }

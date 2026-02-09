@@ -16,7 +16,7 @@ export async function getSocket(): Promise<Socket> {
   }
 
   // Get API URL from environment or default
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const apiUrl = import.meta.env.VITE_API_URL || '';
 
   // Get auth token from localStorage
   const token = localStorage.getItem('accessToken');

@@ -59,7 +59,7 @@ export class EmailProcessor extends WorkerHost {
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Horizon Flux <noreply@ofeklabs.dev>',
+        from: 'onboarding@resend.dev',
         replyTo: 'horizon-flux@ofeklabs.dev',
         to: email,
         subject: title,
@@ -119,7 +119,7 @@ export class EmailProcessor extends WorkerHost {
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Horizon Flux <noreply@ofeklabs.dev>',
+        from: 'onboarding@resend.dev',
         replyTo: 'horizon-flux@ofeklabs.dev>',
         to: email,
         subject: 'Welcome to Horizon Flux',

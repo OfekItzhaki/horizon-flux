@@ -36,7 +36,9 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_CONFIG = {
-  baseURL: getApiBaseUrl(),
+  get baseURL() {
+    return getApiBaseUrl();
+  },
   timeout: 30000, // 30 seconds
 };
 

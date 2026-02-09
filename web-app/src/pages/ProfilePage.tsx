@@ -27,8 +27,8 @@ export default function ProfilePage() {
       const updatedUser = await usersService.uploadAvatar(user.id, file);
       setUser(updatedUser);
       // No need to call refreshUser anymore as we updated state locally
-    } catch (error) {
-      console.error('Failed to upload avatar:', error);
+    } catch {
+      // console.error('Failed to upload avatar:', error);
       alert('Failed to upload profile picture');
     } finally {
       setIsUploadingAvatar(false);
@@ -47,8 +47,8 @@ export default function ProfilePage() {
         notificationFrequency: frequency,
       });
       setUser(updatedUser);
-    } catch (error) {
-      console.error('Failed to update notification frequency:', error);
+    } catch {
+      // console.error('Failed to update notification frequency:', error);
       // Revert on error
       setUser({ ...user, notificationFrequency: previousFrequency });
       alert('Failed to update notification frequency. Please try again.');

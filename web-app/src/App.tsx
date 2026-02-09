@@ -36,7 +36,6 @@ function App() {
             <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="trash" element={<TasksPage isTrashView />} />
           </Route>
         </Routes>
       </AuthProvider>

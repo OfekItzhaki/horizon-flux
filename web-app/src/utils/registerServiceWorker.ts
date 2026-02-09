@@ -16,10 +16,10 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       scope: '/',
     });
 
-    console.log(
-      '[SW] Service worker registered successfully:',
-      registration.scope
-    );
+    // console.log(
+    //   '[SW] Service worker registered successfully:',
+    //   registration.scope
+    // );
 
     // Check for updates on page load
     registration.update();
@@ -50,8 +50,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     });
 
     return registration;
-  } catch (error) {
-    console.error('[SW] Service worker registration failed:', error);
+  } catch {
+    // console.error('[SW] Service worker registration failed:', error);
     return null;
   }
 }
@@ -120,8 +120,8 @@ export async function subscribeToPushNotifications(
     }
 
     return subscription;
-  } catch (error) {
-    console.error('[Push] Failed to subscribe to push notifications:', error);
+  } catch {
+    // console.error('[Push] Failed to subscribe to push notifications:', error);
     return null;
   }
 }
@@ -140,8 +140,8 @@ export async function unsubscribeFromPushNotifications(
       return true;
     }
     return false;
-  } catch (error) {
-    console.error('[Push] Failed to unsubscribe:', error);
+  } catch {
+    // console.error('[Push] Failed to unsubscribe:', error);
     return false;
   }
 }

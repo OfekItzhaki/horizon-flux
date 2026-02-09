@@ -12,6 +12,7 @@ export default {
       auto: 'Auto',
     },
     trash: 'Trash',
+    allLists: 'My Lists',
   },
   languageNames: {
     en: 'English',
@@ -57,6 +58,7 @@ export default {
     createFab: 'Create new list',
     loadFailed: 'Failed to load lists',
     createFailed: 'Failed to create list',
+    done: 'Done',
     form: {
       nameLabel: 'Name',
       typeLabel: 'Type',
@@ -157,6 +159,13 @@ export default {
     openRepo: 'Open repo',
     proAccount: 'Pro Account',
     profilePicture: 'Profile Picture',
+    trashRetention: {
+      title: 'Trash Retention',
+      description: 'Choose how long items stay in the trash before being deleted forever.',
+      days: '{{count}} days',
+      updateSuccess: 'Trash retention updated',
+      updateFailed: 'Failed to update trash retention',
+    },
   },
   footer: {
     allRightsReserved: 'All rights reserved.',
@@ -187,6 +196,24 @@ export default {
     retryLists: 'Retry Loading Lists',
     retryTasks: 'Retry Loading Tasks',
     insightsDescription: 'Insights and statistics',
+  },
+  sharing: {
+    title: 'Share List',
+    shareWith: 'Share with',
+    emailPlaceholder: 'Enter user email...',
+    role: 'Role',
+    roles: {
+      VIEWER: 'Viewer',
+      EDITOR: 'Editor',
+    },
+    shareButton: 'Share',
+    sharedWith: 'Shared with',
+    noShares: 'Not shared with anyone yet',
+    unshare: 'Unshare',
+    shareFailed: 'Failed to share list',
+    unshareFailed: 'Failed to unshare list',
+    unshareConfirm: 'Stop sharing with {{email}}?',
+    alreadyShared: 'This list is already shared with this user',
   },
 } as const;
 

@@ -55,6 +55,23 @@ export default function ProfilePage() {
     }
   };
 
+  const handleTrashRetentionChange = async (days: number) => {
+    if (!user) return;
+
+    const previousDays = user.trashRetentionDays;
+    setUser({ ...user, trashRetentionDays: days });
+
+    try {
+      const updatedUser = await usersService.update(user.id, {
+        trashRetentionDays: days,
+      });
+      setUser(updatedUser);
+    } catch {
+      setUser({ ...user, trashRetentionDays: previousDays });
+      alert('Failed to update trash retention. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -243,6 +260,35 @@ export default function ProfilePage() {
                 <p className="text-xs text-tertiary">
                   Choose how often you want to receive email updates about your
                   tasks.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
+                  {t('profile.trashRetention', {
+                    defaultValue: 'Trash Retention (Days)',
+                  })}
+                </label>
+                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+                  {[7, 14, 30, 60, 90].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => handleTrashRetentionChange(days)}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                        user?.trashRetentionDays === days
+                          ? 'bg-accent text-white shadow-lg'
+                          : 'bg-hover text-secondary hover:bg-hover/80'
+                      }`}
+                    >
+                      {days} {t('common.days', { defaultValue: 'days' })}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-tertiary">
+                  {t('profile.trashRetentionDesc', {
+                    defaultValue:
+                      'Items in trash will be permanently deleted after this many days.',
+                  })}
                 </p>
               </div>
 

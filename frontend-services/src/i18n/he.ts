@@ -12,6 +12,7 @@ export default {
       auto: 'אוטומטי',
     },
     trash: 'סל מיחזור',
+    allLists: 'הרשימות שלי',
   },
   languageNames: {
     en: 'English',
@@ -58,6 +59,7 @@ export default {
     createFab: 'צור רשימה חדשה',
     loadFailed: 'טעינת הרשימות נכשלה',
     createFailed: 'יצירת הרשימה נכשלה',
+    done: 'הושלמו',
     form: {
       nameLabel: 'שם',
       typeLabel: 'סוג',
@@ -167,6 +169,13 @@ export default {
     openRepo: 'פתח מאגר',
     proAccount: 'חשבון Pro',
     profilePicture: 'תמונת פרופיל',
+    trashRetention: {
+      title: 'שמירת פריטים בסל המיחזור',
+      description: 'בחר כמה זמן פריטים יישארו בסל המיחזור לפני שיימחקו לצמיתות.',
+      days: '{{count}} ימים',
+      updateSuccess: 'הגדרת שמירת הפריטים עודכנה',
+      updateFailed: 'עדכון הגדרת שמירת הפריטים נכשל',
+    },
   },
   footer: {
     allRightsReserved: 'כל הזכויות שמורות.',
@@ -197,5 +206,23 @@ export default {
     retryLists: 'נסה שוב טעינת רשימות',
     retryTasks: 'נסה שוב טעינת משימות',
     insightsDescription: 'תובנות וסטטיסטיקות',
+  },
+  sharing: {
+    title: 'שיתוף רשימה',
+    shareWith: 'שתף עם',
+    emailPlaceholder: 'הזן אימייל של המשתמש...',
+    role: 'תפקיד',
+    roles: {
+      VIEWER: 'צופה',
+      EDITOR: 'עורך',
+    },
+    shareButton: 'שתף',
+    sharedWith: 'משותף עם',
+    noShares: 'הרשימה לא משותפת עם אף אחד עדיין',
+    unshare: 'בטל שיתוף',
+    shareFailed: 'שיתוף הרשימה נכשל',
+    unshareFailed: 'ביטול השיתוף נכשל',
+    unshareConfirm: 'להפסיק לשתף עם {{email}}?',
+    alreadyShared: 'הרשימה כבר משותפת עם משתמש זה',
   },
 } as const;

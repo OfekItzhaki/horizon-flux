@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useCallback } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { getTurnstileSiteKey } from '@tasks-management/frontend-services';
 
@@ -38,8 +38,30 @@ const TurnstileWidget = forwardRef<TurnstileInstance, TurnstileWidgetProps>(
   ({ onSuccess, onError, onExpire }, ref) => {
     const siteKey = getTurnstileSiteKey();
 
+    // Memoize handlers to prevent Turnstile component from resetting on parent re-renders
+    const handleSuccess = useCallback(
+      (token: string) => {
+        console.log('[Turnstile] Token generated successfully');
+        onSuccess(token);
+      },
+      [onSuccess]
+    );
+
+    const handleError = useCallback(() => {
+      console.error('[Turnstile] Verification error');
+      if (onError) {
+        onError('CAPTCHA verification failed. Please try again.');
+      }
+    }, [onError]);
+
+    const handleExpire = useCallback(() => {
+      console.warn('[Turnstile] Token expired');
+      if (onExpire) onExpire();
+    }, [onExpire]);
+
     // If site key is not configured, display an error message
     if (!siteKey) {
+      // ... (error message div remains the same)
       return (
         <div className="rounded-md bg-red-50 p-4 border border-red-200">
           <div className="flex">
@@ -73,12 +95,6 @@ const TurnstileWidget = forwardRef<TurnstileInstance, TurnstileWidgetProps>(
       );
     }
 
-    // For debugging: log the site key being used (first 6 chars)
-    console.log(
-      '[Turnstile] Initializing with siteKey:',
-      siteKey?.substring(0, 10) + '...'
-    );
-
     return (
       <Turnstile
         ref={ref}
@@ -86,25 +102,14 @@ const TurnstileWidget = forwardRef<TurnstileInstance, TurnstileWidgetProps>(
         options={{
           theme: 'auto',
           size: 'normal',
-          appearance: 'always', // Force visibility for debugging
+          appearance: 'always',
         }}
         scriptOptions={{
           appendTo: 'head',
         }}
-        onSuccess={(token) => {
-          console.log('[Turnstile] Token generated successfully');
-          onSuccess(token);
-        }}
-        onError={() => {
-          console.error('[Turnstile] Verification error');
-          if (onError) {
-            onError('CAPTCHA verification failed. Please try again.');
-          }
-        }}
-        onExpire={() => {
-          console.warn('[Turnstile] Token expired');
-          if (onExpire) onExpire();
-        }}
+        onSuccess={handleSuccess}
+        onError={handleError}
+        onExpire={handleExpire}
       />
     );
   }

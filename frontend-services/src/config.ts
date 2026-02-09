@@ -16,6 +16,15 @@ const getApiBaseUrl = (): string => {
       const win = window as any;
       if (win.__VITE_API_URL__) {
         url = win.__VITE_API_URL__;
+      } else {
+        // FAIL-SAFE FALLBACK: Detect production domain
+        const hostname = window.location.hostname;
+        if (
+          hostname === 'horizon-flux.ofeklabs.dev' ||
+          hostname.includes('vercel.app')
+        ) {
+          url = 'https://api.horizon-flux.ofeklabs.dev';
+        }
       }
     }
     // In Node.js/SSR, check process.env
@@ -35,7 +44,6 @@ const getApiBaseUrl = (): string => {
   url = url.replace(/\/$/, '');
 
   // CRITICAL: Ensure /api/v1 prefix is present for ALL environments.
-  // We check for /api/v1, /api/v1/, etc.
   const hasPrefix = url.toLowerCase().includes('/api/v1');
 
   if (!hasPrefix) {

@@ -12,14 +12,6 @@ import './index.css';
 
 // Inject Vite environment variables into window for frontend-services
 if (typeof window !== 'undefined') {
-  // Debug: Log what Vite has at build time
-  console.log('Vite env at build time:', {
-    VITE_API_URL: import.meta.env.VITE_API_URL,
-    MODE: import.meta.env.MODE,
-    PROD: import.meta.env.PROD,
-    DEV: import.meta.env.DEV,
-  });
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__VITE_API_URL__ = import.meta.env.VITE_API_URL;
 }

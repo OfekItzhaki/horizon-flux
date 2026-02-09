@@ -2,7 +2,11 @@ let internalBaseUrl: string | null = null;
 let internalTurnstileSiteKey: string | null = null;
 
 export const configure = (config: { baseURL?: string; turnstileSiteKey?: string }) => {
-  if (config.baseURL) internalBaseUrl = config.baseURL;
+  if (config.baseURL) {
+    internalBaseUrl = config.baseURL;
+    // Update the exported config object so immediate consumers get the new value
+    API_CONFIG.baseURL = config.baseURL;
+  }
   if (config.turnstileSiteKey) internalTurnstileSiteKey = config.turnstileSiteKey;
 };
 
@@ -30,7 +34,7 @@ const getApiBaseUrl = (): string => {
       hostname.includes('onrender.com');
 
     if (isProdDomain && url.includes('localhost')) {
-      url = 'https://tasks-api.ofeklabs.dev';
+      url = 'https://api.horizon-flux.ofeklabs.dev';
     }
   }
 

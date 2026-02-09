@@ -1,6 +1,6 @@
 // Get API base URL - works in both Node.js and browser environments
 const getApiBaseUrl = (): string => {
-  let url = 'http://localhost:3000';
+  let url = '';
 
   // Check for Vite environment variables (import.meta.env is injected at build time)
   if (typeof window !== 'undefined') {

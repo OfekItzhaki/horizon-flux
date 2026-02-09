@@ -369,19 +369,28 @@ export default function LoginPage() {
                       </svg>
                     </div>
 
-                    {isRegistering && regStep === 1 && (
+                    {((isRegistering && regStep === 1) ||
+                      (isResettingPassword && resetStep === 1)) && (
                       <div className="absolute inset-y-0 right-2 flex items-center">
                         <button
                           type="button"
-                          onClick={handleRegisterStart}
+                          onClick={
+                            isRegistering
+                              ? handleRegisterStart
+                              : handleForgotPasswordStart
+                          }
                           disabled={loading || !email.includes('@')}
-                          aria-label="Verify Email"
+                          aria-label={
+                            isRegistering ? 'Verify Email' : 'Reset Password'
+                          }
                           className="px-4 py-1.5 bg-accent hover:bg-accent/90 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-accent/20 transition-all disabled:opacity-50 disabled:grayscale active:scale-95"
                         >
                           {loading ? (
                             <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          ) : (
+                          ) : isRegistering ? (
                             'Verify'
+                          ) : (
+                            'Reset'
                           )}
                         </button>
                       </div>
@@ -538,7 +547,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="premium-input px-11 pr-24"
-                      placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+                      placeholder="••••••••"
                     />
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-violet-500 transition-colors">
                       <svg
@@ -663,7 +672,7 @@ export default function LoginPage() {
                       value={passwordConfirm}
                       onChange={(e) => setPasswordConfirm(e.target.value)}
                       className="premium-input px-11 pr-14"
-                      placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+                      placeholder="••••••••"
                     />
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-violet-500 transition-colors">
                       <svg

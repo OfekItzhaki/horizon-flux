@@ -8,27 +8,27 @@ export const configure = (config: { baseURL?: string; turnstileSiteKey?: string 
 
 // Get API base URL - works in both Node.js and browser environments
 const getApiBaseUrl = (): string => {
-  if (internalBaseUrl) return internalBaseUrl;
+  let url = internalBaseUrl || '';
 
-  let url = '';
-
-  // Check for Vite environment variables (import.meta.env is injected at build time)
-  if (typeof window !== 'undefined') {
-    const win = window as any;
-    if (win.__VITE_API_URL__) {
-      url = win.__VITE_API_URL__;
+  if (!url) {
+    // Check for Vite environment variables (import.meta.env is injected at build time)
+    if (typeof window !== 'undefined') {
+      const win = window as any;
+      if (win.__VITE_API_URL__) {
+        url = win.__VITE_API_URL__;
+      }
     }
-  }
-  // In Node.js/SSR, check process.env
-  else if (typeof process !== 'undefined' && (process as any).env) {
-    const env = (process as any).env;
-    const vUrl = env['VITE_API_URL'];
-    const aUrl = env['API_BASE_URL'];
-    const eUrl = env['EXPO_PUBLIC_API_URL'];
+    // In Node.js/SSR, check process.env
+    else if (typeof process !== 'undefined' && (process as any).env) {
+      const env = (process as any).env;
+      const vUrl = env['VITE_API_URL'];
+      const aUrl = env['API_BASE_URL'];
+      const eUrl = env['EXPO_PUBLIC_API_URL'];
 
-    if (vUrl && vUrl.trim().length > 0) url = vUrl;
-    else if (aUrl && aUrl.trim().length > 0) url = aUrl;
-    else if (eUrl && eUrl.trim().length > 0) url = eUrl;
+      if (vUrl && vUrl.trim().length > 0) url = vUrl;
+      else if (aUrl && aUrl.trim().length > 0) url = aUrl;
+      else if (eUrl && eUrl.trim().length > 0) url = eUrl;
+    }
   }
 
   // Cleanup: Remove trailing slash
@@ -38,7 +38,7 @@ const getApiBaseUrl = (): string => {
   // We check for /api/v1, /api/v1/, etc.
   const hasPrefix = url.toLowerCase().includes('/api/v1');
 
-  if (!hasPrefix && url) {
+  if (!hasPrefix) {
     return `${url}/api/v1`;
   }
 

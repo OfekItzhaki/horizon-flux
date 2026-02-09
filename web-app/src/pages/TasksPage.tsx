@@ -77,7 +77,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
 
   //
 
-  // Support both numeric IDs and UUID strings
+  // Use string IDs (UUIDs)
   const effectiveListId = isTrashView ? trashListId : listId;
 
   const { data: list } = useQuery<ListWithSystemFlag, ApiError>({
@@ -87,7 +87,9 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       const cachedLists = queryClient.getQueryData<ListWithSystemFlag[]>([
         'lists',
       ]);
-      return cachedLists?.find((l) => l.id === effectiveListId);
+      return cachedLists?.find(
+        (l) => (l.id as string) === (effectiveListId as string)
+      );
     },
     queryFn: () => listsService.getListById(effectiveListId!),
   });
@@ -214,7 +216,9 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
 
       if (previousLists) {
         queryClient.setQueryData<ListWithSystemFlag[]>(['lists'], (old = []) =>
-          old.map((l) => (l.id === id ? { ...l, ...data } : l))
+          old.map((l) =>
+            (l.id as string) === (id as string) ? { ...l, ...data } : l
+          )
         );
       }
 
@@ -251,7 +255,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
         'lists',
       ]);
       queryClient.setQueryData<ListWithSystemFlag[]>(['lists'], (old = []) =>
-        old.filter((l) => l.id !== id)
+        old.filter((l) => (l.id as string) !== (id as string))
       );
       return { previousLists };
     },
@@ -292,11 +296,11 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       const now = new Date().toISOString();
       const tempId = `temp-${Date.now()}`; // Generate temp ID
       const optimistic: Task = {
-        id: tempId,
+        id: tempId as string,
         description: data.description,
         completed: false,
         completedAt: null,
-        todoListId: effectiveListId!,
+        todoListId: effectiveListId as string,
         order: Date.now(),
         dueDate: null,
         reminderDaysBefore: [],
@@ -329,7 +333,9 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
           ['tasks', effectiveListId],
           (old = []) => {
             // Remove any temporary tasks (negative IDs) and add the real task
-            const withoutTemp = old.filter((task) => task.id !== ctx.tempId);
+            const withoutTemp = old.filter(
+              (task) => (task.id as string) !== (ctx.tempId as string)
+            );
             return [newTask, ...withoutTemp];
           }
         );
@@ -339,7 +345,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       if (ctx?.tempId && pendingActions.current[ctx.tempId]) {
         const actions = pendingActions.current[ctx.tempId];
         // Execute all queued actions with the REAL ID
-        actions.forEach((action) => action(newTask.id));
+        actions.forEach((action) => action(newTask.id as string));
         // Cleanup
         delete pendingActions.current[ctx.tempId];
       }
@@ -390,7 +396,9 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
               }
               // Otherwise update in place
               return old.map((t) =>
-                t.id === id ? { ...t, ...data, updatedAt: now } : t
+                (t.id as string) === (id as string)
+                  ? { ...t, ...data, updatedAt: now }
+                  : t
               );
             }
           );
@@ -979,7 +987,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                               }
                               onDelete={() =>
                                 handleOptimisticAction(task.id, (id) =>
-                                  deleteTaskMutation.mutate({ id })
+                                  deleteTaskMutation.mutate(id)
                                 )
                               }
                               onRestore={() =>
@@ -1042,7 +1050,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                               }
                               onDelete={() =>
                                 handleOptimisticAction(task.id, (id) =>
-                                  deleteTaskMutation.mutate({ id })
+                                  deleteTaskMutation.mutate(id)
                                 )
                               }
                               onRestore={() =>

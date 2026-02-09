@@ -186,6 +186,7 @@ export default {
     loadTasksFailed: 'Failed to load tasks',
     retryLists: 'Retry Loading Lists',
     retryTasks: 'Retry Loading Tasks',
+    insightsDescription: 'Insights and statistics',
   },
 } as const;
 

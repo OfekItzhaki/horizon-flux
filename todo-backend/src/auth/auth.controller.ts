@@ -52,20 +52,19 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    if (loginDto.captchaToken) {
-      await this.authService.verifyTurnstile(loginDto.captchaToken);
-    } else if (process.env.TURNSTILE_SECRET_KEY) {
-      throw new BadRequestException('CAPTCHA token required');
-    }
+    const [userValidationResult] = await Promise.all([
+      this.authService.login(loginDto.email, loginDto.password),
+      loginDto.captchaToken
+        ? this.authService.verifyTurnstile(loginDto.captchaToken)
+        : process.env.TURNSTILE_SECRET_KEY
+          ? Promise.reject(new BadRequestException('CAPTCHA token required'))
+          : Promise.resolve(),
+    ]);
 
-    const result = await this.authService.login(
-      loginDto.email,
-      loginDto.password,
-    );
-    this.setRefreshTokenCookie(response, result.refreshToken);
+    this.setRefreshTokenCookie(response, userValidationResult.refreshToken);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { refreshToken, ...rest } = result;
+    const { refreshToken, ...rest } = userValidationResult;
     return rest;
   }
 
@@ -147,13 +146,16 @@ export class AuthController {
   @ApiOperation({ summary: 'Start registration by sending OTP' })
   @ApiResponse({ status: 201, description: 'OTP sent successfully' })
   async registerStart(@Body() dto: RegisterStartDto) {
-    if (dto.captchaToken) {
-      await this.authService.verifyTurnstile(dto.captchaToken);
-    } else if (process.env.TURNSTILE_SECRET_KEY) {
-      throw new BadRequestException('CAPTCHA token required');
-    }
+    const [result] = await Promise.all([
+      this.authService.registerStart(dto.email),
+      dto.captchaToken
+        ? this.authService.verifyTurnstile(dto.captchaToken)
+        : process.env.TURNSTILE_SECRET_KEY
+          ? Promise.reject(new BadRequestException('CAPTCHA token required'))
+          : Promise.resolve(),
+    ]);
 
-    return this.authService.registerStart(dto.email);
+    return result;
   }
 
   @Post('register/verify')
@@ -190,13 +192,16 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'OTP sent if user exists' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     // Verify CAPTCHA if token provided or if secret key is configured
-    if (dto.captchaToken) {
-      await this.authService.verifyTurnstile(dto.captchaToken);
-    } else if (process.env.TURNSTILE_SECRET_KEY) {
-      throw new BadRequestException('CAPTCHA token required');
-    }
+    const [result] = await Promise.all([
+      this.authService.forgotPassword(dto.email),
+      dto.captchaToken
+        ? this.authService.verifyTurnstile(dto.captchaToken)
+        : process.env.TURNSTILE_SECRET_KEY
+          ? Promise.reject(new BadRequestException('CAPTCHA token required'))
+          : Promise.resolve(),
+    ]);
 
-    return this.authService.forgotPassword(dto.email);
+    return result;
   }
 
   @Post('reset-password/verify')

@@ -111,12 +111,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
   const restoreTaskMutation = useMutation<Task, ApiError, string>({
     mutationFn: (id) => tasksService.restoreTask(id),
     onSuccess: () => {
-      toast.success(t('tasks.restored'));
-      if (effectiveListId) {
-        void queryClient.invalidateQueries({
-          queryKey: ['tasks', effectiveListId],
-        });
-      }
+      // Shhh... be silent for better UX
     },
     onError: (err) => {
       toast.error(formatApiError(err, t('tasks.restoreFailed')));
@@ -373,9 +368,9 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       const previousTask = queryClient.getQueryData<Task>(['task', id]);
       const currentList = effectiveListId
         ? queryClient.getQueryData<ListWithSystemFlag>([
-            'list',
-            effectiveListId,
-          ])
+          'list',
+          effectiveListId,
+        ])
         : undefined;
 
       const now = new Date().toISOString();
@@ -919,215 +914,215 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
             {/* Grouping Logic for Trash and Done Lists */}
             {isTrashView || isFinishedList
               ? Object.entries(
-                  sortedTasks.reduce(
-                    (groups, task) => {
-                      // For Done list, group by originalListId. for Trash, group by todoListId
-                      const sourceListId = isFinishedList
-                        ? task.originalListId || 'unknown'
-                        : task.todoListId;
+                sortedTasks.reduce(
+                  (groups, task) => {
+                    // For Done list, group by originalListId. for Trash, group by todoListId
+                    const sourceListId = isFinishedList
+                      ? task.originalListId || 'unknown'
+                      : task.todoListId;
 
-                      const listName =
-                        allLists.find((l) => l.id === sourceListId)?.name ||
-                        t('tasks.unknownList', {
-                          defaultValue: 'Unknown List',
-                        });
+                    const listName =
+                      allLists.find((l) => l.id === sourceListId)?.name ||
+                      t('tasks.unknownList', {
+                        defaultValue: 'Unknown List',
+                      });
 
-                      if (!groups[listName]) {
-                        groups[listName] = { oneOff: [], recurring: [] };
-                      }
+                    if (!groups[listName]) {
+                      groups[listName] = { oneOff: [], recurring: [] };
+                    }
 
-                      // Get the source list to check task behavior
-                      const sourceList = allLists.find(
-                        (l) => l.id === sourceListId
-                      );
-                      const isRecurring =
-                        sourceList?.taskBehavior === 'RECURRING';
+                    // Get the source list to check task behavior
+                    const sourceList = allLists.find(
+                      (l) => l.id === sourceListId
+                    );
+                    const isRecurring =
+                      sourceList?.taskBehavior === 'RECURRING';
 
-                      if (isRecurring) {
-                        groups[listName].recurring.push(task);
-                      } else {
-                        groups[listName].oneOff.push(task);
-                      }
-                      return groups;
-                    },
-                    {} as Record<string, { oneOff: Task[]; recurring: Task[] }>
-                  )
-                ).map(([listName, groupTasks]) => (
-                  <div key={listName} className="mb-8 animate-slide-up">
-                    <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 px-1">
-                      {listName}
-                    </h3>
+                    if (isRecurring) {
+                      groups[listName].recurring.push(task);
+                    } else {
+                      groups[listName].oneOff.push(task);
+                    }
+                    return groups;
+                  },
+                  {} as Record<string, { oneOff: Task[]; recurring: Task[] }>
+                )
+              ).map(([listName, groupTasks]) => (
+                <div key={listName} className="mb-8 animate-slide-up">
+                  <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 px-1">
+                    {listName}
+                  </h3>
 
-                    {/* One-off Tasks Section */}
-                    {groupTasks.oneOff.length > 0 && (
-                      <div className="mb-6">
-                        <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 px-1 opacity-70">
-                          {t('tasks.oneOffTasks')}
-                        </h4>
-                        <div className="space-y-2">
-                          {groupTasks.oneOff.map((task) => (
-                            <SortableTaskItem
-                              key={task.id}
-                              task={task}
-                              isBulkMode={isBulkMode}
-                              isSelected={selectedTasks.has(task.id)}
-                              isFinishedList={isFinishedList}
-                              isRtl={isRtl}
-                              isOptimistic={task.id.startsWith('temp-')}
-                              onToggleSelect={() =>
-                                toggleTaskSelection(task.id)
-                              }
-                              onToggleComplete={() =>
-                                handleOptimisticAction(task.id, (id) =>
-                                  updateTaskMutation.mutate({
-                                    id,
-                                    data: { completed: !task.completed },
+                  {/* One-off Tasks Section */}
+                  {groupTasks.oneOff.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 px-1 opacity-70">
+                        {t('tasks.oneOffTasks')}
+                      </h4>
+                      <div className="space-y-2">
+                        {groupTasks.oneOff.map((task) => (
+                          <SortableTaskItem
+                            key={task.id}
+                            task={task}
+                            isBulkMode={isBulkMode}
+                            isSelected={selectedTasks.has(task.id)}
+                            isFinishedList={isFinishedList}
+                            isRtl={isRtl}
+                            isOptimistic={task.id.startsWith('temp-')}
+                            onToggleSelect={() =>
+                              toggleTaskSelection(task.id)
+                            }
+                            onToggleComplete={() =>
+                              handleOptimisticAction(task.id, (id) =>
+                                updateTaskMutation.mutate({
+                                  id,
+                                  data: { completed: !task.completed },
+                                })
+                              )
+                            }
+                            onDelete={() =>
+                              handleOptimisticAction(task.id, (id) =>
+                                deleteTaskMutation.mutate(id)
+                              )
+                            }
+                            onRestore={() =>
+                              handleOptimisticAction(task.id, (id) =>
+                                restoreTaskMutation.mutate(id)
+                              )
+                            }
+                            onPermanentDelete={() => {
+                              if (
+                                window.confirm(
+                                  t('tasks.deleteForeverConfirm', {
+                                    description: task.description,
                                   })
                                 )
-                              }
-                              onDelete={() =>
+                              ) {
                                 handleOptimisticAction(task.id, (id) =>
-                                  deleteTaskMutation.mutate(id)
-                                )
+                                  permanentDeleteTaskMutation.mutate(id)
+                                );
                               }
-                              onRestore={() =>
-                                handleOptimisticAction(task.id, (id) =>
-                                  restoreTaskMutation.mutate(id)
-                                )
+                            }}
+                            onClick={() => {
+                              // Prevent navigation for optimistic tasks
+                              if (task.id.startsWith('temp-')) {
+                                return;
                               }
-                              onPermanentDelete={() => {
-                                if (
-                                  window.confirm(
-                                    t('tasks.deleteForeverConfirm', {
-                                      description: task.description,
-                                    })
-                                  )
-                                ) {
-                                  handleOptimisticAction(task.id, (id) =>
-                                    permanentDeleteTaskMutation.mutate(id)
-                                  );
-                                }
-                              }}
-                              onClick={() => {
-                                // Prevent navigation for optimistic tasks
-                                if (task.id.startsWith('temp-')) {
-                                  return;
-                                }
-                                navigate(`/tasks/${task.id}`);
-                              }}
-                            />
-                          ))}
-                        </div>
+                              navigate(`/tasks/${task.id}`);
+                            }}
+                          />
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Recurring Tasks Section */}
-                    {groupTasks.recurring.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 px-1 opacity-70">
-                          {t('tasks.recurringTasks')}
-                        </h4>
-                        <div className="space-y-2">
-                          {groupTasks.recurring.map((task) => (
-                            <SortableTaskItem
-                              key={task.id}
-                              task={task}
-                              isBulkMode={isBulkMode}
-                              isSelected={selectedTasks.has(task.id)}
-                              isFinishedList={isFinishedList}
-                              isRtl={isRtl}
-                              isOptimistic={task.id.startsWith('temp-')}
-                              onToggleSelect={() =>
-                                toggleTaskSelection(task.id)
-                              }
-                              onToggleComplete={() =>
-                                handleOptimisticAction(task.id, (id) =>
-                                  updateTaskMutation.mutate({
-                                    id,
-                                    data: { completed: !task.completed },
+                  {/* Recurring Tasks Section */}
+                  {groupTasks.recurring.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 px-1 opacity-70">
+                        {t('tasks.recurringTasks')}
+                      </h4>
+                      <div className="space-y-2">
+                        {groupTasks.recurring.map((task) => (
+                          <SortableTaskItem
+                            key={task.id}
+                            task={task}
+                            isBulkMode={isBulkMode}
+                            isSelected={selectedTasks.has(task.id)}
+                            isFinishedList={isFinishedList}
+                            isRtl={isRtl}
+                            isOptimistic={task.id.startsWith('temp-')}
+                            onToggleSelect={() =>
+                              toggleTaskSelection(task.id)
+                            }
+                            onToggleComplete={() =>
+                              handleOptimisticAction(task.id, (id) =>
+                                updateTaskMutation.mutate({
+                                  id,
+                                  data: { completed: !task.completed },
+                                })
+                              )
+                            }
+                            onDelete={() =>
+                              handleOptimisticAction(task.id, (id) =>
+                                deleteTaskMutation.mutate(id)
+                              )
+                            }
+                            onRestore={() =>
+                              handleOptimisticAction(task.id, (id) =>
+                                restoreTaskMutation.mutate(id)
+                              )
+                            }
+                            onPermanentDelete={() => {
+                              if (
+                                window.confirm(
+                                  t('tasks.deleteForeverConfirm', {
+                                    description: task.description,
                                   })
                                 )
-                              }
-                              onDelete={() =>
+                              ) {
                                 handleOptimisticAction(task.id, (id) =>
-                                  deleteTaskMutation.mutate(id)
-                                )
+                                  permanentDeleteTaskMutation.mutate(id)
+                                );
                               }
-                              onRestore={() =>
-                                handleOptimisticAction(task.id, (id) =>
-                                  restoreTaskMutation.mutate(id)
-                                )
+                            }}
+                            onClick={() => {
+                              // Prevent navigation for optimistic tasks
+                              if (task.id.startsWith('temp-')) {
+                                return;
                               }
-                              onPermanentDelete={() => {
-                                if (
-                                  window.confirm(
-                                    t('tasks.deleteForeverConfirm', {
-                                      description: task.description,
-                                    })
-                                  )
-                                ) {
-                                  handleOptimisticAction(task.id, (id) =>
-                                    permanentDeleteTaskMutation.mutate(id)
-                                  );
-                                }
-                              }}
-                              onClick={() => {
-                                // Prevent navigation for optimistic tasks
-                                if (task.id.startsWith('temp-')) {
-                                  return;
-                                }
-                                navigate(`/tasks/${task.id}`);
-                              }}
-                            />
-                          ))}
-                        </div>
+                              navigate(`/tasks/${task.id}`);
+                            }}
+                          />
+                        ))}
                       </div>
-                    )}
-                  </div>
-                ))
+                    </div>
+                  )}
+                </div>
+              ))
               : // Standard View (No Grouping)
-                sortedTasks.map((task) => (
-                  <SortableTaskItem
-                    key={task.id}
-                    task={task}
-                    isBulkMode={isBulkMode}
-                    isSelected={selectedTasks.has(task.id)}
-                    isFinishedList={isFinishedList}
-                    isRtl={isRtl}
-                    isOptimistic={task.id.startsWith('temp-')}
-                    onToggleSelect={() => toggleTaskSelection(task.id)}
-                    onToggleComplete={() =>
-                      handleOptimisticAction(task.id, (id) =>
-                        updateTaskMutation.mutate({
-                          id,
-                          data: { completed: !task.completed },
+              sortedTasks.map((task) => (
+                <SortableTaskItem
+                  key={task.id}
+                  task={task}
+                  isBulkMode={isBulkMode}
+                  isSelected={selectedTasks.has(task.id)}
+                  isFinishedList={isFinishedList}
+                  isRtl={isRtl}
+                  isOptimistic={task.id.startsWith('temp-')}
+                  onToggleSelect={() => toggleTaskSelection(task.id)}
+                  onToggleComplete={() =>
+                    handleOptimisticAction(task.id, (id) =>
+                      updateTaskMutation.mutate({
+                        id,
+                        data: { completed: !task.completed },
+                      })
+                    )
+                  }
+                  onDelete={() =>
+                    handleOptimisticAction(task.id, (id) =>
+                      deleteTaskMutation.mutate(id)
+                    )
+                  }
+                  onRestore={() =>
+                    handleOptimisticAction(task.id, (id) =>
+                      restoreTaskMutation.mutate(id)
+                    )
+                  }
+                  onPermanentDelete={() => {
+                    if (
+                      window.confirm(
+                        t('tasks.deleteForeverConfirm', {
+                          description: task.description,
                         })
                       )
+                    ) {
+                      permanentDeleteTaskMutation.mutate(task.id);
                     }
-                    onDelete={() =>
-                      handleOptimisticAction(task.id, (id) =>
-                        deleteTaskMutation.mutate(id)
-                      )
-                    }
-                    onRestore={() =>
-                      handleOptimisticAction(task.id, (id) =>
-                        restoreTaskMutation.mutate(id)
-                      )
-                    }
-                    onPermanentDelete={() => {
-                      if (
-                        window.confirm(
-                          t('tasks.deleteForeverConfirm', {
-                            description: task.description,
-                          })
-                        )
-                      ) {
-                        permanentDeleteTaskMutation.mutate(task.id);
-                      }
-                    }}
-                    onClick={() => navigate(`/tasks/${task.id}`)}
-                  />
-                ))}
+                  }}
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                />
+              ))}
           </SortableContext>
         </div>
       </DndContext>
@@ -1157,8 +1152,8 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
           <p className="mt-2 text-secondary">
             {isTrashView
               ? t('tasks.trashDescription', {
-                  defaultValue: 'Tasks you delete will appear here.',
-                })
+                defaultValue: 'Tasks you delete will appear here.',
+              })
               : t('tasks.form.descriptionPlaceholder')}
           </p>
         </div>

@@ -84,7 +84,7 @@ export default function ReminderEditor({
   }, [debouncedLocation]);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
     document.addEventListener('keydown', handleEscape);

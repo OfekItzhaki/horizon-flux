@@ -14,7 +14,6 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { createHash } from 'crypto';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface JwtPayload {
   sub: string;
   email: string;
@@ -31,7 +30,7 @@ export class AuthService {
     private readonly todoListsService: TodoListsService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async validateUser(email: string, password: string) {
     this.logger.debug(`Validating user: ${email}`);
@@ -116,7 +115,7 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(token, {
         secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
-      }) as JwtPayload;
+      }) as any;
 
       if (!payload.sub || !payload.jti) {
         throw new UnauthorizedException('Invalid payload structure');

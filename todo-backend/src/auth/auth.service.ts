@@ -3,12 +3,15 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import UsersService from '../users/users.service';
+import { TodoListsService } from '../todo-lists/todo-lists.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 interface JwtPayload {
   sub: string;
@@ -23,29 +26,44 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly todoListsService: TodoListsService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (!user || !user.passwordHash) {
-      this.logger.debug(`Login failed: no user or hash for email=${email}`);
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    this.logger.debug(`Validating user: ${email}`);
+    try {
+      const user = await this.usersService.findByEmail(email);
+      if (!user) {
+        this.logger.error(`Login failed: user not found for email=${email}`);
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      if (!user.passwordHash) {
+        this.logger.error(`Login failed: no password hash for user=${user.id}`);
+        throw new UnauthorizedException('Invalid credentials');
+      }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isValid) {
-      this.logger.debug(`Login failed: invalid password for userId=${user.id}`);
-      throw new UnauthorizedException('Invalid credentials');
-    }
+      const isValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isValid) {
+        this.logger.error(
+          `Login failed: invalid password for userId=${user.id}`,
+        );
+        throw new UnauthorizedException('Invalid credentials');
+      }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash: _passwordHash, ...safeUser } = user;
-    return safeUser;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash: _passwordHash, ...safeUser } = user;
+      return safeUser;
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
+      this.logger.error(`Error in validateUser: ${error}`);
+      throw error;
+    }
   }
 
   async login(email: string, password: string) {
+    this.logger.debug(`Attempting login for ${email}`);
     const user = await this.validateUser(email, password);
     return this.createAuthSession(user);
   }
@@ -218,6 +236,9 @@ export class AuthService {
         passwordHash,
       );
 
+      // Seed default lists for the new user
+      await this.todoListsService.seedDefaultLists(user.id);
+
       return this.login(user.email, password);
     } catch (e: unknown) {
       if (e instanceof BadRequestException) throw e;
@@ -273,6 +294,43 @@ export class AuthService {
       const err = e instanceof Error ? e : new Error(String(e));
       this.logger.error('Password reset failed:', err.stack);
       throw new BadRequestException('Invalid or expired reset token');
+    }
+  }
+
+  async verifyTurnstile(token: string) {
+    const secretKey = process.env.TURNSTILE_SECRET_KEY;
+    if (!secretKey) {
+      this.logger.warn('TURNSTILE_SECRET_KEY not set. Skipping verification.');
+      return;
+    }
+
+    try {
+      // Cloudflare Turnstile verification requires x-www-form-urlencoded or multipart/form-data
+      const params = new URLSearchParams();
+      params.append('secret', secretKey);
+      params.append('response', token);
+
+      const response = await axios.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        params.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      );
+
+      const data = response.data as { success: boolean };
+      if (!data.success) {
+        this.logger.warn(
+          `Turnstile verification failed: ${JSON.stringify(data)}`,
+        );
+        throw new ForbiddenException('CAPTCHA verification failed');
+      }
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
+      this.logger.error('Error verifying Turnstile token', error);
+      throw new ForbiddenException('CAPTCHA verification failed');
     }
   }
 }

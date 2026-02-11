@@ -6,7 +6,7 @@ export enum NotificationFrequency {
 }
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   name: string | null;
   profilePicture: string | null;
@@ -36,6 +36,17 @@ export interface UpdateUserDto {
 export interface LoginDto {
   email: string;
   password: string;
+  captchaToken?: string;
+}
+
+export interface RegisterStartDto {
+  email: string;
+  captchaToken?: string;
+}
+
+export interface ForgotPasswordDto {
+  email: string;
+  captchaToken?: string;
 }
 
 export interface LoginResponse {
@@ -51,14 +62,28 @@ export enum ListType {
   YEARLY = 'YEARLY',
   CUSTOM = 'CUSTOM',
   FINISHED = 'FINISHED',
+  TRASH = 'TRASH',
+}
+
+export enum TaskBehavior {
+  RECURRING = 'RECURRING',
+  ONE_OFF = 'ONE_OFF',
+}
+
+export enum CompletionPolicy {
+  AUTO_DELETE = 'AUTO_DELETE',
+  KEEP = 'KEEP',
+  MOVE_TO_DONE = 'MOVE_TO_DONE',
 }
 
 export interface ToDoList {
-  id: number;
+  id: string;
   name: string;
-  ownerId: number;
+  ownerId: string;
   order: number;
   type: ListType;
+  taskBehavior: TaskBehavior;
+  completionPolicy: CompletionPolicy;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -67,19 +92,24 @@ export interface ToDoList {
 
 export interface CreateToDoListDto {
   name: string;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 export interface UpdateToDoListDto {
   name?: string;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 // Task Types
 export interface Task {
-  id: number;
+  id: string;
   description: string;
   completed: boolean;
   completedAt: string | null; // When the task was marked complete
-  todoListId: number;
+  todoListId: string;
+  originalListId?: string | null;
   order: number;
   dueDate: string | null;
   reminderDaysBefore: number[];
@@ -109,14 +139,15 @@ export interface UpdateTaskDto {
   reminderConfig?: unknown; // JSON field for storing reminder configurations
   completed?: boolean;
   order?: number;
+  todoListId?: string;
 }
 
 // Step Types
 export interface Step {
-  id: number;
+  id: string;
   description: string;
   completed: boolean;
-  taskId: number;
+  taskId: string;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -134,12 +165,12 @@ export interface UpdateStepDto {
 }
 
 export interface ReorderStepsDto {
-  stepIds: number[];
+  stepIds: string[];
 }
 
 // Reminder Types
 export interface ReminderNotification {
-  taskId: number;
+  taskId: string;
   taskDescription: string;
   dueDate: string | null;
   reminderDate: string;
@@ -152,13 +183,13 @@ export interface ReminderNotification {
 
 // List Sharing Types
 export interface ShareListDto {
-  sharedWithId: number;
+  sharedWithId: string;
 }
 
 export interface ListShare {
-  id: number;
-  sharedWithId: number;
-  toDoListId: number;
+  id: string;
+  sharedWithId: string;
+  toDoListId: string;
   sharedWith?: User;
   toDoList?: ToDoList;
 }

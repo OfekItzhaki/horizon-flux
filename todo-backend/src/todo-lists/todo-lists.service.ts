@@ -13,7 +13,11 @@ export class TodoListsService {
   constructor(
     private prisma: PrismaService,
     private taskAccess: TaskAccessHelper,
+<<<<<<< HEAD
   ) { }
+=======
+  ) {}
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 
   async create(createToDoListDto: CreateToDoListDto, ownerId: string) {
     const list = await this.prisma.toDoList.create({
@@ -21,13 +25,142 @@ export class TodoListsService {
         name: createToDoListDto.name,
         type: ListType.CUSTOM,
         ownerId,
+        taskBehavior: createToDoListDto.taskBehavior ?? 'ONE_OFF',
+        completionPolicy: createToDoListDto.completionPolicy ?? 'KEEP',
       },
     });
     this.logger.log(`List created: listId=${list.id} userId=${ownerId}`);
     return list;
   }
 
+<<<<<<< HEAD
   async findAll(ownerId: string) {
+=======
+  async seedDefaultLists(userId: string) {
+    const defaultLists: {
+      name: string;
+      type: ListType;
+      taskBehavior: 'RECURRING' | 'ONE_OFF';
+      completionPolicy: 'KEEP' | 'AUTO_DELETE' | 'MOVE_TO_DONE';
+      isSystem?: boolean;
+    }[] = [
+      {
+        name: 'Daily Tasks',
+        type: ListType.DAILY,
+        taskBehavior: 'RECURRING',
+        completionPolicy: 'KEEP',
+      },
+      {
+        name: 'Weekly Tasks',
+        type: ListType.WEEKLY,
+        taskBehavior: 'RECURRING',
+        completionPolicy: 'KEEP',
+      },
+      {
+        name: 'Monthly Tasks',
+        type: ListType.MONTHLY,
+        taskBehavior: 'RECURRING',
+        completionPolicy: 'KEEP',
+      },
+      {
+        name: 'Yearly Tasks',
+        type: ListType.YEARLY,
+        taskBehavior: 'RECURRING',
+        completionPolicy: 'KEEP',
+      },
+      {
+        name: 'Hot Tasks',
+        type: ListType.CUSTOM,
+        taskBehavior: 'ONE_OFF',
+        completionPolicy: 'MOVE_TO_DONE',
+      },
+      {
+        name: 'Done',
+        type: ListType.FINISHED,
+        taskBehavior: 'ONE_OFF',
+        completionPolicy: 'KEEP',
+        isSystem: true,
+      },
+      {
+        name: 'Trash',
+        type: ListType.TRASH,
+        taskBehavior: 'ONE_OFF',
+        completionPolicy: 'KEEP',
+        isSystem: true,
+      },
+    ];
+
+    for (const dl of defaultLists) {
+      const list = await this.prisma.toDoList.create({
+        data: {
+          name: dl.name,
+          type: dl.type,
+          ownerId: userId,
+          taskBehavior: dl.taskBehavior,
+          completionPolicy: dl.completionPolicy,
+          isSystem: dl.isSystem || false,
+        },
+      });
+
+      // Add 4 default tasks to each list except Trash
+      if (dl.type !== ListType.TRASH) {
+        for (let i = 1; i <= 4; i++) {
+          await this.prisma.task.create({
+            data: {
+              description: `Example ${dl.name} Task ${i}`,
+              todoListId: list.id,
+              order: i,
+            },
+          });
+        }
+      }
+    }
+    this.logger.log(`Default lists seeded for userId=${userId}`);
+  }
+
+  async findAll(ownerId: string) {
+    // Lazy Seeding: Ensure system lists exist for this user
+    const systemLists = await this.prisma.toDoList.findMany({
+      where: {
+        ownerId,
+        type: { in: [ListType.TRASH, ListType.FINISHED] },
+        deletedAt: null,
+      },
+    });
+
+    const hasTrash = systemLists.some((l) => l.type === ListType.TRASH);
+    const hasDone = systemLists.some((l) => l.type === ListType.FINISHED);
+
+    if (!hasTrash || !hasDone) {
+      if (!hasTrash) {
+        await this.prisma.toDoList.create({
+          data: {
+            name: 'Trash', // Localize? Backend usually English or key
+            type: ListType.TRASH,
+            ownerId,
+            taskBehavior: 'ONE_OFF',
+            completionPolicy: 'KEEP',
+            isSystem: true,
+          },
+        });
+        this.logger.log(`Lazy seeded Trash list for userId=${ownerId}`);
+      }
+      if (!hasDone) {
+        await this.prisma.toDoList.create({
+          data: {
+            name: 'Done',
+            type: ListType.FINISHED,
+            ownerId,
+            taskBehavior: 'ONE_OFF',
+            completionPolicy: 'KEEP',
+            isSystem: true,
+          },
+        });
+        this.logger.log(`Lazy seeded Done list for userId=${ownerId}`);
+      }
+    }
+
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     return this.prisma.toDoList.findMany({
       where: {
         deletedAt: null,
@@ -91,6 +224,12 @@ export class TodoListsService {
       where: { id },
       data: {
         name: updateToDoListDto.name ?? list.name,
+<<<<<<< HEAD
+=======
+        taskBehavior: updateToDoListDto.taskBehavior ?? list.taskBehavior,
+        completionPolicy:
+          updateToDoListDto.completionPolicy ?? list.completionPolicy,
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
       },
     });
     this.logger.log(`List updated: listId=${id} userId=${userId}`);

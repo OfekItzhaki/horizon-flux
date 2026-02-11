@@ -3,15 +3,23 @@ import userEvent from '@testing-library/user-event';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { render } from '../test/utils';
 import LoginPage from './LoginPage';
-import { server } from '../test/mocks/server';
-import { http, HttpResponse } from 'msw';
 
 describe('LoginPage (integration)', () => {
   it('shows validation error for invalid email', async () => {
     const user = userEvent.setup();
     render(<LoginPage />);
+
+    // Wait for the CAPTCHA widget to be rendered
+    await waitFor(() => {
+      expect(screen.getByTestId('turnstile-widget')).toBeInTheDocument();
+    });
+
     const emailInput = screen.getByPlaceholderText(/name@example.com/i);
+<<<<<<< HEAD
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
+=======
+    const passwordInput = screen.getByLabelText(/password/i);
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     const form = screen.getByLabelText(/sign in/i).closest('form');
     await user.type(emailInput, 'invalid');
     await user.type(passwordInput, 'x');
@@ -23,8 +31,18 @@ describe('LoginPage (integration)', () => {
   it('submits login successfully (no error shown)', async () => {
     const user = userEvent.setup();
     render(<LoginPage />);
+
+    // Wait for the CAPTCHA widget to be rendered and token to be set
+    await waitFor(() => {
+      expect(screen.getByTestId('turnstile-widget')).toBeInTheDocument();
+    });
+
     const emailInput = screen.getByPlaceholderText(/name@example.com/i);
+<<<<<<< HEAD
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
+=======
+    const passwordInput = screen.getByLabelText(/password/i);
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     const submit = screen.getByLabelText(/sign in/i);
     await user.type(emailInput, 'test@example.com');
     await user.type(passwordInput, 'password123');
@@ -37,27 +55,35 @@ describe('LoginPage (integration)', () => {
   });
 
   it('shows error when login fails', async () => {
-    server.use(
-      http.post('*/auth/login', () => {
-        return HttpResponse.json(
-          { message: 'Invalid credentials' },
-          { status: 401 }
-        );
-      })
-    );
-
     const user = userEvent.setup();
     render(<LoginPage />);
+
+    // Wait for the CAPTCHA widget to be rendered
+    await waitFor(() => {
+      expect(screen.getByTestId('turnstile-widget')).toBeInTheDocument();
+    });
+
     const emailInput = screen.getByPlaceholderText(/name@example.com/i);
+<<<<<<< HEAD
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
+=======
+    const passwordInput = screen.getByLabelText(/password/i);
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     const submit = screen.getByLabelText(/sign in/i);
 
     await user.type(emailInput, 'fail@example.com');
     await user.type(passwordInput, 'password123');
+
+    // Wait a moment for the mock widget to set the token
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     await user.click(submit);
 
-    await waitFor(() => {
-      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "web-app",
-  "version": "1.2.0",
+  "version": "1.3.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@marsidev/react-turnstile": "^1.4.2",
     "@tanstack/react-query": "^5.90.16",
     "@tasks-management/frontend-services": "file:../frontend-services",
     "i18next": "^25.7.4",

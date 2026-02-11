@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useQueuedMutation } from './useQueuedMutation';
 import { stepsService } from '../services/steps.service';
-import { Task, Step, CreateStepDto, UpdateStepDto, ApiError } from '@tasks-management/frontend-services';
+import {
+  Task,
+  Step,
+  CreateStepDto,
+  UpdateStepDto,
+  ApiError,
+} from '@tasks-management/frontend-services';
 import { handleApiError } from '../utils/errorHandler';
 import { invalidateTaskQueries } from '../utils/taskCache';
 import toast from 'react-hot-toast';
@@ -13,7 +19,7 @@ export function useStepManagement(task: Task | undefined | null) {
   const queryClient = useQueryClient();
   const [showAddStep, setShowAddStep] = useState(false);
   const [newStepDescription, setNewStepDescription] = useState('');
-  const [editingStepId, setEditingStepId] = useState<number | null>(null);
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [stepDescriptionDraft, setStepDescriptionDraft] = useState('');
 
   const invalidateTask = (taskItem: Task) => {
@@ -23,12 +29,15 @@ export function useStepManagement(task: Task | undefined | null) {
   const updateStepMutation = useQueuedMutation<
     Step,
     ApiError,
-    { task: Task; stepId: number; data: UpdateStepDto },
+    { task: Task; stepId: string; data: UpdateStepDto },
     { previousTask?: Task; previousTasks?: Task[] }
   >({
     mutationFn: ({ stepId, data }) => stepsService.updateStep(stepId, data),
     onMutate: async (vars) => {
-      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
+      const previousTask = queryClient.getQueryData<Task>([
+        'task',
+        vars.task.id,
+      ]);
       const previousTasks = queryClient.getQueryData<Task[]>([
         'tasks',
         vars.task.todoListId,
@@ -37,17 +46,22 @@ export function useStepManagement(task: Task | undefined | null) {
       const patchTaskSteps = (t: Task): Task => ({
         ...t,
         steps: (t.steps ?? []).map((s) =>
-          s.id === vars.stepId ? { ...s, ...vars.data } : s,
+          s.id === vars.stepId ? { ...s, ...vars.data } : s
         ),
         updatedAt: new Date().toISOString(),
       });
 
       if (previousTask) {
-        queryClient.setQueryData<Task>(['task', vars.task.id], patchTaskSteps(previousTask));
+        queryClient.setQueryData<Task>(
+          ['task', vars.task.id],
+          patchTaskSteps(previousTask)
+        );
       }
 
-      queryClient.setQueryData<Task[]>(['tasks', vars.task.todoListId], (old = []) =>
-        old.map((t) => (t.id === vars.task.id ? patchTaskSteps(t) : t)),
+      queryClient.setQueryData<Task[]>(
+        ['tasks', vars.task.todoListId],
+        (old = []) =>
+          old.map((t) => (t.id === vars.task.id ? patchTaskSteps(t) : t))
       );
 
       return { previousTask, previousTasks };
@@ -57,9 +71,17 @@ export function useStepManagement(task: Task | undefined | null) {
         queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
       }
       if (ctx?.previousTasks) {
-        queryClient.setQueryData(['tasks', vars.task.todoListId], ctx.previousTasks);
+        queryClient.setQueryData(
+          ['tasks', vars.task.todoListId],
+          ctx.previousTasks
+        );
       }
-      handleApiError(err, t('taskDetails.updateStepFailed', { defaultValue: 'Failed to update step. Please try again.' }));
+      handleApiError(
+        err,
+        t('taskDetails.updateStepFailed', {
+          defaultValue: 'Failed to update step. Please try again.',
+        })
+      );
     },
     onSettled: (_data, _err, vars) => {
       invalidateTask(vars.task);
@@ -74,10 +96,13 @@ export function useStepManagement(task: Task | undefined | null) {
   >({
     mutationFn: ({ task, data }) => stepsService.createStep(task.id, data),
     onMutate: async (vars) => {
-      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
+      const previousTask = queryClient.getQueryData<Task>([
+        'task',
+        vars.task.id,
+      ]);
 
       const now = new Date().toISOString();
-      const tempId = -Date.now();
+      const tempId = `temp-${Date.now()}`;
       const optimistic: Step = {
         id: tempId,
         description: vars.data.description,
@@ -103,13 +128,20 @@ export function useStepManagement(task: Task | undefined | null) {
       if (ctx?.previousTask) {
         queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
       }
-      handleApiError(err, t('taskDetails.addStepFailed', { defaultValue: 'Failed to add step. Please try again.' }));
+      handleApiError(
+        err,
+        t('taskDetails.addStepFailed', {
+          defaultValue: 'Failed to add step. Please try again.',
+        })
+      );
     },
     onSuccess: (_created, vars) => {
       setNewStepDescription('');
       setShowAddStep(false);
       toast.success(t('taskDetails.stepAdded'));
-      queryClient.invalidateQueries({ queryKey: ['tasks', vars.task.todoListId] });
+      queryClient.invalidateQueries({
+        queryKey: ['tasks', vars.task.todoListId],
+      });
     },
     onSettled: (_data, _err, vars) => {
       invalidateTask(vars.task);
@@ -119,12 +151,15 @@ export function useStepManagement(task: Task | undefined | null) {
   const deleteStepMutation = useQueuedMutation<
     Step,
     ApiError,
-    { task: Task; id: number },
+    { task: Task; id: string },
     { previousTask?: Task }
   >({
     mutationFn: ({ id }) => stepsService.deleteStep(id),
     onMutate: async (vars) => {
-      const previousTask = queryClient.getQueryData<Task>(['task', vars.task.id]);
+      const previousTask = queryClient.getQueryData<Task>([
+        'task',
+        vars.task.id,
+      ]);
 
       if (previousTask) {
         queryClient.setQueryData<Task>(['task', vars.task.id], {
@@ -140,7 +175,12 @@ export function useStepManagement(task: Task | undefined | null) {
       if (ctx?.previousTask) {
         queryClient.setQueryData(['task', vars.task.id], ctx.previousTask);
       }
-      handleApiError(err, t('taskDetails.deleteStepFailed', { defaultValue: 'Failed to delete step. Please try again.' }));
+      handleApiError(
+        err,
+        t('taskDetails.deleteStepFailed', {
+          defaultValue: 'Failed to delete step. Please try again.',
+        })
+      );
     },
     onSuccess: () => {
       toast.success(t('taskDetails.stepDeleted'));
@@ -178,14 +218,14 @@ export function useStepManagement(task: Task | undefined | null) {
           setEditingStepId(null);
           setStepDescriptionDraft('');
         },
-      },
+      }
     );
   };
 
   const handleDeleteStep = (step: Step) => {
     if (!task) return;
     const ok = window.confirm(
-      t('taskDetails.deleteStepConfirm', { description: step.description }),
+      t('taskDetails.deleteStepConfirm', { description: step.description })
     );
     if (!ok) return;
     deleteStepMutation.mutate({ task, id: step.id });

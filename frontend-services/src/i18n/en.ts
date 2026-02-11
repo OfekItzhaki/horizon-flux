@@ -11,6 +11,7 @@ export default {
       dark: 'Dark',
       auto: 'Auto',
     },
+    trash: 'Trash',
   },
   languageNames: {
     en: 'English',
@@ -61,6 +62,12 @@ export default {
       typeLabel: 'Type',
       namePlaceholder: 'e.g. Groceries',
       tip: 'Tip: system “Finished” list is managed automatically.',
+      behaviorLabel: 'Task Behavior',
+      behaviorRecurring: 'Recurring',
+      behaviorOneOff: 'One-off',
+      policyLabel: 'Completion Policy',
+      policyKeep: 'Keep tasks',
+      policyDelete: 'Delete forever',
     },
   },
   tasks: {
@@ -83,6 +90,9 @@ export default {
     selectMultiple: 'Select Multiple',
     deleteSelected: 'Delete',
     deleteSelectedConfirm: 'Delete {{count}} task{{plural}}?',
+    unknownList: 'Unknown List',
+    oneOffTasks: 'One-off Tasks',
+    recurringTasks: 'Recurring Tasks',
     form: {
       descriptionLabel: 'Description',
       descriptionPlaceholder: 'e.g. Buy milk',

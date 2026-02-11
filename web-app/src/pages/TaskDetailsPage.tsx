@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, useMemo } from 'react';
+import { useQueuedMutation } from '../hooks/useQueuedMutation';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { tasksService } from '../services/tasks.service';
@@ -31,12 +32,11 @@ export default function TaskDetailsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const numericTaskId = taskId ? Number(taskId) : null;
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [taskDescriptionDraft, setTaskDescriptionDraft] = useState('');
   const [showAddStep, setShowAddStep] = useState(false);
   const [newStepDescription, setNewStepDescription] = useState('');
-  const [editingStepId, setEditingStepId] = useState<number | null>(null);
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [stepDescriptionDraft, setStepDescriptionDraft] = useState('');
 
   // Reminder State
@@ -46,15 +46,14 @@ export default function TaskDetailsPage() {
   );
 
   const getCachedTaskById = (): Task | undefined => {
-    if (typeof numericTaskId !== 'number' || Number.isNaN(numericTaskId))
-      return undefined;
-    const direct = queryClient.getQueryData<Task>(['task', numericTaskId]);
+    if (!taskId) return undefined;
+    const direct = queryClient.getQueryData<Task>(['task', taskId]);
     if (direct) return direct;
     const candidates = queryClient.getQueriesData<Task[]>({
       queryKey: ['tasks'],
     });
     for (const [, tasks] of candidates) {
-      const found = tasks?.find((t) => t.id === numericTaskId);
+      const found = tasks?.find((t) => t.id === taskId);
       if (found) return found;
     }
     return undefined;
@@ -66,10 +65,10 @@ export default function TaskDetailsPage() {
     isError,
     error,
   } = useQuery<Task, ApiError>({
-    queryKey: ['task', numericTaskId],
-    enabled: typeof numericTaskId === 'number' && !Number.isNaN(numericTaskId),
+    queryKey: ['task', taskId],
+    enabled: !!taskId,
     initialData: () => getCachedTaskById(),
-    queryFn: () => tasksService.getTaskById(numericTaskId as number),
+    queryFn: () => tasksService.getTaskById(taskId!),
   });
 
   useEffect(() => {
@@ -86,21 +85,20 @@ export default function TaskDetailsPage() {
     );
   }, [task]);
 
-  const updateTaskMutation = useMutation<
+  const updateTaskMutation = useQueuedMutation<
     Task,
     ApiError,
-    { id: number; data: UpdateTaskDto },
-    { previousTask?: Task; previousTasks?: Task[]; todoListId?: number }
+    { id: string; data: UpdateTaskDto },
+    { previousTask?: Task; previousTasks?: Task[]; todoListId?: string }
   >({
     mutationFn: ({ id, data }) => tasksService.updateTask(id, data),
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['task', id] });
       const previousTask = queryClient.getQueryData<Task>(['task', id]);
       const todoListId = previousTask?.todoListId;
-      const previousTasks =
-        typeof todoListId === 'number'
-          ? queryClient.getQueryData<Task[]>(['tasks', todoListId])
-          : undefined;
+      const previousTasks = todoListId
+        ? queryClient.getQueryData<Task[]>(['tasks', todoListId])
+        : undefined;
 
       if (previousTask) {
         queryClient.setQueryData<Task>(['task', id], {
@@ -162,12 +160,14 @@ export default function TaskDetailsPage() {
   const updateStepMutation = useMutation<
     Step,
     ApiError,
-    { task: Task; stepId: number; data: UpdateStepDto },
+    { task: Task; stepId: string; data: UpdateStepDto },
     { previousTask?: Task }
   >({
     mutationFn: ({ stepId, data }) => stepsService.updateStep(stepId, data),
     onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: ['task', vars.task.id] });
+      await queryClient.cancelQueries({
+        queryKey: ['task', vars.task.id],
+      });
       const previousTask = queryClient.getQueryData<Task>([
         'task',
         vars.task.id,
@@ -188,7 +188,9 @@ export default function TaskDetailsPage() {
       toast.error(formatApiError(err, t('taskDetails.updateStepFailed')));
     },
     onSettled: async (_data, _err, vars) => {
-      await queryClient.invalidateQueries({ queryKey: ['task', vars.task.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ['task', vars.task.id],
+      });
     },
   });
 
@@ -202,19 +204,23 @@ export default function TaskDetailsPage() {
       setNewStepDescription('');
       setShowAddStep(false);
       toast.success(t('taskDetails.stepAdded'));
-      queryClient.invalidateQueries({ queryKey: ['task', vars.task.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['task', vars.task.id],
+      });
     },
   });
 
   const deleteStepMutation = useMutation<
-    Step,
+    void,
     ApiError,
-    { task: Task; id: number }
+    { task: Task; id: string }
   >({
-    mutationFn: ({ id }) => stepsService.deleteStep(id),
+    mutationFn: ({ id }) => stepsService.deleteStep(id).then(() => {}),
     onSuccess: (_data, vars) => {
       toast.success(t('taskDetails.stepDeleted'));
-      queryClient.invalidateQueries({ queryKey: ['task', vars.task.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['task', vars.task.id],
+      });
     },
   });
 
@@ -593,12 +599,13 @@ export default function TaskDetailsPage() {
                 .map((step) => (
                   <div
                     key={step.id}
-                    className="group vibrant-hover-card p-4 flex items-center justify-between transition-all animate-fade-in"
+                    className={`group vibrant-hover-card p-4 flex items-center justify-between transition-all animate-fade-in ${step.id.startsWith('temp-') ? 'opacity-50 pointer-events-none' : ''}`}
                   >
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                       <input
                         type="checkbox"
                         checked={step.completed}
+                        disabled={step.id.startsWith('temp-')}
                         onChange={() =>
                           updateStepMutation.mutate({
                             task: task as Task,

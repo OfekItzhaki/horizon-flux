@@ -58,7 +58,7 @@ export default function ReminderEditor({
   >(null);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
     document.addEventListener('keydown', handleEscape);
@@ -114,7 +114,7 @@ export default function ReminderEditor({
         : undefined,
       dayOfWeek:
         config.timeframe === ReminderTimeframe.EVERY_WEEK &&
-        config.dayOfWeek === undefined
+          config.dayOfWeek === undefined
           ? 1
           : config.dayOfWeek,
     };

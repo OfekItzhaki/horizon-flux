@@ -71,19 +71,31 @@ export class TasksService {
       }
     }
 
-    const where: Prisma.TaskWhereInput = {
+    const listFilter: Prisma.ToDoListWhereInput = {
       deletedAt: null,
-      todoList: {
-        deletedAt: null,
-        OR: [
-          { ownerId: userId },
-          { shares: { some: { sharedWithId: userId } } },
-        ],
-      },
+      OR: [{ ownerId: userId }, { shares: { some: { sharedWithId: userId } } }],
+    };
+
+    const where: Prisma.TaskWhereInput = {
+      todoList: listFilter,
     };
 
     if (todoListId) {
+      const list = await this.prisma.toDoList.findFirst({
+        where: { id: todoListId },
+      });
+
+      if (list?.type === ListType.TRASH) {
+        // When viewing Trash, show only deleted tasks
+        where.deletedAt = { not: null };
+      } else {
+        // Normal list, show only active tasks
+        where.deletedAt = null;
+      }
       where.todoListId = todoListId;
+    } else {
+      // Global view (e.g. Inbox), show only active tasks
+      where.deletedAt = null;
     }
 
     return this.prisma.task.findMany({
@@ -154,28 +166,105 @@ export class TasksService {
             ) as Prisma.InputJsonValue)
             : undefined,
         completed: updateTaskDto.completed,
+        todoListId: updateTaskDto.todoListId,
         ...(completedAt !== undefined && { completedAt }),
         ...(shouldResetCompletionCount && { completionCount: 0 }),
       },
     });
+<<<<<<< HEAD
+=======
+
+    // Handle Completion Policies
+    if (updateTaskDto.completed && !task.completed) {
+      if (task.todoList.completionPolicy === 'AUTO_DELETE') {
+        this.logger.log(
+          `Task auto-deleted due to list policy: taskId=${id} listId=${task.todoListId}`,
+        );
+        await this.permanentDelete(id, userId, true);
+        return { ...updated, deletedAt: new Date() }; // Return updated with deleted flag for frontend
+      } else if (task.todoList.completionPolicy === 'MOVE_TO_DONE') {
+        // Find the user's "Done" list
+        const doneList = await this.prisma.toDoList.findFirst({
+          where: {
+            ownerId: userId,
+            type: ListType.FINISHED,
+            deletedAt: null,
+          },
+        });
+
+        if (doneList) {
+          this.logger.log(
+            `Task moved to Done list due to policy: taskId=${id} from=${task.todoListId} to=${doneList.id}`,
+          );
+          return this.prisma.task.update({
+            where: { id },
+            data: {
+              todoListId: doneList.id,
+              originalListId: task.todoListId, // Remember where it came from
+            },
+          });
+        } else {
+          this.logger.warn(
+            `Could not find Done list for user ${userId}, skipping move`,
+          );
+        }
+      }
+    }
+
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     this.logger.log(`Task updated: taskId=${id} userId=${userId}`);
     return updated;
   }
 
   async remove(id: string, userId: string) {
+<<<<<<< HEAD
     await this.taskAccess.findTaskForUser(
+=======
+    const task = await this.taskAccess.findTaskForUser(
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
       id,
       userId,
       ShareRole.EDITOR,
     );
+<<<<<<< HEAD
+=======
+
+    // Find the user's trash list
+    const trashList = await this.prisma.toDoList.findFirst({
+      where: {
+        ownerId: userId,
+        type: ListType.TRASH,
+        deletedAt: null,
+      },
+    });
+
+    if (!trashList) {
+      // Fallback: Just soft delete if no trash list (shouldn't happen with lazy seeding)
+      this.logger.warn(
+        `Trash list not found for user ${userId}, soft deleting`,
+      );
+      return this.prisma.task.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    }
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 
     const result = await this.prisma.task.update({
       where: { id },
       data: {
+        todoListId: trashList.id,
+        originalListId: task.todoListId,
         deletedAt: new Date(),
       },
     });
+<<<<<<< HEAD
     this.logger.log(`Task removed (soft): taskId=${id} userId=${userId}`);
+=======
+    this.logger.log(`Task moved to Trash: taskId=${id} userId=${userId}`);
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     return result;
   }
 
@@ -300,7 +389,11 @@ export class TasksService {
     throw new BadRequestException('Task is neither deleted nor archived');
   }
 
+<<<<<<< HEAD
   async permanentDelete(id: string, ownerId: string) {
+=======
+  async permanentDelete(id: string, ownerId: string, allowActive = false) {
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     const task = await this.prisma.task.findFirst({
       where: {
         id,
@@ -315,7 +408,15 @@ export class TasksService {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
+<<<<<<< HEAD
     if (!task.deletedAt && task.todoList.type !== ListType.FINISHED) {
+=======
+    if (
+      !allowActive &&
+      !task.deletedAt &&
+      task.todoList.type !== ListType.FINISHED
+    ) {
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
       throw new BadRequestException(
         'Only deleted or archived tasks can be permanently deleted.',
       );

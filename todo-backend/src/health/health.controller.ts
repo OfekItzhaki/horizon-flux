@@ -5,7 +5,11 @@ import { PrismaService } from '../prisma/prisma.service';
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
+<<<<<<< HEAD
   constructor(private prisma: PrismaService) { }
+=======
+  constructor(private prisma: PrismaService) {}
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 
   @Get()
   @ApiOperation({ summary: 'Check API and DB health status' })
@@ -24,7 +28,13 @@ export class HealthController {
           api: 'up',
         },
       };
+<<<<<<< HEAD
     } catch (error) {
+=======
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
       return {
         status: 'error',
         timestamp: new Date().toISOString(),
@@ -33,7 +43,11 @@ export class HealthController {
           api: 'up',
         },
         error:
+<<<<<<< HEAD
           process.env.NODE_ENV === 'development' ? error.message : undefined,
+=======
+          process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
       };
     }
   }

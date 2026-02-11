@@ -11,6 +11,7 @@ export default {
       dark: 'כהה',
       auto: 'אוטומטי',
     },
+    trash: 'סל מיחזור',
   },
   languageNames: {
     en: 'English',
@@ -61,6 +62,12 @@ export default {
       typeLabel: 'סוג',
       namePlaceholder: 'לדוגמה: קניות',
       tip: 'טיפ: רשימת "Finished" מנוהלת אוטומטית על ידי המערכת.',
+      behaviorLabel: 'התנהגות משימות',
+      behaviorRecurring: 'חוזרות',
+      behaviorOneOff: 'חד פעמיות',
+      policyLabel: 'מדיניות סיום',
+      policyKeep: 'השאר משימות',
+      policyDelete: 'מחק לצמיתות',
     },
   },
   tasks: {
@@ -83,6 +90,9 @@ export default {
     selectMultiple: 'בחר מספר',
     deleteSelected: 'מחק',
     deleteSelectedConfirm: 'למחוק {{count}} משימה{{plural}}?',
+    unknownList: 'רשימה לא ידועה',
+    oneOffTasks: 'משימות חד פעמיות',
+    recurringTasks: 'משימות חוזרות',
     form: {
       descriptionLabel: 'תיאור',
       descriptionPlaceholder: 'לדוגמה: לקנות חלב',

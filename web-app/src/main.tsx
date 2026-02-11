@@ -1,3 +1,11 @@
+import { configure } from '@tasks-management/frontend-services';
+
+// Configure shared services immediately with Vite environment variables
+configure({
+  baseURL: import.meta.env.VITE_API_URL,
+  turnstileSiteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+});
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -34,7 +42,12 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <App />
         </BrowserRouter>
       </ErrorBoundary>

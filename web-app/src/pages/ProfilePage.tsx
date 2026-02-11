@@ -12,7 +12,12 @@ import {
 import Skeleton from '../components/Skeleton';
 
 export default function ProfilePage() {
+<<<<<<< HEAD
   const { user, loading, setUser, isUploadingAvatar, setIsUploadingAvatar } = useAuth();
+=======
+  const { user, loading, setUser, isUploadingAvatar, setIsUploadingAvatar } =
+    useAuth();
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
   const { t, i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -221,6 +226,7 @@ export default function ProfilePage() {
                   Task Updates Frequency
                 </label>
                 <div className="flex gap-4">
+<<<<<<< HEAD
                   {[NotificationFrequency.NONE, NotificationFrequency.DAILY, NotificationFrequency.WEEKLY].map((freq) => (
                     <button
                       key={freq}
@@ -229,6 +235,21 @@ export default function ProfilePage() {
                         ? 'bg-accent text-white shadow-lg'
                         : 'bg-hover text-secondary hover:bg-hover/80'
                         }`}
+=======
+                  {[
+                    NotificationFrequency.NONE,
+                    NotificationFrequency.DAILY,
+                    NotificationFrequency.WEEKLY,
+                  ].map((freq) => (
+                    <button
+                      key={freq}
+                      onClick={() => handleFrequencyChange(freq)}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                        user?.notificationFrequency === freq
+                          ? 'bg-accent text-white shadow-lg'
+                          : 'bg-hover text-secondary hover:bg-hover/80'
+                      }`}
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
                     >
                       {freq.charAt(0) + freq.slice(1).toLowerCase()}
                     </button>

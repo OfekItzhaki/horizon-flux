@@ -39,7 +39,7 @@ export default function VerifyEmailPage() {
       <div className="premium-card max-w-md w-full p-8 text-center animate-scale-in">
         <div className="flex justify-center mb-6">
           <span className="text-3xl font-black bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-            Horizon Tasks
+            Horizon Flux
           </span>
         </div>
 

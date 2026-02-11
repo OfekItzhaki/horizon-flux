@@ -188,7 +188,7 @@ export default function LoginScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>
-            {isLogin ? 'Horizon Tasks' : 'Create Account'}
+            {isLogin ? 'Horizon Flux' : 'Create Account'}
           </Text>
 
           {!isLogin && (

@@ -28,6 +28,22 @@ import {
   CurrentUser,
   CurrentUserPayload,
 } from '../auth/current-user.decorator';
+<<<<<<< HEAD
+=======
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface CloudinaryResponse {
+  secure_url: string;
+  [key: string]: any;
+}
+
+interface CloudinaryError {
+  message: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 import { CloudinaryService } from '../common/cloudinary/cloudinary.service';
 import { FileUploadInterceptor } from './interceptors/file-upload.interceptor';
 
@@ -133,12 +149,31 @@ class UsersController {
     }
 
     // Upload to Cloudinary
+<<<<<<< HEAD
     const result = await this.cloudinaryService.uploadFile(file);
 
     // Update user profile with the Cloudinary secure URL
     return this.userService.updateUser(
       id,
       { profilePicture: result.secure_url },
+=======
+    const result = (await this.cloudinaryService.uploadFile(file)) as unknown;
+
+    if (!result || typeof result !== 'object' || !('secure_url' in result)) {
+      const errorResponse = result as CloudinaryError;
+      throw new BadRequestException(
+        `Cloudinary upload failed: ${errorResponse?.message || 'Unknown error'}`,
+      );
+    }
+
+    const uploadResponse = result as Record<string, unknown>;
+    const secureUrl = uploadResponse.secure_url as string;
+
+    // Update user profile with the Cloudinary secure URL
+    return this.userService.updateUser(
+      id,
+      { profilePicture: secureUrl },
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
       user.userId,
     );
   }

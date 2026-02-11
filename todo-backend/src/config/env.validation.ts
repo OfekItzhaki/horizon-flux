@@ -11,16 +11,30 @@ export const envSchema = z.object({
   SENTRY_DSN: z.string().url().optional(),
 
   // Email config
+  RESEND_API_KEY: z.string().min(1).optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().transform(Number).optional(),
+  SMTP_SECURE: z.string().optional().default('false'),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
+<<<<<<< HEAD
   SMTP_FROM: z.string().email().optional(),
+=======
+  SMTP_FROM: z.string().optional(),
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 
   // Redis config
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.string().transform(Number).default(6379),
   REDIS_PASSWORD: z.string().optional(),
+<<<<<<< HEAD
+=======
+
+  // Cloudinary config
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -33,6 +47,10 @@ export function validate(config: Record<string, unknown>) {
     console.error(JSON.stringify(result.error.format(), null, 2));
     throw new Error('Invalid environment configuration');
   }
+
+  console.log(
+    `🚀 Environment Validated - API Port: ${result.data.PORT}, Redis: ${result.data.REDIS_HOST}:${result.data.REDIS_PORT}`,
+  );
 
   return result.data;
 }

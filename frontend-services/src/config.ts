@@ -1,6 +1,23 @@
+let internalBaseUrl: string | null = null;
+let internalTurnstileSiteKey: string | null = null;
+
+export const configure = (config: { baseURL?: string; turnstileSiteKey?: string }) => {
+  if (config.baseURL) {
+    internalBaseUrl = config.baseURL;
+    // Update the exported config object so immediate consumers get the new value
+    // Re-evaluate to ensure /api/v1 prefix and other logic is applied
+    API_CONFIG.baseURL = getApiBaseUrl();
+  }
+  if (config.turnstileSiteKey) internalTurnstileSiteKey = config.turnstileSiteKey;
+};
+
 // Get API base URL - works in both Node.js and browser environments
 const getApiBaseUrl = (): string => {
+<<<<<<< HEAD
   let url = 'http://localhost:3000';
+=======
+  let url = internalBaseUrl || 'http://localhost:3000';
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 
   // In Vite/Browser, we check both process.env (if polyfilled) and import.meta.env
   if (typeof process !== 'undefined' && (process as any).env) {
@@ -22,7 +39,11 @@ const getApiBaseUrl = (): string => {
       hostname.includes('onrender.com');
 
     if (isProdDomain && url.includes('localhost')) {
+<<<<<<< HEAD
       url = 'https://tasks-api.ofeklabs.dev';
+=======
+      url = 'https://api.horizon-flux.ofeklabs.dev';
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
     }
   }
 
@@ -39,6 +60,14 @@ const getApiBaseUrl = (): string => {
 
   return url;
 };
+
+export const getTurnstileSiteKey = (): string | null => {
+  if (internalTurnstileSiteKey) return internalTurnstileSiteKey;
+  if (typeof window !== 'undefined') {
+    return (window as any).__VITE_TURNSTILE_SITE_KEY__ || null;
+  }
+  return null;
+}
 
 export const API_CONFIG = {
   baseURL: getApiBaseUrl(),

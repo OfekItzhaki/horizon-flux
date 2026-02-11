@@ -12,6 +12,7 @@ type ListWithShares = Prisma.ToDoListGetPayload<{
   };
 }>;
 
+<<<<<<< HEAD
 // Type for task with list and shares
 type TaskWithList = Prisma.TaskGetPayload<{
   include: {
@@ -25,6 +26,8 @@ type TaskWithList = Prisma.TaskGetPayload<{
   };
 }>;
 
+=======
+>>>>>>> 4145321f585625a9ce6a1ccd658b6879607bb25b
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);

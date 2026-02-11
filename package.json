@@ -21,9 +21,13 @@
       "prettier --write",
       "eslint -c web-app/eslint.config.js --fix"
     ],
+    "web-app/src/**/*.{ts,tsx}": [
+      "npm run test --prefix web-app -- --run --passWithNoTests --bail"
+    ],
     "todo-backend/src/**/*.ts": [
       "prettier --write",
-      "eslint -c todo-backend/eslint.config.mjs --fix"
+      "eslint -c todo-backend/eslint.config.mjs --fix",
+      "npm run test --prefix todo-backend -- --passWithNoTests --bail --findRelatedTests"
     ]
   }
 }

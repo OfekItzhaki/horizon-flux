@@ -16,6 +16,10 @@ import { TIMEFRAMES, SPECIFIC_DATES } from '../config/reminder-options';
 import axios from 'axios';
 import { useDebounce } from '../hooks/useDebounce';
 
+interface OsmSuggestion {
+  display_name: string;
+}
+
 interface ReminderEditorProps {
   reminder: ReminderConfig;
   onSave: (reminder: ReminderConfig) => void;
@@ -58,7 +62,7 @@ export default function ReminderEditor({
   const [daysBeforeDueDateError, setDaysBeforeDueDateError] = useState<
     string | null
   >(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<OsmSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const debouncedLocation = useDebounce(location, 500);
 

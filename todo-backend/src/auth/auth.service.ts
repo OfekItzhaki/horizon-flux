@@ -113,9 +113,9 @@ export class AuthService {
 
   async refreshAccessToken(token: string) {
     try {
-      const payload = this.jwtService.verify(token, {
+      const payload = this.jwtService.verify<JwtPayload>(token, {
         secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
-      }) as any;
+      });
 
       if (!payload.sub || !payload.jti) {
         throw new UnauthorizedException('Invalid payload structure');

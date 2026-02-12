@@ -5,7 +5,6 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { EmailService } from '../src/email/email.service';
 
-
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 

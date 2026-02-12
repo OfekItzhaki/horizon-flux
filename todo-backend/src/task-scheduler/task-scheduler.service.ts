@@ -22,7 +22,7 @@ export class TaskSchedulerService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('reminders') private remindersQueue: Queue,
-  ) { }
+  ) {}
 
   private isSchedulerDisabled(): boolean {
     return process.env.DISABLE_SCHEDULER === 'true';
@@ -541,7 +541,6 @@ export class TaskSchedulerService implements OnModuleInit {
       if (totalTasksPurged > 0 || totalListsPurged > 0) {
         this.logger.log(
           `Purged ${totalTasksPurged} tasks and ${totalListsPurged} lists from recycle bin across all users`,
-
         );
       }
     });

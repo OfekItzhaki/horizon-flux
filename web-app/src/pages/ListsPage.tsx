@@ -12,8 +12,8 @@ import {
   CompletionPolicy,
 } from '@tasks-management/frontend-services';
 import { formatApiError } from '../utils/formatApiError';
-import Skeleton from '../components/Skeleton';
 import { useTranslation } from 'react-i18next';
+import ShareListModal from '../components/ShareListModal';
 
 export default function ListsPage() {
   const [newListName, setNewListName] = useState('');
@@ -26,6 +26,7 @@ export default function ListsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const [sharingList, setSharingList] = useState<ToDoList | null>(null);
 
   // Automatically set completion policy to KEEP when task behavior is RECURRING
   useEffect(() => {
@@ -104,7 +105,7 @@ export default function ListsPage() {
     return (
       <div className="space-y-8">
         <div className="flex justify-center">
-          <Skeleton className="h-10 w-48 rounded-lg" />
+          <h1 className="text-3xl font-bold text-primary">{t('nav.lists')}</h1>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -284,50 +285,76 @@ export default function ListsPage() {
               l.type === ListType.YEARLY
           )
           .map((list, index) => (
-            <Link
-              key={list.id}
-              to={`/lists/${list.id}/tasks`}
-              onMouseEnter={() => {
-                void queryClient.prefetchQuery({
-                  queryKey: ['tasks', list.id],
-                  queryFn: () => tasksService.getTasksByList(list.id),
-                });
-                void queryClient.prefetchQuery({
-                  queryKey: ['list', list.id],
-                  queryFn: () => listsService.getListById(list.id),
-                });
-              }}
-              className="group relative p-6 h-40 rounded-2xl border-2 border-border-subtle bg-surface hover:border-accent hover:shadow-lg transition-all duration-200 flex flex-col justify-between animate-slide-up"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              {/* List Content */}
-              <div>
-                <h3 className="text-xl font-bold text-primary group-hover:text-accent transition-colors line-clamp-2 break-words">
-                  {list.name}
-                </h3>
-              </div>
-
-              {/* Footer with Arrow */}
-              <div className="flex justify-between items-center">
-                <div className="w-8 h-8 rounded-lg bg-hover group-hover:bg-accent group-hover:text-white flex items-center justify-center transition-all">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+            <div key={list.id} className="relative group/card h-40">
+              <Link
+                to={`/lists/${list.id}/tasks`}
+                onMouseEnter={() => {
+                  void queryClient.prefetchQuery({
+                    queryKey: ['tasks', list.id],
+                    queryFn: () => tasksService.getTasksByList(list.id),
+                  });
+                  void queryClient.prefetchQuery({
+                    queryKey: ['list', list.id],
+                    queryFn: () => listsService.getListById(list.id),
+                  });
+                }}
+                className="block p-6 h-full rounded-2xl border-2 border-border-subtle bg-surface hover:border-accent hover:shadow-lg transition-all duration-200 flex flex-col justify-between animate-slide-up"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                {/* List Content */}
+                <div>
+                  <h3 className="text-xl font-bold text-primary group-hover:text-accent transition-colors line-clamp-2 break-words">
+                    {list.name}
+                  </h3>
                 </div>
-              </div>
-              {/* Accent Bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>
+
+                {/* Footer with Arrow */}
+                <div className="flex justify-between items-center">
+                  <div className="w-8 h-8 rounded-lg bg-hover group-hover:bg-accent group-hover:text-white flex items-center justify-center transition-all">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                {/* Accent Bar */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+
+              {/* Share Button Overlay */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSharingList(list);
+                }}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-surface/80 border border-border-subtle text-secondary opacity-0 group-hover/card:opacity-100 hover:text-accent hover:border-accent transition-all backdrop-blur-sm z-10"
+                title={t('sharing.title')}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+              </button>
+            </div>
           ))}
       </div>
 
@@ -419,6 +446,14 @@ export default function ListsPage() {
         <div className="text-center py-16">
           <p className="text-lg text-tertiary">{t('lists.empty')}</p>
         </div>
+      )}
+      {/* Share List Modal */}
+      {sharingList && (
+        <ShareListModal
+          listId={sharingList.id}
+          listName={sharingList.name}
+          onClose={() => setSharingList(null)}
+        />
       )}
     </div>
   );

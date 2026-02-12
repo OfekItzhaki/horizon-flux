@@ -61,7 +61,7 @@ export default function StepsList({
       >
         <div className="flex items-center gap-3">
           <h2 className="premium-header-section text-lg">
-            {t('taskDetails.stepsTitle', { defaultValue: 'Steps' })}
+            {isRtl ? 'שלבים' : t('taskDetails.stepsTitle', { defaultValue: 'Steps' })}
           </h2>
           {task.steps && task.steps.length > 0 && (
             <button
@@ -164,6 +164,14 @@ export default function StepsList({
                 ref={stepInputRef}
                 value={newStepDescription}
                 onChange={(e) => onNewStepDescriptionChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onCreateStep();
+                  } else if (e.key === 'Escape') {
+                    onCancelAddStep();
+                  }
+                }}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder={t('taskDetails.form.descriptionPlaceholder')}
               />
@@ -233,6 +241,14 @@ export default function StepsList({
                     onChange={(e) =>
                       onStepDescriptionDraftChange(e.target.value)
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onSaveStep();
+                      } else if (e.key === 'Escape') {
+                        onCancelEdit();
+                      }
+                    }}
                     className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     autoFocus
                   />

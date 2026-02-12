@@ -25,6 +25,7 @@ model User {
   passwordResetOtp        String?                @db.VarChar(6)
   passwordResetExpiresAt  DateTime?
   notificationFrequency   NotificationFrequency @default(NONE)
+  trashRetentionDays      Int                    @default(30)
   shares                  ListShare[]
   lists                   ToDoList[]
   refreshTokens           RefreshToken[]

@@ -21,6 +21,7 @@ These principles apply to **any project** adopting The Horizon Standard:
 - **Rule**: Whenever the backend contracts change, re-run the client generator.
 - **Benefit**: Zero "type mismatch" bugs.
 - **Applies to**: REST APIs, GraphQL, gRPC, or any API-first architecture.
+- **Content Management**: **Never hardcode content in code.** Use a CMS (Sanity, Contentful, Strapi, etc.) for all dynamic content (products, URLs, descriptions). Content belongs in the CMS, not in the codebase.
 
 ### 2. Standardized Error Handling
 - **Backend**: Use a global error handling middleware. No scattered `try-catch` blocks unless for specific logic.
@@ -538,7 +539,7 @@ Before marking any task as complete, verify:
 ### Common Pitfalls to Avoid
 1. **Don't skip linting**: Always run and fix linting errors before committing
 2. **Don't use `any`**: Take the time to define proper types
-3. **Don't hardcode values**: Use configuration files and environment variables
+3. **Don't hardcode values**: Use configuration files and environment variables. **Never hardcode content** - use a CMS for dynamic content
 4. **Don't ignore errors**: Implement proper error handling and logging
 5. **Don't break patterns**: Follow existing architectural patterns in the codebase
 6. **Don't commit secrets**: Use environment variables or secret managers

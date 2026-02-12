@@ -13,6 +13,12 @@ import {
   isRtlLanguage,
 } from '@tasks-management/frontend-services';
 import { TIMEFRAMES, SPECIFIC_DATES } from '../config/reminder-options';
+import axios from 'axios';
+import { useDebounce } from '../hooks/useDebounce';
+
+interface OsmSuggestion {
+  display_name: string;
+}
 
 interface ReminderEditorProps {
   reminder: ReminderConfig;
@@ -56,9 +62,33 @@ export default function ReminderEditor({
   const [daysBeforeDueDateError, setDaysBeforeDueDateError] = useState<
     string | null
   >(null);
+  const [suggestions, setSuggestions] = useState<OsmSuggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedLocation = useDebounce(location, 500);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    if (debouncedLocation.length > 2) {
+      const searchLocation = async () => {
+        setIsSearching(true);
+        try {
+          const response = await axios.get(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(debouncedLocation)}&limit=5&addressdetails=1`
+          );
+          setSuggestions(response.data);
+        } catch (error) {
+          console.error('Location search error:', error);
+        } finally {
+          setIsSearching(false);
+        }
+      };
+      void searchLocation();
+    } else {
+      setSuggestions([]);
+    }
+  }, [debouncedLocation]);
+
+  useEffect(() => {
+    const handleEscape = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
     document.addEventListener('keydown', handleEscape);
@@ -114,7 +144,7 @@ export default function ReminderEditor({
         : undefined,
       dayOfWeek:
         config.timeframe === ReminderTimeframe.EVERY_WEEK &&
-        config.dayOfWeek === undefined
+          config.dayOfWeek === undefined
           ? 1
           : config.dayOfWeek,
     };
@@ -401,15 +431,39 @@ export default function ReminderEditor({
               </svg>
               {t('reminders.location', { defaultValue: 'Location' })}
             </label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={t('reminders.locationPlaceholder', {
-                defaultValue: 'Enter place or address...',
-              })}
-              className="premium-input w-full"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t('reminders.locationPlaceholder', {
+                  defaultValue: 'Enter place or address...',
+                })}
+                className="premium-input w-full"
+              />
+              {isSearching && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              {suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border-subtle rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setLocation(s.display_name);
+                        setSuggestions([]);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-hover transition-colors border-b border-border-subtle last:border-0 flex items-center gap-3"
+                    >
+                      <span className="text-accent opacity-60">📍</span>
+                      <span className="truncate text-primary">{s.display_name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Alarm Toggle */}

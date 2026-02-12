@@ -53,10 +53,10 @@ export function useNotifications() {
             }
           ).__tasksTestNotification = triggerTestNotification;
         }
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Error requesting notification permissions:', error);
-        }
+      } catch {
+        // if (import.meta.env.DEV) {
+        //   console.error('Error requesting notification permissions:', error);
+        // }
       }
     };
 
@@ -72,17 +72,12 @@ export function useNotifications() {
 
     const scheduleReminders = async () => {
       try {
-        // Convert all task IDs to numbers for the notification service
-        const tasksWithNumericIds = allTasks.map((task) => ({
-          ...task,
-          id: Number(task.id),
-          todoListId: Number(task.todoListId),
-        }));
-        await rescheduleAllReminders(tasksWithNumericIds);
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Error rescheduling reminders:', error);
-        }
+        // Pass tasks directly (IDs are already strings)
+        await rescheduleAllReminders(allTasks);
+      } catch {
+        // if (import.meta.env.DEV) {
+        //   console.error('Error rescheduling reminders:', error);
+        // }
       }
     };
 

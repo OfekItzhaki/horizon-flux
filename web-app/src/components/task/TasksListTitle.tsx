@@ -7,7 +7,7 @@ import { UpdateToDoListDto } from '@tasks-management/frontend-services';
 interface TasksListTitleProps {
   list: ListWithSystemFlag | undefined;
   isRtl: boolean;
-  onUpdateList: (id: number, data: UpdateToDoListDto) => void;
+  onUpdateList: (id: string, data: UpdateToDoListDto) => void;
 }
 
 export default function TasksListTitle({
@@ -39,7 +39,7 @@ export default function TasksListTitle({
             disabled={!list || !nameDraft.trim()}
             onClick={() => {
               if (!list) return;
-              onUpdateList(Number(list.id), { name: nameDraft.trim() });
+              onUpdateList(list.id, { name: nameDraft.trim() });
               setIsEditing(false);
               toast.success(t('tasks.listUpdated'));
             }}

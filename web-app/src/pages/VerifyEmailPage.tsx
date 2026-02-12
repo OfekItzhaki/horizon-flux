@@ -25,8 +25,8 @@ export default function VerifyEmailPage() {
         setTimeout(() => {
           navigate('/login');
         }, 3000);
-      } catch (error) {
-        console.error('Verification failed:', error);
+      } catch {
+        // console.error('Verification failed:', error);
         setStatus('error');
       }
     };

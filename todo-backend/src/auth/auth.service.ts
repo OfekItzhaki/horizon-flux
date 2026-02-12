@@ -12,8 +12,8 @@ import { TodoListsService } from '../todo-lists/todo-lists.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import { createHash } from 'crypto';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface JwtPayload {
   sub: string;
   email: string;
@@ -55,7 +55,7 @@ export class AuthService {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { passwordHash: _passwordHash, ...safeUser } = user;
-      return safeUser;
+      return safeUser as Omit<typeof user, 'passwordHash'>;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error(`Error in validateUser: ${error}`);
@@ -95,7 +95,7 @@ export class AuthService {
 
     await this.prisma.refreshToken.create({
       data: {
-        token: await bcrypt.hash(token, 10),
+        token: createHash('sha256').update(token).digest('hex'),
         userId,
         expiresAt,
       },
@@ -113,20 +113,20 @@ export class AuthService {
 
   async refreshAccessToken(token: string) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const payload: any = this.jwtService.verify(token, {
+      const payload = this.jwtService.verify<JwtPayload>(token, {
         secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (!payload.sub || !payload.jti) {
         throw new UnauthorizedException('Invalid payload structure');
       }
 
+      const userId = payload.sub;
+      const jti = payload.jti;
+
       const refreshTokenRecord = await this.prisma.refreshToken.findFirst({
         where: {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          userId: payload.sub,
+          userId,
           revokedAt: null,
           expiresAt: { gt: new Date() },
         },
@@ -137,11 +137,8 @@ export class AuthService {
       }
 
       // Check if the token matches (hashing)
-      const isMatch = await bcrypt.compare(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-        payload.jti,
-        refreshTokenRecord.token,
-      );
+      const tokenHash = createHash('sha256').update(jti).digest('hex');
+      const isMatch = tokenHash === refreshTokenRecord.token;
       if (!isMatch) {
         throw new UnauthorizedException('Token mismatch');
       }
@@ -152,8 +149,7 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const user = await this.usersService.findById(payload.sub);
+      const user = await this.usersService.findById(userId);
       if (!user) {
         throw new UnauthorizedException('User not found');
       }

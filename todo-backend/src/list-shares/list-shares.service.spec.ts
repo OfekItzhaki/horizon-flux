@@ -53,7 +53,7 @@ describe('ListSharesService', () => {
   describe('shareList', () => {
     const todoListId = '1';
     const ownerId = '1';
-    const shareListDto: ShareListDto = { sharedWithId: '2' };
+    const shareListDto: ShareListDto = { email: 'user2@example.com' };
 
     it('should share list successfully', async () => {
       const mockList = {
@@ -63,6 +63,7 @@ describe('ListSharesService', () => {
       };
       const mockUser = {
         id: '2',
+        email: 'user2@example.com',
         deletedAt: null,
       };
       const mockShare = {
@@ -82,7 +83,7 @@ describe('ListSharesService', () => {
 
       expect(mockPrismaService.listShare.create).toHaveBeenCalledWith({
         data: {
-          sharedWithId: shareListDto.sharedWithId,
+          sharedWithId: '2',
           toDoListId: todoListId,
           role: ShareRole.EDITOR,
         },
@@ -114,10 +115,7 @@ describe('ListSharesService', () => {
 
       await expect(
         service.shareList(todoListId, shareListDto, ownerId),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        service.shareList(todoListId, shareListDto, ownerId),
-      ).rejects.toThrow('User with ID 2 not found');
+      ).rejects.toThrow(`User with email ${shareListDto.email} not found`);
     });
 
     it('should throw ConflictException if list is already shared', async () => {

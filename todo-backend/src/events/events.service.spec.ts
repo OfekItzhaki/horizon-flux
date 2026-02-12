@@ -65,25 +65,29 @@ describe('EventsService', () => {
       });
 
       // Should send to owner
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledWith(
         'owner-1',
         'task-updated',
         { taskId: 'task-1' },
       );
 
       // Should send to shared users
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledWith(
         'user-2',
         'task-updated',
         { taskId: 'task-1' },
       );
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledWith(
         'user-3',
         'task-updated',
         { taskId: 'task-1' },
       );
 
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledTimes(3);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledTimes(3);
     });
 
     it('should handle task without shares', async () => {
@@ -104,8 +108,10 @@ describe('EventsService', () => {
       });
 
       // Should only send to owner
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledTimes(1);
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledTimes(1);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledWith(
         'owner-1',
         'task-updated',
         { taskId: 'task-1' },
@@ -118,7 +124,8 @@ describe('EventsService', () => {
       await service.broadcastTaskEvent('nonexistent', 'task-updated', {});
 
       // Should not send any events
-      expect((eventsGateway as any).sendToUser).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).not.toHaveBeenCalled();
     });
 
     it('should handle task without todoList gracefully', async () => {
@@ -133,7 +140,8 @@ describe('EventsService', () => {
       await service.broadcastTaskEvent('task-1', 'task-updated', {});
 
       // Should not send any events
-      expect((eventsGateway as any).sendToUser).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).not.toHaveBeenCalled();
     });
 
     it('should handle database errors gracefully', async () => {
@@ -146,7 +154,8 @@ describe('EventsService', () => {
         service.broadcastTaskEvent('task-1', 'task-updated', {}),
       ).resolves.not.toThrow();
 
-      expect((eventsGateway as any).sendToUser).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).not.toHaveBeenCalled();
     });
   });
 
@@ -165,8 +174,10 @@ describe('EventsService', () => {
         listId: 'list-1',
       });
 
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledTimes(3);
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledTimes(3);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledWith(
         'owner-1',
         'list-updated',
         { listId: 'list-1' },
@@ -178,7 +189,8 @@ describe('EventsService', () => {
 
       await service.broadcastListEvent('nonexistent', 'list-updated', {});
 
-      expect((eventsGateway as any).sendToUser).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).not.toHaveBeenCalled();
     });
 
     it('should deduplicate user IDs', async () => {
@@ -197,7 +209,8 @@ describe('EventsService', () => {
       await service.broadcastListEvent('list-1', 'list-updated', {});
 
       // Should only send to each user once
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledTimes(2);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -219,7 +232,7 @@ describe('EventsService', () => {
         stepId: 'step-1',
       });
 
-      expect((mockPrismaService.task as any).findUnique).toHaveBeenCalledWith({
+      expect(mockPrismaService.task.findUnique).toHaveBeenCalledWith({
         where: { id: 'task-1' },
         include: {
           todoList: {
@@ -232,7 +245,8 @@ describe('EventsService', () => {
         },
       });
 
-      expect((eventsGateway as any).sendToUser).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventsGateway.sendToUser).toHaveBeenCalledWith(
         'owner-1',
         'step-updated',
         { stepId: 'step-1' },

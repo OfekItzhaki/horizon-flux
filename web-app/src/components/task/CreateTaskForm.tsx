@@ -40,6 +40,9 @@ export default function CreateTaskForm({
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') onCancel();
+            }}
             aria-label={t('tasks.form.descriptionLabel')}
             className="premium-input w-full text-gray-900 dark:text-white"
             placeholder={t('tasks.form.descriptionPlaceholder')}

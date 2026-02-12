@@ -22,7 +22,7 @@ export class TaskSchedulerService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('reminders') private remindersQueue: Queue,
-  ) {}
+  ) { }
 
   private isSchedulerDisabled(): boolean {
     return process.env.DISABLE_SCHEDULER === 'true';
@@ -475,56 +475,73 @@ export class TaskSchedulerService implements OnModuleInit {
   @Cron('0 1 * * *')
   async purgeRecycleBin() {
     await this.runIfDbAvailable('purgeRecycleBin', async () => {
-      const purgeThreshold = new Date();
-      purgeThreshold.setDate(purgeThreshold.getDate() - 30);
-
-      // 1. Purge old soft-deleted tasks
-      const tasksToPurge = await this.prisma.task.findMany({
-        where: {
-          deletedAt: { lte: purgeThreshold },
-        },
-        select: { id: true },
+      // Fetch all users to get their specific retention days
+      const users = await this.prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { id: true, trashRetentionDays: true },
       });
 
-      if (tasksToPurge.length > 0) {
-        const taskIds = tasksToPurge.map((t) => t.id);
-        // Manual cleanup if no cascade
-        await this.prisma.step.deleteMany({
-          where: { taskId: { in: taskIds } },
-        });
-        await this.prisma.task.deleteMany({
-          where: { id: { in: taskIds } },
-        });
-        this.logger.log(
-          `Purged ${tasksToPurge.length} old tasks from recycle bin`,
+      let totalTasksPurged = 0;
+      let totalListsPurged = 0;
+
+      for (const user of users) {
+        const purgeThreshold = new Date();
+        purgeThreshold.setDate(
+          purgeThreshold.getDate() - (user.trashRetentionDays || 30),
         );
-      }
 
-      // 2. Purge old soft-deleted lists
-      const listsToPurge = await this.prisma.toDoList.findMany({
-        where: {
-          deletedAt: { lte: purgeThreshold },
-        },
-        select: { id: true },
-      });
+        // 1. Purge user's old soft-deleted tasks
+        const tasksToPurge = await this.prisma.task.findMany({
+          where: {
+            todoList: { ownerId: user.id },
+            deletedAt: { lte: purgeThreshold },
+          },
+          select: { id: true },
+        });
 
-      if (listsToPurge.length > 0) {
-        for (const list of listsToPurge) {
+        if (tasksToPurge.length > 0) {
+          const taskIds = tasksToPurge.map((t) => t.id);
           await this.prisma.step.deleteMany({
-            where: { task: { todoListId: list.id } },
+            where: { taskId: { in: taskIds } },
           });
           await this.prisma.task.deleteMany({
-            where: { todoListId: list.id },
+            where: { id: { in: taskIds } },
           });
-          await this.prisma.listShare.deleteMany({
-            where: { toDoListId: list.id },
-          });
-          await this.prisma.toDoList.delete({
-            where: { id: list.id },
-          });
+          totalTasksPurged += tasksToPurge.length;
         }
+
+        // 2. Purge user's old soft-deleted lists
+        const listsToPurge = await this.prisma.toDoList.findMany({
+          where: {
+            ownerId: user.id,
+            deletedAt: { lte: purgeThreshold },
+          },
+          select: { id: true },
+        });
+
+        if (listsToPurge.length > 0) {
+          for (const list of listsToPurge) {
+            await this.prisma.step.deleteMany({
+              where: { task: { todoListId: list.id } },
+            });
+            await this.prisma.task.deleteMany({
+              where: { todoListId: list.id },
+            });
+            await this.prisma.listShare.deleteMany({
+              where: { toDoListId: list.id },
+            });
+            await this.prisma.toDoList.delete({
+              where: { id: list.id },
+            });
+          }
+          totalListsPurged += listsToPurge.length;
+        }
+      }
+
+      if (totalTasksPurged > 0 || totalListsPurged > 0) {
         this.logger.log(
-          `Purged ${listsToPurge.length} old lists from recycle bin`,
+          `Purged ${totalTasksPurged} tasks and ${totalListsPurged} lists from recycle bin across all users`,
+
         );
       }
     });

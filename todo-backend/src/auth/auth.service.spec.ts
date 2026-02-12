@@ -195,6 +195,37 @@ describe('AuthService', () => {
         expect.any(Object),
       );
     });
+
+    it('registerFinish should complete registration and login', async () => {
+      const mockUser = { id: '1', email: 'test@example.com' };
+      const mockToken = 'reg-token';
+      const mockPayload = {
+        sub: '1',
+        purpose: 'registration',
+        email: 'test@example.com',
+      };
+
+      mockJwtService.verify = jest.fn().mockReturnValue(mockPayload);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
+      mockUsersService.setPassword = jest.fn().mockResolvedValue(mockUser);
+      mockTodoListsService.seedDefaultLists = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      // Mock login internal call
+      mockUsersService.findByEmail.mockResolvedValue({
+        ...mockUser,
+        passwordHash: 'hashed-password',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockJwtService.sign.mockReturnValue('final-jwt');
+
+      const result = await service.registerFinish(mockToken, 'newpassword');
+
+      expect(result).toHaveProperty('accessToken', 'final-jwt');
+      expect(mockUsersService.setPassword).toHaveBeenCalled();
+      expect(mockTodoListsService.seedDefaultLists).toHaveBeenCalledWith('1');
+    });
   });
 
   describe('forgot password flow', () => {

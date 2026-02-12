@@ -67,7 +67,7 @@ export class AuthService {
   async registerStart(email: string, captchaToken?: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>('/auth/register/start', {
       email,
-      captchaToken
+      captchaToken,
     });
   }
 

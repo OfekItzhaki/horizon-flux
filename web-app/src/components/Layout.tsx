@@ -43,24 +43,35 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const isRtl = i18n.dir() === 'rtl';
+
   return (
-    <div className="min-h-screen flex flex-col bg-app font-inter">
+    <div
+      className={`min-h-screen flex flex-col bg-app font-inter ${isRtl ? 'rtl' : 'ltr'}`}
+      dir={isRtl ? 'rtl' : 'ltr'}
+    >
       {/* Navigation Bar - Solid, Clean */}
       <nav
         dir="ltr"
         className="sticky top-0 z-50 bg-surface border-b border-border-subtle shadow-sm"
       >
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-16">
+          <div
+            className={`flex justify-between items-center h-16 ${isRtl ? 'flex-row-reverse' : ''}`}
+          >
             {/* Logo & Links */}
-            <div className="flex items-center gap-8">
+            <div
+              className={`flex items-center gap-8 ${isRtl ? 'flex-row-reverse' : ''}`}
+            >
               <Link to="/lists" className="flex items-center gap-2 group">
                 <span className="text-xl font-bold text-primary tracking-tight group-hover:text-accent transition-colors">
                   Horizon Flux
                 </span>
               </Link>
 
-              <div className="hidden sm:flex items-center gap-4">
+              <div
+                className={`hidden sm:flex items-center gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}
+              >
                 {/* Lists Dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
@@ -88,12 +99,14 @@ export default function Layout() {
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-surface rounded-xl shadow-xl border border-border-subtle overflow-hidden animate-fade-in z-50">
+                    <div
+                      className={`absolute top-full mt-1 w-48 bg-surface rounded-xl shadow-xl border border-border-subtle overflow-hidden animate-fade-in z-50 ${isRtl ? 'right-0' : 'left-0'}`}
+                    >
                       <div className="p-1">
                         <Link
                           to="/lists"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-hover text-primary"
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-hover text-primary ${isRtl ? 'flex-row-reverse text-right' : ''}`}
                         >
                           <span className="w-5 h-5 flex items-center justify-center text-accent">
                             <svg
@@ -117,7 +130,7 @@ export default function Layout() {
                           <Link
                             to={`/lists/${doneList.id}/tasks`}
                             onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-hover text-primary"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-hover text-primary ${isRtl ? 'flex-row-reverse text-right' : ''}`}
                           >
                             <span className="w-5 h-5 flex items-center justify-center text-accent-success">
                               <svg
@@ -141,7 +154,7 @@ export default function Layout() {
                         <Link
                           to="/trash"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-hover text-primary"
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-hover text-primary ${isRtl ? 'flex-row-reverse text-right' : ''}`}
                         >
                           <span className="w-5 h-5 flex items-center justify-center text-accent-danger">
                             <svg
@@ -178,7 +191,9 @@ export default function Layout() {
             </div>
 
             {/* Right Side Actions */}
-            <div className="flex items-center gap-3">
+            <div
+              className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}
+            >
               {/* Theme Toggle */}
               <div className="flex bg-hover rounded-lg p-1 border border-border-subtle">
                 {(['light', 'dark', 'auto'] as const).map((mode) => (
@@ -260,8 +275,13 @@ export default function Layout() {
               </select>
 
               {/* Profile */}
-              <div className="flex items-center gap-3 pl-3 border-l border-border-subtle">
-                <Link to="/profile" className="flex items-center gap-2 group">
+              <div
+                className={`flex items-center gap-3 ${isRtl ? 'pr-3 border-r' : 'pl-3 border-l'} border-border-subtle`}
+              >
+                <Link
+                  to="/profile"
+                  className={`flex items-center gap-2 group ${isRtl ? 'flex-row-reverse' : ''}`}
+                >
                   <div className="w-8 h-8 rounded-full bg-accent/10 border-2 border-accent/20 group-hover:border-accent transition-all flex items-center justify-center overflow-hidden relative">
                     {user?.profilePicture ? (
                       <img
@@ -270,15 +290,13 @@ export default function Layout() {
                         alt={user.name || user.email}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // Fallback to initials if image fails to load
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     ) : null}
                     {!user?.profilePicture && (
                       <span className="text-xs font-bold text-accent">
-                        {user?.name?.[0]?.toUpperCase() ||
-                          user?.email[0]?.toUpperCase()}
+                        {user?.name?.[0]?.toUpperCase() || user?.email[0]?.toUpperCase()}
                       </span>
                     )}
 
@@ -289,7 +307,9 @@ export default function Layout() {
                     )}
                   </div>
 
-                  <div className="hidden md:flex flex-col leading-none">
+                  <div
+                    className={`hidden md:flex flex-col leading-none ${isRtl ? 'text-right' : ''}`}
+                  >
                     <span className="text-sm font-semibold text-primary group-hover:text-accent transition-colors">
                       {user?.name || user?.email.split('@')[0]}
                     </span>
@@ -312,7 +332,7 @@ export default function Layout() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7 m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                     />
                   </svg>
                 </button>
@@ -327,14 +347,15 @@ export default function Layout() {
       </main>
 
       <footer className="mt-auto py-6 px-6 border-t border-border-subtle bg-surface">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm">
+        <div
+          className={`max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm ${isRtl ? 'flex-row-reverse' : ''}`}
+        >
           <span className="text-tertiary">
             &copy; {new Date().getFullYear()} Horizon Flux.{' '}
             {t('footer.allRightsReserved')}
           </span>
           <span className="text-tertiary">
-            Developed by{' '}
-            <span className="text-accent font-medium">OfekLabs</span>
+            Developed by <span className="text-accent font-medium">OfekLabs</span>
           </span>
         </div>
       </footer>

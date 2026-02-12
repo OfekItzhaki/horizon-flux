@@ -71,3 +71,4 @@ Expo-managed React Native application.
 ## 🛠️ Developer Workflow
 
 Always run verification before pushing. Refer to **[HORIZON_STANDARD.md](HORIZON_STANDARD.md)** for global coding standards (no-any, error handling, etc.).
+

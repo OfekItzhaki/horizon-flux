@@ -23,6 +23,7 @@ export class EmailProcessor extends WorkerHost {
       );
       return;
     }
+
     switch (job.name) {
       case 'sendVerificationEmail':
         return this.handleSendVerificationEmail(
@@ -119,7 +120,7 @@ export class EmailProcessor extends WorkerHost {
     try {
       const { data: result, error } = await this.resend.emails.send({
         from: 'Horizon Flux <noreply@ofeklabs.dev>',
-        replyTo: 'horizon-flux@ofeklabs.dev>',
+        replyTo: 'horizon-flux@ofeklabs.dev',
         to: email,
         subject: 'Welcome to Horizon Flux',
         html: `

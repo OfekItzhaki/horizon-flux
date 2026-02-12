@@ -73,7 +73,7 @@ export function disconnectSocket(): void {
 export async function joinListRoom(listId: number): Promise<void> {
   const socket = await getSocket();
   socket.emit('enter-list', { listId });
-  console.log('[Socket] Joined list room:', listId);
+  // console.log('[Socket] Joined list room:', listId);
 }
 
 /**
@@ -82,7 +82,7 @@ export async function joinListRoom(listId: number): Promise<void> {
 export async function leaveListRoom(listId: number): Promise<void> {
   const socket = await getSocket();
   socket.emit('leave-list', { listId });
-  console.log('[Socket] Left list room:', listId);
+  // console.log('[Socket] Left list room:', listId);
 }
 
 /**

@@ -49,7 +49,8 @@ describe('EventsGateway', () => {
       gateway.handleConnection(mockSocket);
 
       // Verify JWT was checked
-      expect((jwtService as any).verify).toHaveBeenCalledWith('valid-token');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(jwtService.verify).toHaveBeenCalledWith('valid-token');
 
       // User should be tracked
       const userSockets = gateway['userSockets'].get('user-1');
@@ -217,6 +218,8 @@ describe('EventsGateway', () => {
 
       gateway.sendToUser('user-1', 'test-event', { data: 'test' });
 
+      expect(mockTo).toHaveBeenCalledWith('socket-1');
+      expect(mockTo).toHaveBeenCalledWith('socket-2');
       expect(mockTo).toHaveBeenCalledTimes(2);
     });
 

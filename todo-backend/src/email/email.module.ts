@@ -9,10 +9,10 @@ import { EmailProcessor } from './email.processor';
   imports: [
     ...(process.env.REDIS_HOST
       ? [
-          BullModule.registerQueue({
-            name: 'email',
-          }),
-        ]
+        BullModule.registerQueue({
+          name: 'email',
+        }),
+      ]
       : []),
   ],
   providers: [
@@ -29,15 +29,15 @@ import { EmailProcessor } from './email.processor';
     ...(process.env.REDIS_HOST
       ? []
       : [
-          {
-            provide: getQueueToken('email'),
-            useValue: {
-              add: async () => {},
-              process: async () => {},
-            },
+        {
+          provide: getQueueToken('email'),
+          useValue: {
+            add: async () => { },
+            process: async () => { },
           },
-        ]),
+        },
+      ]),
   ],
   exports: [EmailService],
 })
-export class EmailModule {}
+export class EmailModule { }

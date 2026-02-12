@@ -209,7 +209,7 @@ function formatNotificationBody(
 export async function showNotification(
   title: string,
   options: NotificationOptions & {
-    data?: { taskId?: number; reminderId?: string };
+    data?: { taskId?: string; reminderId?: string };
   } = {}
 ): Promise<void> {
   // 1. Browser Native Notification
@@ -306,7 +306,7 @@ export async function triggerTestNotification(): Promise<boolean> {
     body: 'If you see this, reminders should work. Try a custom reminder in a few minutes.',
     tag: 'test-notification',
   });
-  console.log('[Notifications] Test notification sent.');
+  // console.log('[Notifications] Test notification sent.');
   return true;
 }
 
@@ -314,7 +314,7 @@ export async function triggerTestNotification(): Promise<boolean> {
  * Schedule a reminder notification
  */
 export async function scheduleReminderNotification(
-  taskId: number,
+  taskId: string,
   taskDescription: string,
   reminder: ReminderConfig,
   dueDate: Date | string | null
@@ -484,7 +484,7 @@ export async function scheduleReminderNotification(
  * Schedule next occurrence of a recurring notification
  */
 function scheduleNextRecurringNotification(
-  taskId: number,
+  taskId: string,
   taskDescription: string,
   reminder: ReminderConfig,
   dueDate: Date | string | null,
@@ -567,7 +567,7 @@ export function cancelAllTaskNotifications(taskId: string): void {
  * Schedule multiple notifications for a task's reminders
  */
 export async function scheduleTaskReminders(
-  taskId: number,
+  taskId: string,
   taskDescription: string,
   reminders: ReminderConfig[],
   dueDate: Date | string | null
@@ -595,7 +595,7 @@ export async function scheduleTaskReminders(
  */
 export async function rescheduleAllReminders(
   tasks: Array<{
-    id: number;
+    id: string;
     description: string;
     completed: boolean;
     dueDate: string | null;

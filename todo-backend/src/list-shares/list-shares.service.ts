@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ShareListDto } from './dto/share-list.dto';
@@ -13,7 +14,7 @@ export class ListSharesService {
   constructor(
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
-  ) {}
+  ) { }
 
   private async ensureOwnedList(todoListId: string, ownerId: string) {
     const list = await this.prisma.toDoList.findFirst({
@@ -39,25 +40,29 @@ export class ListSharesService {
     // Verify list exists and user owns it
     await this.ensureOwnedList(todoListId, ownerId);
 
-    // Verify user exists
+    // Verify user exists by email
     const user = await this.prisma.user.findFirst({
       where: {
-        id: shareListDto.sharedWithId,
+        email: shareListDto.email,
         deletedAt: null,
       },
     });
 
     if (!user) {
       throw new NotFoundException(
-        `User with ID ${shareListDto.sharedWithId} not found`,
+        `User with email ${shareListDto.email} not found`,
       );
+    }
+
+    if (user.id === ownerId) {
+      throw new BadRequestException('You cannot share a list with yourself');
     }
 
     // Check if already shared
     const existingShare = await this.prisma.listShare.findUnique({
       where: {
         sharedWithId_toDoListId: {
-          sharedWithId: shareListDto.sharedWithId,
+          sharedWithId: user.id,
           toDoListId: todoListId,
         },
       },
@@ -70,7 +75,7 @@ export class ListSharesService {
     // Create share
     const share = await this.prisma.listShare.create({
       data: {
-        sharedWithId: shareListDto.sharedWithId,
+        sharedWithId: user.id,
         toDoListId: todoListId,
         role: shareListDto.role ?? ShareRole.EDITOR,
       },
@@ -96,11 +101,7 @@ export class ListSharesService {
     });
 
     // Notify the shared user
-    this.eventsGateway.sendToUser(
-      shareListDto.sharedWithId,
-      'list_shared',
-      share.toDoList,
-    );
+    this.eventsGateway.sendToUser(user.id, 'list_shared', share.toDoList);
 
     return share;
   }

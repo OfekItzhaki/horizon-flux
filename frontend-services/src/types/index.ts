@@ -12,6 +12,7 @@ export interface User {
   profilePicture: string | null;
   emailVerified: boolean;
   notificationFrequency: NotificationFrequency;
+  trashRetentionDays: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -30,6 +31,7 @@ export interface UpdateUserDto {
   profilePicture?: string;
   password?: string;
   notificationFrequency?: NotificationFrequency;
+  trashRetentionDays?: number;
 }
 
 // Auth Types
@@ -182,14 +184,22 @@ export interface ReminderNotification {
 }
 
 // List Sharing Types
+export enum ShareRole {
+  VIEWER = 'VIEWER',
+  EDITOR = 'EDITOR',
+}
+
 export interface ShareListDto {
-  sharedWithId: string;
+  email: string;
+  role?: ShareRole;
+  sharedWithId?: string; // Temporarily keeping both to see backend preference
 }
 
 export interface ListShare {
   id: string;
   sharedWithId: string;
   toDoListId: string;
+  role: ShareRole;
   sharedWith?: User;
   toDoList?: ToDoList;
 }

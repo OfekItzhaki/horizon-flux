@@ -35,6 +35,7 @@ export class ApiClient {
       ...restOptions,
       method,
       headers,
+      credentials: 'include', // Ensure cookies are sent (especially for the refresh token fallback)
     };
 
     try {

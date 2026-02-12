@@ -5,6 +5,9 @@ import {
   IsUrl,
   MinLength,
   IsEnum,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { NotificationFrequency } from '@prisma/client';
@@ -53,4 +56,15 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(NotificationFrequency)
   notificationFrequency?: NotificationFrequency;
+  @ApiPropertyOptional({
+    description: 'Number of days to keep items in trash before purging',
+    example: 30,
+    minimum: 1,
+    maximum: 365,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  trashRetentionDays?: number;
 }

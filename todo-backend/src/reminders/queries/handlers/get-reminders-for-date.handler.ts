@@ -7,9 +7,6 @@ export class GetRemindersForDateHandler implements IQueryHandler<GetRemindersFor
   constructor(private readonly remindersService: RemindersService) {}
 
   async execute(query: GetRemindersForDateQuery) {
-    return this.remindersService.getReminderNotifications(
-      query.userId,
-      query.date,
-    );
+    return this.remindersService.getReminderNotifications(query.userId, query.date);
   }
 }

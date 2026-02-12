@@ -11,16 +11,9 @@ export class CreateTodoListHandler implements ICommandHandler<CreateTodoListComm
   ) {}
 
   async execute(command: CreateTodoListCommand) {
-    const result = await this.todoListsService.create(
-      command.createToDoListDto,
-      command.userId,
-    );
+    const result = await this.todoListsService.create(command.createToDoListDto, command.userId);
 
-    await this.eventsService.broadcastListEvent(
-      result.id,
-      'list_created',
-      result,
-    );
+    await this.eventsService.broadcastListEvent(result.id, 'list_created', result);
 
     return result;
   }

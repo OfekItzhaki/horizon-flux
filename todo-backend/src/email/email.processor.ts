@@ -10,17 +10,13 @@ export class EmailProcessor extends WorkerHost {
   constructor(@Inject('RESEND_CLIENT') private readonly resend: Resend | null) {
     super();
     if (!this.resend) {
-      this.logger.warn(
-        'RESEND_API_KEY not configured - email sending will be disabled',
-      );
+      this.logger.warn('RESEND_API_KEY not configured - email sending will be disabled');
     }
   }
 
   async process(job: Job<unknown, unknown, string>): Promise<unknown> {
     if (!this.resend) {
-      this.logger.warn(
-        `Skipping email job "${job.name}" - Resend not configured`,
-      );
+      this.logger.warn(`Skipping email job "${job.name}" - Resend not configured`);
       return;
     }
 
@@ -94,9 +90,7 @@ export class EmailProcessor extends WorkerHost {
         throw new Error(error.message);
       }
 
-      this.logger.log(
-        `Successfully sent reminder email to: ${email}, ID: ${result?.id}`,
-      );
+      this.logger.log(`Successfully sent reminder email to: ${email}, ID: ${result?.id}`);
     } catch (error: unknown) {
       const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`Failed to send reminder email to ${email}:`, stack);
@@ -104,11 +98,7 @@ export class EmailProcessor extends WorkerHost {
     }
   }
 
-  private async handleSendVerificationEmail(data: {
-    email: string;
-    otp: string;
-    name?: string;
-  }) {
+  private async handleSendVerificationEmail(data: { email: string; otp: string; name?: string }) {
     const { email, otp, name } = data;
     this.logger.log(`Processing verification email for: ${email}`);
 
@@ -166,9 +156,7 @@ export class EmailProcessor extends WorkerHost {
         throw new Error(error.message);
       }
 
-      this.logger.log(
-        `Successfully sent verification email to: ${email}, ID: ${result?.id}`,
-      );
+      this.logger.log(`Successfully sent verification email to: ${email}, ID: ${result?.id}`);
     } catch (error: unknown) {
       const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`Failed to send email to ${email}:`, stack);

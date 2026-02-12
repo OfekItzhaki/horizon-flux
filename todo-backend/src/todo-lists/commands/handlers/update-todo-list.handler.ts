@@ -17,11 +17,7 @@ export class UpdateTodoListHandler implements ICommandHandler<UpdateTodoListComm
       command.userId,
     );
 
-    await this.eventsService.broadcastListEvent(
-      command.id,
-      'list_updated',
-      result,
-    );
+    await this.eventsService.broadcastListEvent(command.id, 'list_updated', result);
 
     return result;
   }

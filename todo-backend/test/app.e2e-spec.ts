@@ -19,9 +19,7 @@ describe('AppController (e2e)', () => {
       .overrideProvider('RESEND_CLIENT')
       .useValue({
         emails: {
-          send: jest
-            .fn()
-            .mockResolvedValue({ data: { id: 'test' }, error: null }),
+          send: jest.fn().mockResolvedValue({ data: { id: 'test' }, error: null }),
         },
       })
       .compile();

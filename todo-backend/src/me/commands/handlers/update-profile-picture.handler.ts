@@ -29,10 +29,7 @@ export class UpdateProfilePictureHandler implements ICommandHandler<UpdateProfil
 
     // 2. Upload to Cloudinary
     // Logic: Resize/crop is already handled in CloudinaryService's transformation
-    const result = (await this.cloudinaryService.uploadFile(
-      file,
-      'profile_pictures',
-    )) as unknown;
+    const result = (await this.cloudinaryService.uploadFile(file, 'profile_pictures')) as unknown;
 
     if (!result || typeof result !== 'object' || !('secure_url' in result)) {
       const error = result as { message?: string };

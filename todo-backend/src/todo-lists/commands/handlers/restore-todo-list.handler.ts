@@ -11,15 +11,8 @@ export class RestoreTodoListHandler implements ICommandHandler<RestoreTodoListCo
   ) {}
 
   async execute(command: RestoreTodoListCommand) {
-    const result = await this.todoListsService.restore(
-      command.id,
-      command.userId,
-    );
-    await this.eventsService.broadcastListEvent(
-      command.id,
-      'list_restored',
-      result,
-    );
+    const result = await this.todoListsService.restore(command.id, command.userId);
+    await this.eventsService.broadcastListEvent(command.id, 'list_restored', result);
     return result;
   }
 }

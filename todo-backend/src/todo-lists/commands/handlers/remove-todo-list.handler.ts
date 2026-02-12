@@ -11,10 +11,7 @@ export class RemoveTodoListHandler implements ICommandHandler<RemoveTodoListComm
   ) {}
 
   async execute(command: RemoveTodoListCommand) {
-    const result = await this.todoListsService.remove(
-      command.id,
-      command.userId,
-    );
+    const result = await this.todoListsService.remove(command.id, command.userId);
 
     await this.eventsService.broadcastListEvent(command.id, 'list_deleted', {
       id: command.id,

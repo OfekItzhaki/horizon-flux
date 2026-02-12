@@ -85,10 +85,7 @@ describe('AuthService', () => {
       mockUsersService.findByEmail.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.validateUser(
-        'test@example.com',
-        'password123',
-      );
+      const result = await service.validateUser('test@example.com', 'password123');
 
       expect(result).not.toHaveProperty('passwordHash');
       expect(result).toHaveProperty('id', '1');
@@ -98,9 +95,9 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       mockUsersService.findByEmail.mockResolvedValue(null);
 
-      await expect(
-        service.validateUser('nonexistent@example.com', 'password123'),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUser('nonexistent@example.com', 'password123')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException if user has no passwordHash', async () => {
@@ -112,9 +109,9 @@ describe('AuthService', () => {
 
       mockUsersService.findByEmail.mockResolvedValue(mockUser);
 
-      await expect(
-        service.validateUser('test@example.com', 'password123'),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUser('test@example.com', 'password123')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException if password is incorrect', async () => {
@@ -128,9 +125,9 @@ describe('AuthService', () => {
       mockUsersService.findByEmail.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(
-        service.validateUser('test@example.com', 'wrongpassword'),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUser('test@example.com', 'wrongpassword')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -172,9 +169,7 @@ describe('AuthService', () => {
       const result = await service.registerStart('test@example.com');
 
       expect(result).toEqual({ message: 'OTP sent' });
-      expect(mockUsersService.initUser).toHaveBeenCalledWith(
-        'test@example.com',
-      );
+      expect(mockUsersService.initUser).toHaveBeenCalledWith('test@example.com');
     });
 
     it('registerVerify should return token for valid OTP', async () => {
@@ -208,9 +203,7 @@ describe('AuthService', () => {
       mockJwtService.verify = jest.fn().mockReturnValue(mockPayload);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       mockUsersService.setPassword = jest.fn().mockResolvedValue(mockUser);
-      mockTodoListsService.seedDefaultLists = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      mockTodoListsService.seedDefaultLists = jest.fn().mockResolvedValue(undefined);
 
       // Mock login internal call
       mockUsersService.findByEmail.mockResolvedValue({
@@ -235,9 +228,7 @@ describe('AuthService', () => {
       });
       const result = await service.forgotPassword('test@example.com');
       expect(result).toEqual({ message: 'OTP sent' });
-      expect(mockUsersService.generatePasswordResetOtp).toHaveBeenCalledWith(
-        'test@example.com',
-      );
+      expect(mockUsersService.generatePasswordResetOtp).toHaveBeenCalledWith('test@example.com');
     });
 
     it('verifyResetOtp should return reset token for valid OTP', async () => {
@@ -269,11 +260,7 @@ describe('AuthService', () => {
 
       mockPrismaService.user.update.mockResolvedValue({ id: '1' });
 
-      const result = await service.resetPassword(
-        'test@example.com',
-        'valid-token',
-        'new-password',
-      );
+      const result = await service.resetPassword('test@example.com', 'valid-token', 'new-password');
 
       expect(result).toEqual({ message: 'Password reset successful' });
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
@@ -294,11 +281,7 @@ describe('AuthService', () => {
       mockJwtService.verify.mockReturnValue(mockPayload);
 
       await expect(
-        service.resetPassword(
-          'test@example.com',
-          'valid-token',
-          'new-password',
-        ),
+        service.resetPassword('test@example.com', 'valid-token', 'new-password'),
       ).rejects.toThrow(BadRequestException);
     });
   });

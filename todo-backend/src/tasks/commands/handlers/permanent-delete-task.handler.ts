@@ -11,16 +11,11 @@ export class PermanentDeleteTaskHandler implements ICommandHandler<PermanentDele
   ) {}
 
   async execute(command: PermanentDeleteTaskCommand) {
-    const result = await this.tasksService.permanentDelete(
-      command.id,
-      command.userId,
-    );
+    const result = await this.tasksService.permanentDelete(command.id, command.userId);
 
-    await this.eventsService.broadcastTaskEvent(
-      command.id,
-      'task_permanently_deleted',
-      { id: command.id },
-    );
+    await this.eventsService.broadcastTaskEvent(command.id, 'task_permanently_deleted', {
+      id: command.id,
+    });
 
     return result;
   }

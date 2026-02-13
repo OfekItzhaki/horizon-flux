@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/auth.service';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useAuthStore } from '../store/useAuthStore';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -15,47 +15,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthenticated, isLoading, loadUser, login, register, logout, refreshUser } =
+    useAuthStore();
 
   useEffect(() => {
     loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const storedUser = await authService.getStoredUser();
-      setUser(storedUser);
-    } catch (error) {
-      console.error('Error loading user:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (email: string, password: string) => {
-    const response = await authService.login({ email, password });
-    setUser(response.user);
-  };
-
-  const register = async (email: string, password: string, name: string) => {
-    await authService.register({ email, password, name });
-  };
-
-  const logout = async () => {
-    await authService.logout();
-    setUser(null);
-  };
-
-  const refreshUser = async () => {
-    await loadUser();
-  };
+  }, [loadUser]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated,
         isLoading,
         login,
         register,
@@ -75,11 +46,3 @@ export function useAuth() {
   }
   return context;
 }
-
-
-
-
-
-
-
-

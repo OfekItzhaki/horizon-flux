@@ -1,17 +1,18 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TaskAccessHelper } from '../tasks/helpers/task-access.helper';
+import { ShareRole } from '@prisma/client';
 import { CreateStepDto } from './dto/create-step.dto';
 import { UpdateStepDto } from './dto/update-step.dto';
 
 @Injectable()
 export class StepsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly taskAccess: TaskAccessHelper,
+  ) {}
 
-  private async ensureTaskAccess(taskId: number, userId: number) {
+  private async ensureTaskAccess(taskId: string, userId: string) {
     // Check if user owns the list OR has shared access
     const task = await this.prisma.task.findFirst({
       where: {
@@ -19,10 +20,7 @@ export class StepsService {
         deletedAt: null,
         todoList: {
           deletedAt: null,
-          OR: [
-            { ownerId: userId },
-            { shares: { some: { sharedWithId: userId } } },
-          ],
+          OR: [{ ownerId: userId }, { shares: { some: { sharedWithId: userId } } }],
         },
       },
     });
@@ -34,7 +32,7 @@ export class StepsService {
     return task;
   }
 
-  private async ensureStepAccess(stepId: number, userId: number) {
+  private async ensureStepAccess(stepId: string, userId: string) {
     // Check if user owns the list OR has shared access
     const step = await this.prisma.step.findFirst({
       where: {
@@ -44,10 +42,7 @@ export class StepsService {
           deletedAt: null,
           todoList: {
             deletedAt: null,
-            OR: [
-              { ownerId: userId },
-              { shares: { some: { sharedWithId: userId } } },
-            ],
+            OR: [{ ownerId: userId }, { shares: { some: { sharedWithId: userId } } }],
           },
         },
       },
@@ -63,7 +58,7 @@ export class StepsService {
     return step;
   }
 
-  private async getNextOrder(taskId: number) {
+  private async getNextOrder(taskId: string) {
     const lastStep = await this.prisma.step.findFirst({
       where: { taskId, deletedAt: null },
       orderBy: { order: 'desc' },
@@ -72,8 +67,8 @@ export class StepsService {
     return lastStep ? lastStep.order + 1 : 1;
   }
 
-  async create(taskId: number, dto: CreateStepDto, ownerId: number) {
-    await this.ensureTaskAccess(taskId, ownerId);
+  async create(taskId: string, dto: CreateStepDto, ownerId: string) {
+    await this.taskAccess.findTaskForUser(taskId, ownerId, ShareRole.EDITOR);
     const order = await this.getNextOrder(taskId);
 
     return this.prisma.step.create({
@@ -86,8 +81,8 @@ export class StepsService {
     });
   }
 
-  async findAll(taskId: number, ownerId: number) {
-    await this.ensureTaskAccess(taskId, ownerId);
+  async findAll(taskId: string, ownerId: string) {
+    await this.taskAccess.findTaskForUser(taskId, ownerId);
 
     return this.prisma.step.findMany({
       where: {
@@ -100,8 +95,10 @@ export class StepsService {
     });
   }
 
-  async update(stepId: number, dto: UpdateStepDto, ownerId: number) {
-    await this.ensureStepAccess(stepId, ownerId);
+  async update(stepId: string, dto: UpdateStepDto, ownerId: string) {
+    const step = await this.ensureStepAccess(stepId, ownerId);
+    // Find task to check EDITOR role
+    await this.taskAccess.findTaskForUser(step.taskId, ownerId, ShareRole.EDITOR);
 
     return this.prisma.step.update({
       where: { id: stepId },
@@ -112,8 +109,9 @@ export class StepsService {
     });
   }
 
-  async remove(stepId: number, ownerId: number) {
-    await this.ensureStepAccess(stepId, ownerId);
+  async remove(stepId: string, ownerId: string) {
+    const step = await this.ensureStepAccess(stepId, ownerId);
+    await this.taskAccess.findTaskForUser(step.taskId, ownerId, ShareRole.EDITOR);
 
     return this.prisma.step.update({
       where: { id: stepId },
@@ -123,8 +121,8 @@ export class StepsService {
     });
   }
 
-  async reorder(taskId: number, ownerId: number, stepIds: number[]) {
-    await this.ensureTaskAccess(taskId, ownerId);
+  async reorder(taskId: string, ownerId: string, stepIds: string[]) {
+    await this.taskAccess.findTaskForUser(taskId, ownerId, ShareRole.EDITOR);
 
     const existingSteps = await this.prisma.step.findMany({
       where: {
@@ -137,25 +135,19 @@ export class StepsService {
     });
 
     if (existingSteps.length !== stepIds.length) {
-      throw new BadRequestException(
-        'All steps must be included when reordering',
-      );
+      throw new BadRequestException('All steps must be included when reordering');
     }
 
     // Check for duplicate step IDs
     const uniqueStepIds = new Set(stepIds);
     if (uniqueStepIds.size !== stepIds.length) {
-      throw new BadRequestException(
-        'Duplicate step IDs are not allowed when reordering',
-      );
+      throw new BadRequestException('Duplicate step IDs are not allowed when reordering');
     }
 
     const validStepIds = new Set(existingSteps.map((step) => step.id));
     stepIds.forEach((id) => {
       if (!validStepIds.has(id)) {
-        throw new BadRequestException(
-          `Step ID ${id} does not belong to task ${taskId}`,
-        );
+        throw new BadRequestException(`Step ID ${id} does not belong to task ${taskId}`);
       }
     });
 

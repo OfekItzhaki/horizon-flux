@@ -29,7 +29,7 @@ import { authService } from '@tasks-management/frontend-services';
 // Login
 const response = await authService.login({
   email: 'user@example.com',
-  password: 'password123'
+  password: 'password123',
 });
 // Token is automatically stored
 
@@ -53,12 +53,12 @@ const lists = await listsService.getAll();
 // Create a list
 const newList = await listsService.create({
   name: 'My List',
-  type: 'CUSTOM'
+  type: 'CUSTOM',
 });
 
 // Update a list
 await listsService.update(listId, {
-  name: 'Updated Name'
+  name: 'Updated Name',
 });
 
 // Delete a list
@@ -80,7 +80,7 @@ const listTasks = await tasksService.getAll(listId);
 const task = await tasksService.create(listId, {
   description: 'Renew vehicle registration',
   dueDate: '2024-12-31T00:00:00Z',
-  reminderDaysBefore: [7, 1] // 7 days and 1 day before
+  reminderDaysBefore: [7, 1], // 7 days and 1 day before
 });
 
 // Get tasks for a specific date
@@ -98,7 +98,7 @@ const steps = await stepsService.getByTask(taskId);
 // Create a step
 await stepsService.create(taskId, {
   description: 'Step 1',
-  completed: false
+  completed: false,
 });
 
 // Reorder steps
@@ -117,10 +117,7 @@ const todayReminders = await remindersService.getToday();
 const reminders = await remindersService.getByDate('2024-12-25');
 
 // Get reminders for a date range (for scheduling)
-const upcomingReminders = await remindersService.getByRange(
-  '2024-12-25',
-  '2024-12-31'
-);
+const upcomingReminders = await remindersService.getByRange('2024-12-25', '2024-12-31');
 
 // Each reminder has:
 // - title: "Reminder: Task description"
@@ -135,7 +132,7 @@ import { sharingService } from '@tasks-management/frontend-services';
 
 // Share a list
 await sharingService.shareList(listId, {
-  sharedWithId: userId
+  sharedWithId: userId,
 });
 
 // Get lists shared with me
@@ -195,6 +192,35 @@ API_CONFIG.baseURL = 'https://api.example.com';
 // API_BASE_URL=https://api.example.com
 ```
 
+## Shared Reminder Module
+
+Reminder types and helpers are shared between web-app and mobile-app:
+
+```typescript
+import {
+  ReminderConfig,
+  ReminderTimeframe,
+  ReminderSpecificDate,
+  DAY_NAMES,
+  convertBackendToReminders,
+  convertRemindersToBackend,
+  formatReminderDisplay,
+} from '@tasks-management/frontend-services';
+
+// ReminderConfig includes: id, timeframe, time, specificDate, customDate,
+// dayOfWeek, daysBefore, hasAlarm, location (optional)
+
+const reminders = convertBackendToReminders(
+  task.reminderDaysBefore,
+  task.specificDayOfWeek,
+  task.dueDate,
+  task.reminderConfig,
+);
+
+const backend = convertRemindersToBackend(reminders, dueDate);
+const label = formatReminderDisplay(reminder, t); // t optional for i18n
+```
+
 ## TypeScript Support
 
 Full TypeScript support with all types exported:
@@ -205,6 +231,9 @@ import {
   Task,
   ToDoList,
   ReminderNotification,
+  ReminderConfig,
+  ReminderTimeframe,
+  ReminderSpecificDate,
   CreateTaskDto,
   // ... all types
 } from '@tasks-management/frontend-services';
@@ -227,7 +256,7 @@ function ListsComponent() {
 
   return (
     <div>
-      {lists.map(list => (
+      {lists.map((list) => (
         <div key={list.id}>{list.name}</div>
       ))}
     </div>
@@ -257,5 +286,3 @@ npm run build
 ```
 
 Output will be in the `dist/` folder with TypeScript declarations.
-
-

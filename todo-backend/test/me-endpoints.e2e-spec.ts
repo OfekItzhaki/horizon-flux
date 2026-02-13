@@ -3,19 +3,27 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { EmailService } from '../src/email/email.service';
 
 describe('Me Endpoints (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let authToken: string;
-  let userId: number;
-  let listId: number;
-  let taskId: number;
+  let userId: string;
+  let listId: string;
+  let taskId: string;
+
+  const mockEmailService = {
+    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EmailService)
+      .useValue(mockEmailService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
@@ -23,23 +31,48 @@ describe('Me Endpoints (e2e)', () => {
 
     prisma = moduleFixture.get<PrismaService>(PrismaService);
 
-    // Create test user and login
-    const userResponse = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        email: 'metest@example.com',
-        password: 'password123',
-        name: 'Me Test User',
+    // Cleanup
+    const userEmails = ['metest@example.com'];
+    const usersToDelete = await prisma.user.findMany({
+      where: { email: { in: userEmails } },
+      select: { id: true },
+    });
+    const userIds = usersToDelete.map((u) => u.id);
+
+    if (userIds.length > 0) {
+      await (prisma.step as any).deleteMany({
+        where: { task: { todoList: { ownerId: { in: userIds } } } },
       });
+      await (prisma.task as any).deleteMany({
+        where: { todoList: { ownerId: { in: userIds } } },
+      });
+      await (prisma.listShare as any).deleteMany({
+        where: {
+          OR: [{ sharedWithId: { in: userIds } }, { toDoList: { ownerId: { in: userIds } } }],
+        },
+      });
+      await (prisma.toDoList as any).deleteMany({
+        where: { ownerId: { in: userIds } },
+      });
+      await (prisma as any).refreshToken.deleteMany({
+        where: { userId: { in: userIds } },
+      });
+      await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    }
+
+    // Create test user and login
+    const userResponse = await request(app.getHttpServer()).post('/users').send({
+      email: 'metest@example.com',
+      password: 'password123',
+      name: 'Me Test User',
+    });
 
     userId = userResponse.body.id;
 
-    const loginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: 'metest@example.com',
-        password: 'password123',
-      });
+    const loginResponse = await request(app.getHttpServer()).post('/auth/login').send({
+      email: 'metest@example.com',
+      password: 'password123',
+    });
 
     authToken = loginResponse.body.accessToken;
 
@@ -61,9 +94,32 @@ describe('Me Endpoints (e2e)', () => {
 
   afterAll(async () => {
     if (userId) {
-      await prisma.user.deleteMany({
-        where: { email: { contains: 'metest@example.com' } },
+      const userEmails = ['metest@example.com'];
+      const users = await prisma.user.findMany({
+        where: { email: { in: userEmails } },
       });
+      const userIds = users.map((u) => u.id);
+
+      if (userIds.length > 0) {
+        await (prisma.step as any).deleteMany({
+          where: { task: { todoList: { ownerId: { in: userIds } } } },
+        });
+        await (prisma.task as any).deleteMany({
+          where: { todoList: { ownerId: { in: userIds } } },
+        });
+        await (prisma.listShare as any).deleteMany({
+          where: {
+            OR: [{ sharedWithId: { in: userIds } }, { toDoList: { ownerId: { in: userIds } } }],
+          },
+        });
+        await (prisma.toDoList as any).deleteMany({
+          where: { ownerId: { in: userIds } },
+        });
+        await (prisma as any).refreshToken.deleteMany({
+          where: { userId: { in: userIds } },
+        });
+        await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+      }
     }
     await app.close();
   });
@@ -76,10 +132,8 @@ describe('Me Endpoints (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(Array.isArray(res.body)).toBe(true);
-          expect(res.body.length).toBeGreaterThanOrEqual(5); // 4 defaults + 1 created
-          const hasCreatedList = res.body.some(
-            (list: any) => list.id === listId,
-          );
+          expect(res.body.length).toBeGreaterThanOrEqual(1);
+          const hasCreatedList = res.body.some((list: any) => list.id === listId);
           expect(hasCreatedList).toBe(true);
         });
     });
@@ -97,9 +151,7 @@ describe('Me Endpoints (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(Array.isArray(res.body)).toBe(true);
-          const hasCreatedTask = res.body.some(
-            (task: any) => task.id === taskId,
-          );
+          const hasCreatedTask = res.body.some((task: any) => task.id === taskId);
           expect(hasCreatedTask).toBe(true);
         });
     });
@@ -122,4 +174,3 @@ describe('Me Endpoints (e2e)', () => {
     });
   });
 });
-

@@ -1,9 +1,30 @@
-import { Body, Controller, Post, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Param,
+  HttpCode,
+  HttpStatus,
+  Res,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { Response, Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import { CurrentUser, CurrentUserPayload } from './current-user.decorator';
+import { ForgotPasswordDto, VerifyResetOtpDto, ResetPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
+import {
+  RegisterStartDto,
+  RegisterVerifyDto,
+  RegisterFinishDto,
+} from './dto/register-multi-step.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
-import UsersService from '../users/users.service';
+import { UsersService } from '../users/users.service';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -11,20 +32,85 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({
     status: 200,
-    description: 'Returns JWT access token and user data',
+    description: 'Returns JWT access token and user data, sets refresh token cookie',
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto.email, loginDto.password);
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
+    const [userValidationResult] = await Promise.all([
+      this.authService.login(loginDto.email, loginDto.password),
+      loginDto.captchaToken
+        ? this.authService.verifyTurnstile(loginDto.captchaToken)
+        : process.env.TURNSTILE_SECRET_KEY
+          ? Promise.reject(new BadRequestException('CAPTCHA token required'))
+          : Promise.resolve(),
+    ]);
+
+    this.setRefreshTokenCookie(response, userValidationResult.refreshToken);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { refreshToken, ...rest } = userValidationResult;
+    return rest;
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({ status: 200, description: 'Returns new access token' })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    const refreshToken = request.cookies['refresh_token'] as string | undefined;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token missing');
+    }
+
+    const result = await this.authService.refreshAccessToken(refreshToken);
+    this.setRefreshTokenCookie(response, result.refreshToken);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { refreshToken: _rt, ...rest } = result;
+    return rest;
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout and revoke refresh tokens' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully' })
+  async logout(
+    @CurrentUser() user: CurrentUserPayload,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.authService.logout(user.userId);
+    response.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      sameSite: 'strict',
+      path: '/api/v1/auth/refresh',
+    });
+    return { message: 'Logged out' };
+  }
+
+  private setRefreshTokenCookie(response: Response, token: string) {
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    response.cookie('refresh_token', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax', // Use lax in dev for better cross-port support
+      path: '/api/v1/auth/refresh', // Only send to refresh endpoint
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
   }
 
   @Post('verify-email/:token')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email address with token' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid or expired token' })
@@ -33,15 +119,93 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend email verification' })
   @ApiResponse({ status: 200, description: 'Verification email sent' })
   @ApiResponse({ status: 400, description: 'Email already verified' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async resendVerification(
-    @Body() resendVerificationDto: ResendVerificationDto,
+  async resendVerification(@Body() resendVerificationDto: ResendVerificationDto) {
+    return this.usersService.resendVerificationEmail(resendVerificationDto.email);
+  }
+
+  @Post('register/start')
+  @ApiOperation({ summary: 'Start registration by sending OTP' })
+  @ApiResponse({ status: 201, description: 'OTP sent successfully' })
+  async registerStart(@Body() dto: RegisterStartDto) {
+    const [result] = await Promise.all([
+      this.authService.registerStart(dto.email),
+      dto.captchaToken
+        ? this.authService.verifyTurnstile(dto.captchaToken)
+        : process.env.TURNSTILE_SECRET_KEY
+          ? Promise.reject(new BadRequestException('CAPTCHA token required'))
+          : Promise.resolve(),
+    ]);
+
+    return result;
+  }
+
+  @Post('register/verify')
+  @ApiOperation({ summary: 'Verify OTP and return a registration token' })
+  @ApiResponse({ status: 200, description: 'OTP verified' })
+  registerVerify(@Body() dto: RegisterVerifyDto) {
+    return this.authService.registerVerify(dto.email, dto.otp);
+  }
+
+  @Post('register/finish')
+  @ApiOperation({ summary: 'Complete registration with password' })
+  @ApiResponse({ status: 201, description: 'User registered and logged in' })
+  async registerFinish(
+    @Body() dto: RegisterFinishDto,
+    @Res({ passthrough: true }) response: Response,
   ) {
-    return this.usersService.resendVerificationEmail(
-      resendVerificationDto.email,
-    );
+    if (dto.password !== dto.passwordConfirm) {
+      throw new BadRequestException('Passwords do not match');
+    }
+    const result = await this.authService.registerFinish(dto.registrationToken, dto.password);
+    this.setRefreshTokenCookie(response, result.refreshToken);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { refreshToken, ...rest } = result;
+    return rest;
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset OTP' })
+  @ApiResponse({ status: 200, description: 'OTP sent if user exists' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    // Verify CAPTCHA if token provided or if secret key is configured
+    const [result] = await Promise.all([
+      this.authService.forgotPassword(dto.email),
+      dto.captchaToken
+        ? this.authService.verifyTurnstile(dto.captchaToken)
+        : process.env.TURNSTILE_SECRET_KEY
+          ? Promise.reject(new BadRequestException('CAPTCHA token required'))
+          : Promise.resolve(),
+    ]);
+
+    return result;
+  }
+
+  @Post('reset-password/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify reset OTP and return reset token' })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verified, returns reset token',
+  })
+  async verifyReset(@Body() dto: VerifyResetOtpDto) {
+    return this.authService.verifyResetOtp(dto.email, dto.otp);
+  }
+
+  @Post('reset-password/finish')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using reset token' })
+  @ApiResponse({ status: 200, description: 'Password reset successful' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    if (dto.password !== dto.passwordConfirm) {
+      throw new BadRequestException('Passwords do not match');
+    }
+    return this.authService.resetPassword(dto.email, dto.token, dto.password);
   }
 }

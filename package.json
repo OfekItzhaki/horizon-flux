@@ -1,0 +1,33 @@
+{
+  "name": "tasks-management",
+  "private": true,
+  "description": "Tasks Management monorepo",
+  "scripts": {
+    "start": "concurrently \"npm run dev:backend\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev:backend": "npm start --prefix todo-backend",
+    "dev:web": "npm start --prefix web-app",
+    "dev:mobile": "npm start --prefix mobile-app",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "eslint": "^9.17.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.4.2"
+  },
+  "lint-staged": {
+    "web-app/src/**/*.{ts,tsx,css,json}": [
+      "prettier --write",
+      "eslint -c web-app/eslint.config.js --fix"
+    ],
+    "web-app/src/**/*.{ts,tsx}": [
+      "npm run test --prefix web-app -- --run --passWithNoTests --bail"
+    ],
+    "todo-backend/src/**/*.ts": [
+      "prettier --write",
+      "eslint -c todo-backend/eslint.config.mjs --fix",
+      "npm run test --prefix todo-backend -- --passWithNoTests --bail --findRelatedTests"
+    ]
+  }
+}

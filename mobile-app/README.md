@@ -8,11 +8,41 @@ React Native mobile app built with Expo for managing to-do lists, tasks, and rem
 - 📋 To-Do Lists management (Daily, Weekly, Monthly, Yearly, Custom)
 - ✅ Tasks with completion tracking
 - 📝 Sub-tasks (Steps)
-- 🔔 Reminders notifications (⚠️ See Note Below)
+- 🔔 Reminders (specific date, every day/week/month/year, days before due) with optional **location**; shared logic from `frontend-services`
+- 🔕 Push notifications for reminders (task name, time, location when set) (⚠️ See Note Below)
 - 👥 List sharing
 - 📱 Native iOS and Android support
 
-⚠️ **Notification Testing Note:** Android push notifications are **not supported in Expo Go**. To test notifications on Android, you'll need to build a development build or production build. See [PRODUCTION_BUILD.md](./PRODUCTION_BUILD.md) for details.
+⚠️ **Notification Testing Note:** Android push notifications are **not supported in Expo Go**. To test notifications on Android, you'll need to build a development build or production build.
+
+## CAPTCHA / Bot Protection
+
+**Current Status:** The mobile app does NOT implement CAPTCHA verification for authentication flows.
+
+**Web App:** The web application uses Cloudflare Turnstile CAPTCHA to protect login, registration, and forgot password endpoints from bot attacks and credential stuffing.
+
+**Mobile Implementation Strategy:**
+
+The backend is configured to allow authentication without CAPTCHA when the `TURNSTILE_SECRET_KEY` environment variable is not set. This allows the mobile app to function without CAPTCHA protection during development.
+
+**Future Implementation Options:**
+
+1. **WebView Integration (Recommended):**
+   - Render Turnstile widget in a WebView component
+   - Use WebView message passing to communicate token to React Native
+   - Provides full Turnstile functionality with additional complexity
+
+2. **Deferred Implementation:**
+   - Continue allowing mobile authentication without CAPTCHA
+   - Backend already supports optional CAPTCHA verification
+   - Implement mobile CAPTCHA in a future iteration
+
+3. **Alternative CAPTCHA Provider:**
+   - Use a different CAPTCHA provider with better React Native support
+   - Maintain Turnstile for web, use alternative for mobile
+   - Backend would need to support multiple verification methods
+
+**Note:** The @marsidev/react-turnstile library is designed for web browsers and has limited React Native support. Cloudflare Turnstile relies on browser APIs that are not available in React Native.
 
 ## Prerequisites
 
@@ -23,19 +53,22 @@ React Native mobile app built with Expo for managing to-do lists, tasks, and rem
 ## Setup
 
 1. **Install dependencies:**
+
    ```bash
    cd mobile-app
    npm install
    ```
 
 2. **Configure API URL:**
-   
+
    Create a `.env` file in the `mobile-app` directory:
+
    ```env
    EXPO_PUBLIC_API_URL=http://localhost:3000
    ```
-   
+
    Or update `src/config/api.ts` directly:
+
    ```typescript
    export const API_CONFIG = {
      baseURL: 'http://your-backend-url:3000',
@@ -43,11 +76,13 @@ React Native mobile app built with Expo for managing to-do lists, tasks, and rem
    ```
 
    **Note:** For testing on a physical device, use your computer's local IP address instead of `localhost`:
+
    ```env
    EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000
    ```
 
 3. **Start the development server:**
+
    ```bash
    npm start
    ```
@@ -120,6 +155,7 @@ npx expo build:ios
 ## Next Steps
 
 ### ✅ Completed
+
 - [x] Add push notifications for reminders (requires dev/prod build on Android)
 - [x] Implement task creation/editing UI
 - [x] Add step management UI (add, toggle, delete)
@@ -128,20 +164,22 @@ npx expo build:ios
 - [x] Task sorting (by due date, completed, alphabetical)
 
 ### 🔧 Remaining Improvements
-See [IMPROVEMENTS_CHECKLIST.md](./IMPROVEMENTS_CHECKLIST.md) for detailed list.
 
 **High Priority:**
+
 - [ ] Implement list sharing UI (backend API exists, needs UI)
 - [ ] Add step reordering UI (drag-and-drop or buttons)
 - [ ] Add pull-to-refresh on RemindersScreen
 - [ ] Email verification flow improvements (resend verification, better messaging)
 
 **Medium Priority:**
+
 - [ ] Step edit functionality (edit descriptions)
 - [ ] User profile editing
 - [ ] Better error handling and user feedback
 
 **Low Priority:**
+
 - [ ] Offline support
 - [ ] Advanced filters and views
 - [ ] Accessibility improvements
@@ -149,22 +187,37 @@ See [IMPROVEMENTS_CHECKLIST.md](./IMPROVEMENTS_CHECKLIST.md) for detailed list.
 ## Troubleshooting
 
 **Connection errors:**
+
 - Make sure your backend is running
 - Check that the API URL is correct
 - For physical devices, ensure phone and computer are on the same network
 
 **Module not found errors:**
+
 - Delete `node_modules` and run `npm install` again
 - Clear Expo cache: `npx expo start -c`
+
+## Building for Production
+
+### Store Submission
+
+See [STORE_SUBMISSION.md](../instructions/MOBILE_APP_STORE_SUBMISSION.md) for detailed instructions on submitting to Google Play Store and Apple App Store.
+
+### App Store Assets
+
+See [STORE_LISTING.md](../instructions/MOBILE_APP_STORE_LISTING.md) for app description, keywords, and screenshot requirements.
+
+## Privacy Policy
+
+A privacy policy template is available in `privacy-policy.html`. You must host this file online and provide the URL when submitting to app stores.
+
+**To host the privacy policy:**
+
+1. Upload `privacy-policy.html` to a hosting service (GitHub Pages, your website, etc.)
+2. Get the public URL
+3. Update the email address in the privacy policy
+4. Add the URL to your app store listings
 
 ## License
 
 UNLICENSED
-
-
-
-
-
-
-
-

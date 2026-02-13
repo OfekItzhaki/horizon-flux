@@ -1,34 +1,37 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
+  Controller,
+  Get,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import {
-  CurrentUser,
-  CurrentUserPayload,
-} from '../auth/current-user.decorator';
-import { TodoListsService } from '../todo-lists/todo-lists.service';
-import { TasksService } from '../tasks/tasks.service';
+import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator';
+import { GetTodoListsQuery } from '../todo-lists/queries/get-todo-lists.query';
+import { GetTasksQuery } from '../tasks/queries/get-tasks.query';
+import { GetTrashQuery } from './queries/get-trash.query';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { UpdateProfilePictureCommand } from './commands/update-profile-picture.command';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Me')
-@ApiBearerAuth('JWT-auth')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('me')
 export class MeController {
   constructor(
-    private readonly todoListsService: TodoListsService,
-    private readonly tasksService: TasksService,
+    private readonly queryBus: QueryBus,
+    private readonly commandBus: CommandBus,
   ) {}
 
   @Get('lists')
   @ApiOperation({ summary: 'Get my lists (alias for GET /todo-lists)' })
   @ApiResponse({ status: 200, description: 'Returns all user lists' })
   getMyLists(@CurrentUser() user: CurrentUserPayload) {
-    return this.todoListsService.findAll(user.userId);
+    return this.queryBus.execute(new GetTodoListsQuery(user.userId));
   }
 
   @Get('tasks')
@@ -36,16 +39,32 @@ export class MeController {
   @ApiQuery({
     name: 'todoListId',
     required: false,
-    type: Number,
+    type: String,
     description: 'Filter tasks by list ID',
   })
   @ApiResponse({ status: 200, description: 'Returns user tasks' })
-  getMyTasks(
+  getMyTasks(@CurrentUser() user: CurrentUserPayload, @Query('todoListId') todoListId?: string) {
+    return this.queryBus.execute(new GetTasksQuery(user.userId, todoListId));
+  }
+
+  @Get('trash')
+  @ApiOperation({ summary: 'Get deleted lists and tasks for recovery' })
+  @ApiResponse({ status: 200, description: 'Returns all soft-deleted items' })
+  getTrash(@CurrentUser() user: CurrentUserPayload) {
+    return this.queryBus.execute(new GetTrashQuery(user.userId));
+  }
+
+  @Post('profile-picture')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Update profile picture' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture updated successfully',
+  })
+  updateProfilePicture(
     @CurrentUser() user: CurrentUserPayload,
-    @Query('todoListId') todoListId?: string,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    const listId = todoListId ? parseInt(todoListId, 10) : undefined;
-    return this.tasksService.findAll(user.userId, listId);
+    return this.commandBus.execute(new UpdateProfilePictureCommand(user.userId, file));
   }
 }
-

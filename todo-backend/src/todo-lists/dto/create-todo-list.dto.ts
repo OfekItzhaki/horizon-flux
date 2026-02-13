@@ -1,14 +1,6 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum ListType {
-  DAILY = 'DAILY',
-  WEEKLY = 'WEEKLY',
-  MONTHLY = 'MONTHLY',
-  YEARLY = 'YEARLY',
-  CUSTOM = 'CUSTOM',
-  FINISHED = 'FINISHED', // System list for archived completed tasks
-}
+import { ApiProperty } from '@nestjs/swagger';
+import { TaskBehavior, CompletionPolicy } from '@prisma/client';
 
 export class CreateToDoListDto {
   @ApiProperty({
@@ -18,13 +10,21 @@ export class CreateToDoListDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional({
-    description: 'Type of the list',
-    enum: ListType,
-    default: ListType.CUSTOM,
-    example: ListType.DAILY,
+  @ApiProperty({
+    description: 'Task behavior (Recurring vs One-off)',
+    enum: TaskBehavior,
+    default: TaskBehavior.ONE_OFF,
   })
-  @IsEnum(ListType)
+  @IsEnum(TaskBehavior)
   @IsOptional()
-  type?: ListType;
+  taskBehavior?: TaskBehavior;
+
+  @ApiProperty({
+    description: 'Completion policy (Keep vs Auto-delete)',
+    enum: CompletionPolicy,
+    default: CompletionPolicy.KEEP,
+  })
+  @IsEnum(CompletionPolicy)
+  @IsOptional()
+  completionPolicy?: CompletionPolicy;
 }

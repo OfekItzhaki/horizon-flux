@@ -3,20 +3,27 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { EmailService } from '../src/email/email.service';
 
 describe('List Sharing (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let ownerToken: string;
   let sharedWithToken: string;
-  let ownerId: number;
-  let sharedWithId: number;
-  let listId: number;
+  let ownerId: string;
+  let sharedWithId: string;
+  let listId: string;
+  const mockEmailService = {
+    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EmailService)
+      .useValue(mockEmailService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
@@ -24,43 +31,61 @@ describe('List Sharing (e2e)', () => {
 
     prisma = moduleFixture.get<PrismaService>(PrismaService);
 
+    // Aggressive cleanup before tests
+    const userEmails = ['owner@example.com', 'sharedwith@example.com'];
+    for (const email of userEmails) {
+      const user = await prisma.user.findFirst({ where: { email } });
+      if (user) {
+        await (prisma.step as any).deleteMany({
+          where: { task: { todoList: { ownerId: user.id } } },
+        });
+        await (prisma.task as any).deleteMany({
+          where: { todoList: { ownerId: user.id } },
+        });
+        await (prisma.listShare as any).deleteMany({
+          where: {
+            OR: [{ sharedWithId: user.id }, { toDoList: { ownerId: user.id } }],
+          },
+        });
+        await (prisma.toDoList as any).deleteMany({
+          where: { ownerId: user.id },
+        });
+        await (prisma as any).refreshToken.deleteMany({
+          where: { userId: user.id },
+        });
+        await prisma.user.delete({ where: { id: user.id } });
+      }
+    }
+
     // Create owner user
-    const ownerResponse = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        email: 'owner@example.com',
-        password: 'password123',
-        name: 'Owner User',
-      });
+    const ownerResponse = await request(app.getHttpServer()).post('/users').send({
+      email: 'owner@example.com',
+      password: 'password123',
+      name: 'Owner User',
+    });
 
     ownerId = ownerResponse.body.id;
 
-    const ownerLoginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: 'owner@example.com',
-        password: 'password123',
-      });
+    const ownerLoginResponse = await request(app.getHttpServer()).post('/auth/login').send({
+      email: 'owner@example.com',
+      password: 'password123',
+    });
 
     ownerToken = ownerLoginResponse.body.accessToken;
 
     // Create user to share with
-    const sharedWithResponse = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        email: 'sharedwith@example.com',
-        password: 'password123',
-        name: 'Shared With User',
-      });
+    const sharedWithResponse = await request(app.getHttpServer()).post('/users').send({
+      email: 'sharedwith@example.com',
+      password: 'password123',
+      name: 'Shared With User',
+    });
 
     sharedWithId = sharedWithResponse.body.id;
 
-    const sharedWithLoginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: 'sharedwith@example.com',
-        password: 'password123',
-      });
+    const sharedWithLoginResponse = await request(app.getHttpServer()).post('/auth/login').send({
+      email: 'sharedwith@example.com',
+      password: 'password123',
+    });
 
     sharedWithToken = sharedWithLoginResponse.body.accessToken;
 
@@ -75,11 +100,32 @@ describe('List Sharing (e2e)', () => {
 
   afterAll(async () => {
     if (ownerId && sharedWithId) {
-      await prisma.user.deleteMany({
-        where: {
-          email: { in: ['owner@example.com', 'sharedwith@example.com'] },
-        },
+      const userEmails = ['owner@example.com', 'sharedwith@example.com'];
+      const users = await prisma.user.findMany({
+        where: { email: { in: userEmails } },
       });
+      const userIds = users.map((u) => u.id);
+
+      if (userIds.length > 0) {
+        await (prisma.step as any).deleteMany({
+          where: { task: { todoList: { ownerId: { in: userIds } } } },
+        });
+        await (prisma.task as any).deleteMany({
+          where: { todoList: { ownerId: { in: userIds } } },
+        });
+        await (prisma.listShare as any).deleteMany({
+          where: {
+            OR: [{ sharedWithId: { in: userIds } }, { toDoList: { ownerId: { in: userIds } } }],
+          },
+        });
+        await (prisma.toDoList as any).deleteMany({
+          where: { ownerId: { in: userIds } },
+        });
+        await (prisma as any).refreshToken.deleteMany({
+          where: { userId: { in: userIds } },
+        });
+        await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+      }
     }
     await app.close();
   });
@@ -105,7 +151,7 @@ describe('List Sharing (e2e)', () => {
         .post(`/list-shares/todo-list/${listId}`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({
-          sharedWithId: 99999,
+          sharedWithId: '550e8400-e29b-41d4-a716-446655449999',
         })
         .expect(404);
     });
@@ -146,9 +192,7 @@ describe('List Sharing (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(Array.isArray(res.body)).toBe(true);
-          const hasSharedList = res.body.some(
-            (share: any) => share.toDoList.id === listId,
-          );
+          const hasSharedList = res.body.some((share: any) => share.id === listId);
           expect(hasSharedList).toBe(true);
         });
     });
@@ -169,9 +213,7 @@ describe('List Sharing (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(Array.isArray(res.body)).toBe(true);
-          const hasSharedWith = res.body.some(
-            (share: any) => share.sharedWith.id === sharedWithId,
-          );
+          const hasSharedWith = res.body.some((share: any) => share.sharedWith.id === sharedWithId);
           expect(hasSharedWith).toBe(true);
         });
     });
@@ -190,9 +232,7 @@ describe('List Sharing (e2e)', () => {
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200)
         .expect((res) => {
-          const hasSharedWith = res.body.some(
-            (share: any) => share.sharedWith.id === sharedWithId,
-          );
+          const hasSharedWith = res.body.some((share: any) => share.sharedWith.id === sharedWithId);
           expect(hasSharedWith).toBe(false);
         });
     });
@@ -205,4 +245,3 @@ describe('List Sharing (e2e)', () => {
     });
   });
 });
-

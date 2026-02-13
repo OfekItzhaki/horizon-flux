@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { getApiUrl } from '../config/api';
-import { TokenStorage } from './storage';
+import { TokenStorage, UserStorage } from './storage';
 import { normalizeBooleans } from './normalize';
 
 /**
@@ -26,6 +26,7 @@ const createApiClient = (): AxiosInstance => {
     headers: {
       'Content-Type': 'application/json',
     },
+    timeout: 30000, // 30 seconds timeout
   });
 
   // Request interceptor: Add auth token
@@ -35,12 +36,20 @@ const createApiClient = (): AxiosInstance => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      // Don't set Content-Type for FormData - let axios set it with boundary
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
       return config;
     },
     (error) => {
       return Promise.reject(error);
     },
   );
+
+  // Flag to prevent multiple refresh calls
+  let isRefreshing = false;
+  let refreshPromise: Promise<any> | null = null;
 
   // Response interceptor: Normalize data and handle errors
   client.interceptors.response.use(
@@ -51,11 +60,63 @@ const createApiClient = (): AxiosInstance => {
       }
       return response;
     },
-    (error: AxiosError) => {
+    async (error: AxiosError) => {
+      const originalRequest = error.config;
+
       if (error.response) {
         const statusCode = error.response.status;
         const serverMessage = (error.response.data as any)?.message;
-        
+
+        // Handle 401 Unauthorized - attempt refresh except for login/refresh paths
+        if (
+          statusCode === 401 &&
+          originalRequest &&
+          !originalRequest.url?.includes('/auth/login') &&
+          !originalRequest.url?.includes('/auth/refresh')
+        ) {
+          if (!isRefreshing) {
+            isRefreshing = true;
+            // Attempt to refresh the token using a separate call to avoid interceptor loop
+            refreshPromise = (async () => {
+              try {
+                const response = await axios.post(
+                  getApiUrl('/auth/refresh'),
+                  {},
+                  { withCredentials: true },
+                );
+                const newToken = response.data.accessToken;
+                await TokenStorage.setToken(newToken);
+                return newToken;
+              } catch (refreshError) {
+                // Refresh failed - clear everything
+                await TokenStorage.removeToken();
+                await UserStorage.removeUser();
+                throw refreshError;
+              } finally {
+                isRefreshing = false;
+                refreshPromise = null;
+              }
+            })();
+          }
+
+          try {
+            const token = await refreshPromise;
+            // Update original request header and retry
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return client(originalRequest);
+          } catch (retryError) {
+            return Promise.reject(retryError);
+          }
+        }
+
+        // If it was a 401 on login or refresh, or if refresh effort failed
+        if (statusCode === 401) {
+          await TokenStorage.removeToken();
+          await UserStorage.removeUser();
+        }
+
         // Provide user-friendly messages for common HTTP errors
         let message: string;
         switch (statusCode) {
@@ -63,7 +124,7 @@ const createApiClient = (): AxiosInstance => {
             message = serverMessage || 'Invalid request. Please check your input.';
             break;
           case 401:
-            message = serverMessage || 'Invalid credentials. Please try again.';
+            message = serverMessage || 'Session expired. Please log in again.';
             break;
           case 403:
             message = 'You do not have permission to perform this action.';
@@ -87,13 +148,20 @@ const createApiClient = (): AxiosInstance => {
         }
         throw new ApiError(statusCode, message, error.response.data);
       } else if (error.request) {
+        // Check if it's a timeout error
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          throw new ApiError(
+            0,
+            'Request is taking too long. The server may be slow or unavailable. Please try again later.',
+          );
+        }
         // Network error - server not reachable
         throw new ApiError(
-          0, 
-          'Unable to connect to server. Please check your internet connection and try again.',
+          0,
+          'Unable to connect to server. Please check your internet connection and try again later.',
         );
       } else {
-        throw new ApiError(0, 'Something went wrong. Please try again.');
+        throw new ApiError(0, 'Something went wrong. Please try again later.');
       }
     },
   );

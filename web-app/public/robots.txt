@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /src/
+Disallow: /api/
+Disallow: /auth/
+
+Sitemap: https://tasks.ofeklabs.dev/sitemap.xml

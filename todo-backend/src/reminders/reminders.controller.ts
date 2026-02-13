@@ -1,21 +1,12 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { RemindersService } from './reminders.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import {
-  CurrentUser,
-  CurrentUserPayload,
-} from '../auth/current-user.decorator';
+import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator';
 import { GetTasksByDateDto } from '../tasks/dto/get-tasks-by-date.dto';
 
 @ApiTags('Reminders')
-@ApiBearerAuth('JWT-auth')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('reminders')
 export class RemindersController {
@@ -43,7 +34,7 @@ export class RemindersController {
             type: 'string',
             example: '"Complete project" from Daily is due tomorrow.',
           },
-          title: {
+          summary: {
             type: 'string',
             example: 'Reminder: Complete project',
           },
@@ -74,10 +65,7 @@ export class RemindersController {
     status: 200,
     description: 'Returns array of reminder notifications for the date',
   })
-  getRemindersForDate(
-    @CurrentUser() user: CurrentUserPayload,
-    @Query() query: GetTasksByDateDto,
-  ) {
+  getRemindersForDate(@CurrentUser() user: CurrentUserPayload, @Query() query: GetTasksByDateDto) {
     const date = query.date ? new Date(query.date) : new Date();
     return this.remindersService.getReminderNotifications(user.userId, date);
   }
@@ -113,11 +101,6 @@ export class RemindersController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-    return this.remindersService.getRemindersForDateRange(
-      user.userId,
-      startDate,
-      endDate,
-    );
+    return this.remindersService.getRemindersForDateRange(user.userId, startDate, endDate);
   }
 }
-

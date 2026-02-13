@@ -5,7 +5,7 @@ export class StepsService {
   /**
    * Get all steps for a task
    */
-  async getByTask(taskId: number): Promise<Step[]> {
+  async getByTask(taskId: string): Promise<Step[]> {
     try {
       const response = await apiClient.get<Step[]>(`/tasks/${taskId}/steps`);
       return response.data;
@@ -20,12 +20,9 @@ export class StepsService {
   /**
    * Create a step
    */
-  async create(taskId: number, data: CreateStepDto): Promise<Step> {
+  async create(taskId: string, data: CreateStepDto): Promise<Step> {
     try {
-      const response = await apiClient.post<Step>(
-        `/tasks/${taskId}/steps`,
-        data,
-      );
+      const response = await apiClient.post<Step>(`/tasks/${taskId}/steps`, data);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -38,7 +35,7 @@ export class StepsService {
   /**
    * Update a step
    */
-  async update(id: number, data: UpdateStepDto): Promise<Step> {
+  async update(id: string, data: UpdateStepDto): Promise<Step> {
     try {
       const response = await apiClient.patch<Step>(`/steps/${id}`, data);
       return response.data;
@@ -53,7 +50,7 @@ export class StepsService {
   /**
    * Delete a step (soft delete)
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     try {
       await apiClient.delete(`/steps/${id}`);
     } catch (error) {
@@ -67,12 +64,11 @@ export class StepsService {
   /**
    * Reorder steps for a task
    */
-  async reorder(taskId: number, stepIds: number[]): Promise<Step[]> {
+  async reorder(taskId: string, stepIds: string[]): Promise<Step[]> {
     try {
-      const response = await apiClient.patch<Step[]>(
-        `/tasks/${taskId}/steps/reorder`,
-        { stepIds } as ReorderStepsDto,
-      );
+      const response = await apiClient.patch<Step[]>(`/tasks/${taskId}/steps/reorder`, {
+        stepIds,
+      } as ReorderStepsDto);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -84,11 +80,3 @@ export class StepsService {
 }
 
 export const stepsService = new StepsService();
-
-
-
-
-
-
-
-

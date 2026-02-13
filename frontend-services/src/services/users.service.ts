@@ -25,25 +25,37 @@ export class UsersService {
   /**
    * Get user by ID
    */
-  async getById(id: number): Promise<User> {
+  async getById(id: string): Promise<User> {
     return apiClient.get<User>(`/users/${id}`);
   }
 
   /**
    * Update user profile
    */
-  async update(id: number, data: UpdateUserDto): Promise<User> {
+  async update(id: string, data: UpdateUserDto): Promise<User> {
     return apiClient.patch<User>(`/users/${id}`, data);
   }
 
   /**
    * Soft delete user account
    */
-  async delete(id: number): Promise<User> {
+  async delete(id: string): Promise<User> {
     return apiClient.delete<User>(`/users/${id}`);
+  }
+
+  /**
+   * Upload profile picture
+   */
+  async uploadAvatar(id: string, file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiClient.post<User>(`/users/${id}/upload-avatar`, formData, {
+      headers: {
+        // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+      },
+    });
   }
 }
 
 export const usersService = new UsersService();
-
-

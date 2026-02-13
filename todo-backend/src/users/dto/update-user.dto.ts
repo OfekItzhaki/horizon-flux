@@ -4,8 +4,13 @@ import {
   IsString,
   IsUrl,
   MinLength,
+  IsEnum,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { NotificationFrequency } from '@prisma/client';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({
@@ -42,4 +47,24 @@ export class UpdateUserDto {
   @IsString()
   @MinLength(8)
   password?: string;
+
+  @ApiPropertyOptional({
+    description: 'User preference for task update notifications',
+    enum: ['NONE', 'DAILY', 'WEEKLY'],
+    example: 'DAILY',
+  })
+  @IsOptional()
+  @IsEnum(NotificationFrequency)
+  notificationFrequency?: NotificationFrequency;
+  @ApiPropertyOptional({
+    description: 'Number of days to keep items in trash before purging',
+    example: 30,
+    minimum: 1,
+    maximum: 365,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  trashRetentionDays?: number;
 }

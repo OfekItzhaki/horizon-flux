@@ -3,14 +3,14 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
-import { ListType } from '../todo-lists/dto/create-todo-list.dto';
+import { EmailService } from '../email/email.service';
+import { User, Prisma, ListType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
@@ -31,46 +31,67 @@ type UserWithRelations = Prisma.UserGetPayload<{
   };
 }>;
 
-type SanitizedUser = Omit<User, 'passwordHash' | 'emailVerificationToken'>;
+type SanitizedUser = Omit<User, 'passwordHash' | 'emailVerificationOtp'>;
 
 @Injectable()
-class UsersService {
-  constructor(private prisma: PrismaService) {}
+export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   private sanitizeUser<
     T extends {
       passwordHash?: string | null;
-      emailVerificationToken?: string | null;
+      emailVerificationOtp?: string | null;
     },
-  >(user: T | null): Omit<T, 'passwordHash' | 'emailVerificationToken'> | null {
+  >(user: T | null): Omit<T, 'passwordHash' | 'emailVerificationOtp'> | null {
     if (!user) {
       return null;
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, emailVerificationToken, ...rest } = user;
+    const { passwordHash, emailVerificationOtp, ...rest } = user;
     return rest;
   }
 
-  async findByEmail(email: string) {
-    return this.prisma.user.findFirst({
+  async findByEmail(email: string): Promise<User | null> {
+    try {
+      this.logger.log(`Finding user by email: ${email}`);
+      const user = await this.prisma.user.findFirst({
+        where: {
+          email,
+          deletedAt: null,
+        },
+      });
+      this.logger.log(`User found: ${user ? user.id : 'null'}`);
+      return user;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`Error finding user by email=${email}: ${err.message}`, err.stack);
+      throw error;
+    }
+  }
+
+  async findById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
       where: {
-        email,
+        id,
         deletedAt: null,
       },
     });
   }
 
-  async getAllUsers(requestingUserId: number): Promise<SanitizedUser[]> {
+  async getAllUsers(requestingUserId: string): Promise<SanitizedUser[]> {
     const user = await this.getUser(requestingUserId, requestingUserId);
     return user ? [user] : [];
   }
 
   async getUser(
-    id: number,
-    requestingUserId: number,
-  ): Promise<
-    Omit<UserWithRelations, 'passwordHash' | 'emailVerificationToken'>
-  > {
+    id: string,
+    requestingUserId: string,
+  ): Promise<Omit<UserWithRelations, 'passwordHash' | 'emailVerificationOtp'>> {
     if (id !== requestingUserId) {
       throw new ForbiddenException('You can only access your own profile');
     }
@@ -122,9 +143,7 @@ class UsersService {
           ...share,
           toDoList: {
             ...share.toDoList,
-            tasks: share.toDoList.tasks.filter(
-              (task) => task.deletedAt === null,
-            ),
+            tasks: share.toDoList.tasks.filter((task) => task.deletedAt === null),
           },
         })),
     };
@@ -136,26 +155,141 @@ class UsersService {
     return result;
   }
 
-  private async createDefaultLists(userId: number) {
-    const defaultLists = [
+  private async createDefaultLists(userId: string) {
+    const defaultLists: Array<{
+      name: string;
+      type: ListType;
+      isSystem?: boolean;
+    }> = [
       { name: 'Daily', type: ListType.DAILY },
       { name: 'Weekly', type: ListType.WEEKLY },
       { name: 'Monthly', type: ListType.MONTHLY },
       { name: 'Yearly', type: ListType.YEARLY },
+      // System list for archived completed tasks (created once per user)
+      { name: 'Finished Tasks', type: ListType.FINISHED, isSystem: true },
     ];
 
     await this.prisma.toDoList.createMany({
       data: defaultLists.map((list) => ({
         name: list.name,
         type: list.type,
+        isSystem: Boolean(list.isSystem ?? false),
         ownerId: userId,
       })),
     });
   }
 
+  async initUser(email: string): Promise<User> {
+    const existingUser = await this.findByEmail(email);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minutes for registration
+
+    if (existingUser) {
+      if (existingUser.emailVerified) {
+        throw new BadRequestException('Email is already registered and verified');
+      }
+
+      // Update existing unverified user with new OTP
+      return this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          emailVerificationOtp: otp,
+          emailVerificationExpiresAt: expiresAt,
+          emailVerificationSentAt: new Date(),
+          emailVerificationAttempts: 0,
+        },
+      });
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        emailVerificationOtp: otp,
+        emailVerificationExpiresAt: expiresAt,
+        emailVerificationSentAt: new Date(),
+        emailVerificationAttempts: 0,
+        name: email.split('@')[0],
+      },
+    });
+
+    // Create default lists for the new user
+    await this.createDefaultLists(user.id);
+
+    return user;
+  }
+
+  async sendOtp(email: string, otp: string, name?: string) {
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.debug(`OTP for ${email}: ${otp}`);
+    }
+    await this.emailService.sendVerificationEmail(email, otp, name);
+  }
+
+  async generatePasswordResetOtp(email: string) {
+    const user = await this.findByEmail(email);
+    if (!user) {
+      // Don't leak user existence? Actually for personal apps it's usually fine,
+      // but let's be professional and throw 404 if we want, or just return success either way.
+      // For this spec, we'll throw 404 to be clear.
+      throw new NotFoundException('User not found');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetOtp: otp,
+        passwordResetExpiresAt: expiresAt,
+      },
+    });
+
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.debug(`Password Reset OTP for ${email}: ${otp}`);
+    }
+    // Reuse verification email template for now or add a new one if needed
+    await this.emailService.sendVerificationEmail(email, otp, user.name || undefined);
+
+    return { message: 'Password reset OTP sent' };
+  }
+
+  async verifyPasswordResetOtp(email: string, otp: string) {
+    const user = await this.findByEmail(email);
+    if (!user || user.passwordResetOtp !== otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    const now = new Date();
+    if (user.passwordResetExpiresAt && user.passwordResetExpiresAt < now) {
+      throw new BadRequestException('OTP expired');
+    }
+
+    return user;
+  }
+
+  async setPassword(userId: string, passwordHash: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        emailVerified: true,
+        emailVerificationOtp: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+  }
+
   async createUser(data: CreateUserDto): Promise<SanitizedUser> {
+    // Keep original method for compatibility if needed, but refactored
     const passwordHash = await bcrypt.hash(data.password, 10);
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
     const user = await this.prisma.user.create({
       data: {
@@ -163,31 +297,32 @@ class UsersService {
         name: data.name,
         profilePicture: data.profilePicture,
         passwordHash,
-        emailVerificationToken,
+        emailVerificationOtp: otp,
         emailVerificationSentAt: new Date(),
+        emailVerificationExpiresAt: expiresAt,
       } as Prisma.UserCreateInput,
     });
 
-    // Create default lists for the new user
     await this.createDefaultLists(user.id);
+    this.sendOtp(user.email, otp, user.name || undefined).catch(console.error);
 
-    const sanitized = this.sanitizeUser(user);
-    if (!sanitized) {
-      throw new Error('Failed to create user');
-    }
-    return sanitized;
+    return this.sanitizeUser(user)!;
   }
 
-  async verifyEmail(token: string): Promise<SanitizedUser> {
+  async verifyEmail(otp: string): Promise<SanitizedUser> {
     const user = await this.prisma.user.findFirst({
       where: {
-        emailVerificationToken: token,
+        emailVerificationOtp: otp,
         deletedAt: null,
       } as Prisma.UserWhereInput,
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired verification token');
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    if (user.emailVerificationExpiresAt && user.emailVerificationExpiresAt < new Date()) {
+      throw new BadRequestException('Verification code has expired');
     }
 
     const userWithEmailVerified = user as User & { emailVerified: boolean };
@@ -199,7 +334,8 @@ class UsersService {
       where: { id: user.id },
       data: {
         emailVerified: true,
-        emailVerificationToken: null,
+        emailVerificationOtp: null,
+        emailVerificationExpiresAt: null,
       } as Prisma.UserUpdateInput,
     });
 
@@ -222,15 +358,44 @@ class UsersService {
       throw new BadRequestException('Email is already verified');
     }
 
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    // Rate Limit: 5 seconds
+    if (user.emailVerificationSentAt) {
+      const diff = new Date().getTime() - new Date(user.emailVerificationSentAt).getTime();
+      if (diff < 5000) {
+        throw new BadRequestException('Please wait 5 seconds before resending');
+      }
+    }
+
+    // Max Attempts: 5
+    if (user.emailVerificationAttempts >= 5) {
+      throw new BadRequestException('Too many attempts. Please try again later.');
+    }
+
+    const emailVerificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
     const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerificationToken,
+        emailVerificationOtp,
         emailVerificationSentAt: new Date(),
+        emailVerificationExpiresAt: expiresAt,
+        emailVerificationAttempts: { increment: 1 },
       } as Prisma.UserUpdateInput,
     });
+
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.debug(`Resent OTP for ${email}: ${emailVerificationOtp}`);
+    }
+
+    // Send verification email (don't await to avoid blocking response)
+    this.emailService
+      .sendVerificationEmail(updatedUser.email, emailVerificationOtp, updatedUser.name || undefined)
+      .catch((error) => {
+        console.error('Failed to send verification email:', error);
+      });
 
     const sanitized = this.sanitizeUser(updatedUser);
     if (!sanitized) {
@@ -240,19 +405,24 @@ class UsersService {
   }
 
   async updateUser(
-    id: number,
+    id: string,
     data: UpdateUserDto,
-    requestingUserId: number,
+    requestingUserId: string,
   ): Promise<SanitizedUser> {
     await this.getUser(id, requestingUserId); // This will throw if user doesn't exist or unauthorized
 
     const updateData: Prisma.UserUpdateInput = {};
     if (data.email !== undefined) updateData.email = data.email;
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.profilePicture !== undefined)
-      updateData.profilePicture = data.profilePicture;
+    if (data.profilePicture !== undefined) updateData.profilePicture = data.profilePicture;
     if (data.password !== undefined) {
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
+    }
+    if (data.notificationFrequency !== undefined) {
+      updateData.notificationFrequency = data.notificationFrequency;
+    }
+    if (data.trashRetentionDays !== undefined) {
+      updateData.trashRetentionDays = data.trashRetentionDays;
     }
 
     const user = await this.prisma.user.update({
@@ -267,10 +437,7 @@ class UsersService {
     return sanitized;
   }
 
-  async deleteUser(
-    id: number,
-    requestingUserId: number,
-  ): Promise<SanitizedUser> {
+  async deleteUser(id: string, requestingUserId: string): Promise<SanitizedUser> {
     await this.getUser(id, requestingUserId); // This will throw if user doesn't exist
 
     const user = await this.prisma.user.update({
@@ -287,4 +454,3 @@ class UsersService {
     return sanitized;
   }
 }
-export default UsersService;

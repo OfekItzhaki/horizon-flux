@@ -7,13 +7,9 @@ export class ListsService {
    */
   async getAll(): Promise<ToDoList[]> {
     try {
-      console.log('ListsService.getAll() - Fetching lists...');
       const response = await apiClient.get<ToDoList[]>('/todo-lists');
-      console.log('ListsService.getAll() - Raw response:', response);
-      console.log('ListsService.getAll() - response.data:', response.data);
       return response.data;
     } catch (error) {
-      console.error('ListsService.getAll() - Error:', error);
       if (error instanceof ApiError) {
         throw error;
       }
@@ -24,7 +20,7 @@ export class ListsService {
   /**
    * Get a list by ID
    */
-  async getById(id: number): Promise<ToDoList> {
+  async getById(id: string): Promise<ToDoList> {
     try {
       const response = await apiClient.get<ToDoList>(`/todo-lists/${id}`);
       return response.data;
@@ -54,12 +50,9 @@ export class ListsService {
   /**
    * Update a list
    */
-  async update(id: number, data: UpdateTodoListDto): Promise<ToDoList> {
+  async update(id: string, data: UpdateTodoListDto): Promise<ToDoList> {
     try {
-      const response = await apiClient.patch<ToDoList>(
-        `/todo-lists/${id}`,
-        data,
-      );
+      const response = await apiClient.patch<ToDoList>(`/todo-lists/${id}`, data);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -72,7 +65,7 @@ export class ListsService {
   /**
    * Delete a list (soft delete)
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     try {
       await apiClient.delete(`/todo-lists/${id}`);
     } catch (error) {

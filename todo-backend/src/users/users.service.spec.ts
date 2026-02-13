@@ -1,22 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
-import UsersService from './users.service';
+import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ListType } from '../todo-lists/dto/create-todo-list.dto';
+import { ListType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 jest.mock('bcrypt');
 jest.mock('crypto');
 
+const mockEmailService = {
+  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('UsersService', () => {
   let service: UsersService;
-  let prisma: PrismaService;
 
   const mockPrismaService = {
     user: {
@@ -30,22 +31,20 @@ describe('UsersService', () => {
   };
 
   beforeEach(async () => {
+    mockEmailService.sendVerificationEmail.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   describe('createUser', () => {
@@ -57,11 +56,13 @@ describe('UsersService', () => {
 
     it('should create user and default lists', async () => {
       const mockUser = {
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         name: 'Test User',
         passwordHash: 'hashed',
-        emailVerificationToken: 'token',
+        emailVerificationOtp: '123456',
+        emailVerificationExpiresAt: new Date(Date.now() + 600000),
+        emailVerificationAttempts: 0,
         emailVerificationSentAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -71,30 +72,55 @@ describe('UsersService', () => {
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      (crypto.randomBytes as unknown as jest.Mock).mockReturnValue(Buffer.from('mock-token-bytes'));
       mockPrismaService.user.create.mockResolvedValue(mockUser);
-      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 4 });
+      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 5 });
 
       const result = await service.createUser(createUserDto);
 
       expect(mockPrismaService.user.create).toHaveBeenCalled();
       expect(mockPrismaService.toDoList.createMany).toHaveBeenCalledWith({
         data: expect.arrayContaining([
-          { name: 'Daily', type: ListType.DAILY, ownerId: 1 },
-          { name: 'Weekly', type: ListType.WEEKLY, ownerId: 1 },
-          { name: 'Monthly', type: ListType.MONTHLY, ownerId: 1 },
-          { name: 'Yearly', type: ListType.YEARLY, ownerId: 1 },
+          expect.objectContaining({
+            name: 'Daily',
+            type: ListType.DAILY,
+            ownerId: '1',
+          }),
+          expect.objectContaining({
+            name: 'Weekly',
+            type: ListType.WEEKLY,
+            ownerId: '1',
+          }),
+          expect.objectContaining({
+            name: 'Monthly',
+            type: ListType.MONTHLY,
+            ownerId: '1',
+          }),
+          expect.objectContaining({
+            name: 'Yearly',
+            type: ListType.YEARLY,
+            ownerId: '1',
+          }),
+          expect.objectContaining({
+            name: 'Finished Tasks',
+            type: ListType.FINISHED,
+            ownerId: '1',
+            isSystem: true,
+          }),
         ]),
       });
       expect(result).not.toHaveProperty('passwordHash');
-      expect(result).not.toHaveProperty('emailVerificationToken');
+      expect(result).not.toHaveProperty('emailVerificationOtp');
     });
 
     it('should hash password before storing', async () => {
       const mockUser = {
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         passwordHash: 'hashed',
-        emailVerificationToken: 'token',
+        emailVerificationOtp: '123456',
+        emailVerificationExpiresAt: new Date(Date.now() + 600000),
+        emailVerificationAttempts: 0,
         emailVerificationSentAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -104,8 +130,9 @@ describe('UsersService', () => {
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      (crypto.randomBytes as unknown as jest.Mock).mockReturnValue(Buffer.from('mock-token-bytes'));
       mockPrismaService.user.create.mockResolvedValue(mockUser);
-      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 4 });
+      mockPrismaService.toDoList.createMany.mockResolvedValue({ count: 5 });
 
       await service.createUser(createUserDto);
 
@@ -114,8 +141,8 @@ describe('UsersService', () => {
   });
 
   describe('getUser', () => {
-    const userId = 1;
-    const requestingUserId = 1;
+    const userId = '1';
+    const requestingUserId = '1';
 
     it('should return user if found and authorized', async () => {
       const mockUser = {
@@ -123,7 +150,9 @@ describe('UsersService', () => {
         email: 'test@example.com',
         name: 'Test User',
         passwordHash: 'hashed',
-        emailVerificationToken: 'token',
+        emailVerificationOtp: '123456',
+        emailVerificationExpiresAt: new Date(Date.now() + 600000),
+        emailVerificationAttempts: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -137,14 +166,12 @@ describe('UsersService', () => {
       const result = await service.getUser(userId, requestingUserId);
 
       expect(result).not.toHaveProperty('passwordHash');
-      expect(result).not.toHaveProperty('emailVerificationToken');
+      expect(result).not.toHaveProperty('emailVerificationOtp');
     });
 
     it('should throw ForbiddenException if accessing another user', async () => {
-      await expect(service.getUser(1, 2)).rejects.toThrow(
-        ForbiddenException,
-      );
-      await expect(service.getUser(1, 2)).rejects.toThrow(
+      await expect(service.getUser('1', '2')).rejects.toThrow(ForbiddenException);
+      await expect(service.getUser('1', '2')).rejects.toThrow(
         'You can only access your own profile',
       );
     });
@@ -152,15 +179,13 @@ describe('UsersService', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.getUser(999, 999)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.getUser('999', '999')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('updateUser', () => {
-    const userId = 1;
-    const requestingUserId = 1;
+    const userId = '1';
+    const requestingUserId = '1';
 
     it('should update user successfully', async () => {
       const mockUser = {
@@ -233,10 +258,10 @@ describe('UsersService', () => {
   describe('verifyEmail', () => {
     it('should verify email successfully', async () => {
       const mockUser = {
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         emailVerified: false,
-        emailVerificationToken: 'valid-token',
+        emailVerificationOtp: 'valid-token',
         passwordHash: 'hashed',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -248,7 +273,8 @@ describe('UsersService', () => {
       mockPrismaService.user.update.mockResolvedValue({
         ...mockUser,
         emailVerified: true,
-        emailVerificationToken: null,
+        emailVerificationOtp: null,
+        emailVerificationExpiresAt: null,
       });
 
       const result = await service.verifyEmail('valid-token');
@@ -257,30 +283,31 @@ describe('UsersService', () => {
         expect.objectContaining({
           data: {
             emailVerified: true,
-            emailVerificationToken: null,
+            emailVerificationOtp: null,
+            emailVerificationExpiresAt: null,
           },
         }),
       );
-      expect(result).not.toHaveProperty('emailVerificationToken');
+      expect(result).not.toHaveProperty('emailVerificationOtp');
     });
 
     it('should throw BadRequestException for invalid token', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
 
+      await expect(service.verifyEmail('invalid-token')).rejects.toThrow(BadRequestException);
       await expect(service.verifyEmail('invalid-token')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.verifyEmail('invalid-token')).rejects.toThrow(
-        'Invalid or expired verification token',
+        'Invalid or expired verification code',
       );
     });
 
     it('should throw BadRequestException if email already verified', async () => {
       const mockUser = {
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         emailVerified: true,
-        emailVerificationToken: 'token',
+        emailVerificationOtp: '123456',
+        emailVerificationExpiresAt: new Date(Date.now() + 600000),
+        emailVerificationAttempts: 0,
         passwordHash: 'hashed',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -290,18 +317,14 @@ describe('UsersService', () => {
 
       mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
 
-      await expect(service.verifyEmail('token')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.verifyEmail('token')).rejects.toThrow(
-        'Email is already verified',
-      );
+      await expect(service.verifyEmail('123456')).rejects.toThrow(BadRequestException);
+      await expect(service.verifyEmail('123456')).rejects.toThrow('Email is already verified');
     });
   });
 
   describe('deleteUser', () => {
-    const userId = 1;
-    const requestingUserId = 1;
+    const userId = '1';
+    const requestingUserId = '1';
 
     it('should soft delete user', async () => {
       const mockUser = {
@@ -337,4 +360,3 @@ describe('UsersService', () => {
     });
   });
 });
-

@@ -1,10 +1,18 @@
 // User Types
+export enum NotificationFrequency {
+  NONE = 'NONE',
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+}
+
 export interface User {
-  id: number;
+  id: string;
   email: string;
   name: string | null;
   profilePicture: string | null;
   emailVerified: boolean;
+  notificationFrequency: NotificationFrequency;
+  trashRetentionDays: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -22,17 +30,30 @@ export interface UpdateUserDto {
   name?: string;
   profilePicture?: string;
   password?: string;
+  notificationFrequency?: NotificationFrequency;
+  trashRetentionDays?: number;
 }
 
 // Auth Types
 export interface LoginDto {
   email: string;
   password: string;
+  captchaToken?: string;
+}
+
+export interface RegisterStartDto {
+  email: string;
+  captchaToken?: string;
+}
+
+export interface ForgotPasswordDto {
+  email: string;
+  captchaToken?: string;
 }
 
 export interface LoginResponse {
   accessToken: string;
-  user: Omit<User, 'passwordHash' | 'emailVerificationToken'>;
+  user: Omit<User, 'passwordHash' | 'emailVerificationOtp'>;
 }
 
 // List Types
@@ -42,14 +63,29 @@ export enum ListType {
   MONTHLY = 'MONTHLY',
   YEARLY = 'YEARLY',
   CUSTOM = 'CUSTOM',
+  FINISHED = 'FINISHED',
+  TRASH = 'TRASH',
+}
+
+export enum TaskBehavior {
+  RECURRING = 'RECURRING',
+  ONE_OFF = 'ONE_OFF',
+}
+
+export enum CompletionPolicy {
+  AUTO_DELETE = 'AUTO_DELETE',
+  KEEP = 'KEEP',
+  MOVE_TO_DONE = 'MOVE_TO_DONE',
 }
 
 export interface ToDoList {
-  id: number;
+  id: string;
   name: string;
-  ownerId: number;
+  ownerId: string;
   order: number;
   type: ListType;
+  taskBehavior: TaskBehavior;
+  completionPolicy: CompletionPolicy;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -58,24 +94,29 @@ export interface ToDoList {
 
 export interface CreateToDoListDto {
   name: string;
-  type?: ListType;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 export interface UpdateToDoListDto {
   name?: string;
-  type?: ListType;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 // Task Types
 export interface Task {
-  id: number;
+  id: string;
   description: string;
   completed: boolean;
-  todoListId: number;
+  completedAt: string | null; // When the task was marked complete
+  todoListId: string;
+  originalListId?: string | null;
   order: number;
   dueDate: string | null;
   reminderDaysBefore: number[];
   specificDayOfWeek: number | null;
+  reminderConfig?: unknown; // JSON field for storing reminder configurations
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -88,23 +129,27 @@ export interface CreateTaskDto {
   dueDate?: string;
   specificDayOfWeek?: number;
   reminderDaysBefore?: number[];
+  reminderConfig?: unknown;
   completed?: boolean;
 }
 
 export interface UpdateTaskDto {
   description?: string;
-  dueDate?: string;
-  specificDayOfWeek?: number;
+  dueDate?: string | null;
+  specificDayOfWeek?: number | null;
   reminderDaysBefore?: number[];
+  reminderConfig?: unknown; // JSON field for storing reminder configurations
   completed?: boolean;
+  order?: number;
+  todoListId?: string;
 }
 
 // Step Types
 export interface Step {
-  id: number;
+  id: string;
   description: string;
   completed: boolean;
-  taskId: number;
+  taskId: string;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -122,12 +167,12 @@ export interface UpdateStepDto {
 }
 
 export interface ReorderStepsDto {
-  stepIds: number[];
+  stepIds: string[];
 }
 
 // Reminder Types
 export interface ReminderNotification {
-  taskId: number;
+  taskId: string;
   taskDescription: string;
   dueDate: string | null;
   reminderDate: string;
@@ -139,16 +184,34 @@ export interface ReminderNotification {
 }
 
 // List Sharing Types
+export enum ShareRole {
+  VIEWER = 'VIEWER',
+  EDITOR = 'EDITOR',
+}
+
 export interface ShareListDto {
-  sharedWithId: number;
+  email: string;
+  role?: ShareRole;
+  sharedWithId?: string; // Temporarily keeping both to see backend preference
 }
 
 export interface ListShare {
-  id: number;
-  sharedWithId: number;
-  toDoListId: number;
+  id: string;
+  sharedWithId: string;
+  toDoListId: string;
+  role: ShareRole;
   sharedWith?: User;
   toDoList?: ToDoList;
+}
+
+export interface TrashResponse {
+  lists: ToDoList[];
+  tasks: Task[];
+}
+
+export interface UpdateProfilePictureResponse {
+  message: string;
+  profilePicture: string;
 }
 
 // API Error Types
@@ -157,5 +220,3 @@ export interface ApiError {
   message: string | string[];
   error?: string;
 }
-
-

@@ -34,7 +34,7 @@ type UserWithRelations = Prisma.UserGetPayload<{
 type SanitizedUser = Omit<User, 'passwordHash' | 'emailVerificationOtp'>;
 
 @Injectable()
-class UsersService {
+export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
   constructor(
@@ -454,4 +454,3 @@ class UsersService {
     return sanitized;
   }
 }
-export default UsersService;

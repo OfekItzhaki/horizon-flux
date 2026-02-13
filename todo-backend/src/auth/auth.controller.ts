@@ -22,7 +22,7 @@ import {
   RegisterFinishDto,
 } from './dto/register-multi-step.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
-import UsersService from '../users/users.service';
+import { UsersService } from '../users/users.service';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -33,7 +33,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

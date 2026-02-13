@@ -34,13 +34,13 @@ type UserWithRelations = Prisma.UserGetPayload<{
 type SanitizedUser = Omit<User, 'passwordHash' | 'emailVerificationOtp'>;
 
 @Injectable()
-class UsersService {
+export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
-  ) {}
+  ) { }
 
   private sanitizeUser<
     T extends {
@@ -161,13 +161,13 @@ class UsersService {
       type: ListType;
       isSystem?: boolean;
     }> = [
-      { name: 'Daily', type: ListType.DAILY },
-      { name: 'Weekly', type: ListType.WEEKLY },
-      { name: 'Monthly', type: ListType.MONTHLY },
-      { name: 'Yearly', type: ListType.YEARLY },
-      // System list for archived completed tasks (created once per user)
-      { name: 'Finished Tasks', type: ListType.FINISHED, isSystem: true },
-    ];
+        { name: 'Daily', type: ListType.DAILY },
+        { name: 'Weekly', type: ListType.WEEKLY },
+        { name: 'Monthly', type: ListType.MONTHLY },
+        { name: 'Yearly', type: ListType.YEARLY },
+        // System list for archived completed tasks (created once per user)
+        { name: 'Finished Tasks', type: ListType.FINISHED, isSystem: true },
+      ];
 
     await this.prisma.toDoList.createMany({
       data: defaultLists.map((list) => ({
@@ -454,4 +454,3 @@ class UsersService {
     return sanitized;
   }
 }
-export default UsersService;

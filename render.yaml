@@ -10,7 +10,7 @@ services:
     plan: free
     rootDir: todo-backend
     buildCommand: cd ../frontend-services && npm ci && npm run build && cd ../todo-backend && NODE_ENV=development npm ci && npx prisma generate && npm run build
-    startCommand: npm run start:prod
+    startCommand: npx prisma migrate deploy && npm run start:prod
     healthCheckPath: /api/v1/healthz
     envVars:
       - key: NODE_ENV

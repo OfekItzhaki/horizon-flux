@@ -25,7 +25,7 @@ export class TasksService {
     private taskAccess: TaskAccessHelper,
     @Inject(forwardRef(() => TaskSchedulerService))
     private taskScheduler: TaskSchedulerService,
-  ) { }
+  ) {}
 
   async create(todoListId: string, createTaskDto: CreateTaskDto, ownerId: string) {
     await this.taskAccess.ensureListAccess(todoListId, ownerId, ShareRole.EDITOR);
@@ -38,7 +38,7 @@ export class TasksService {
 
     if (list && (list.type === ListType.TRASH || list.type === ListType.DONE)) {
       throw new BadRequestException(
-        `Cannot create tasks directly in "${list.name}" list. Tasks are moved here automatically.`
+        `Cannot create tasks directly in "${list.name}" list. Tasks are moved here automatically.`,
       );
     }
 

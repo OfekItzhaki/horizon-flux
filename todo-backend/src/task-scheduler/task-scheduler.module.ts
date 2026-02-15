@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TaskSchedulerService } from './task-scheduler.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { IdentityModule } from '../common/identity.module';
 import { BullModule, getQueueToken } from '@nestjs/bullmq';
 
 @Module({
   imports: [
     PrismaModule,
+    IdentityModule,
     ...(process.env.REDIS_HOST
       ? [
           BullModule.registerQueue({

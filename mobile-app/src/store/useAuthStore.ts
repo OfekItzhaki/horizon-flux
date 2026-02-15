@@ -11,6 +11,8 @@ interface AuthState {
   // Actions
   loadUser: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  ssoLogin: () => Promise<void>;
+  finalizeSsoLogin: (accessToken: string, refreshToken: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -64,6 +66,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error) {
       console.error('Error requesting notifications:', error);
+    }
+  },
+
+  ssoLogin: async () => {
+    set({ isLoading: true });
+    try {
+      const { openBrowserAsync } = await import('expo-web-browser');
+      const { createURL } = await import('expo-linking');
+      const { TokenStorage, UserStorage } = await import('../utils/storage');
+      const { authService } = await import('../services/auth.service');
+
+      const ssoUrl = 'https://ofeklabs.dev/login'; // Or use an env variable
+      const redirectUrl = createURL('auth-callback');
+      const authUrl = `${ssoUrl}?returnUrl=${encodeURIComponent(redirectUrl)}`;
+
+      const result = await openBrowserAsync(authUrl, {
+        showInRecents: true,
+      });
+
+      // result logic is handled by the deep link listener in App.tsx or similar
+      // but if the user cancels, we should handle it here
+      if (result.type === 'cancel') {
+        set({ isLoading: false });
+      }
+    } catch (error) {
+      console.error('SSO Login failed:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  finalizeSsoLogin: async (accessToken, refreshToken) => {
+    set({ isLoading: true });
+    try {
+      const { TokenStorage, UserStorage } = await import('../utils/storage');
+      const { usersService } = await import('../services/users.service');
+
+      await TokenStorage.setToken(accessToken);
+      // If we had refreshToken storage, we'd save it here too
+
+      const freshUser = await usersService.getCurrent();
+      await UserStorage.setUser(freshUser);
+
+      set({ user: freshUser, isAuthenticated: true });
+    } catch (error) {
+      console.error('Finalize SSO failed:', error);
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isLoading: false });
     }
   },
 

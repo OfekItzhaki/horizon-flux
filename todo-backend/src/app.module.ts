@@ -76,4 +76,4 @@ import { validate } from './config/env.validation';
     { provide: APP_FILTER, useClass: PrismaClientExceptionFilter },
   ],
 })
-export class AppModule { }
+export class AppModule {}

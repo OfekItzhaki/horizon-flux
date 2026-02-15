@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 
 const envSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url().optional(),
+  EXPO_PUBLIC_AUTH_URL: z.string().url().optional(),
   EXPO_PUBLIC_SENTRY_DSN: z.string().url().optional(),
 });
 
@@ -13,6 +14,7 @@ export const validateEnv = (): Env => {
   // When using EXPO_PUBLIC_ prefix, they are automatically embedded
   const rawEnv = {
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+    EXPO_PUBLIC_AUTH_URL: process.env.EXPO_PUBLIC_AUTH_URL,
     EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
   };
 

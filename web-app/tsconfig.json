@@ -30,7 +30,7 @@
         "./src/*"
       ],
       "@tasks-management/frontend-services": [
-        "../frontend-services/src/index.ts"
+        "../../horizon-auth-platform/packages/auth-sdk/src/index.ts"
       ]
     }
   },

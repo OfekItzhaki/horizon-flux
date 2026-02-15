@@ -36,7 +36,7 @@ export class RemindersService {
     private readonly eventsGateway: EventsGateway,
     private readonly emailService: EmailService,
     private readonly identityServiceClient: IdentityServiceClient,
-  ) { }
+  ) {}
 
   /**
    * Get reminders for a specific date and format them as notifications
@@ -105,7 +105,7 @@ export class RemindersService {
       this.eventsGateway.sendToUser(userId, 'task-reminder', notification);
 
       // 2. Fallback to email
-      // In the new architecture, we assume notifications are enabled by default 
+      // In the new architecture, we assume notifications are enabled by default
       // or we check a property on the remote user if available.
       await this.emailService.sendReminderEmail(
         user.email,

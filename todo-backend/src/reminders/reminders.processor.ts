@@ -3,6 +3,7 @@ import { Job, Queue } from 'bullmq';
 import { RemindersService } from './reminders.service';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { IdentityServiceClient } from '../common/identity-service-client';
 
 interface ReminderJobData {
   userId?: string;
@@ -15,6 +16,7 @@ export class RemindersProcessor extends WorkerHost {
   constructor(
     private readonly remindersService: RemindersService,
     private readonly prisma: PrismaService,
+    private readonly identityServiceClient: IdentityServiceClient,
     @InjectQueue('reminders') private readonly remindersQueue: Queue,
   ) {
     super();
@@ -34,10 +36,8 @@ export class RemindersProcessor extends WorkerHost {
 
   private async handleProcessAllReminders() {
     this.logger.log('Processing reminders for all users');
-    const users = await this.prisma.user.findMany({
-      where: { deletedAt: null },
-      select: { id: true },
-    });
+    // We search for all active users via the identity service
+    const users = await this.identityServiceClient.searchUsers('');
 
     for (const user of users) {
       await this.remindersQueue.add('processUserReminders', {

@@ -19,7 +19,7 @@ import { handleApiError } from '../utils/errorHandler';
 import { useTheme } from '../context/ThemeContext';
 
 export default function LoginScreen() {
-  const { login, register } = useAuth();
+  const { login, register, ssoLogin } = useAuth();
   const { setThemeMode, isDark } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -239,16 +239,37 @@ export default function LoginScreen() {
           {loading ? (
             <ActivityIndicator size="large" color="#6366f1" />
           ) : (
-            <TouchableOpacity onPress={isLogin ? handleLogin : handleRegister} activeOpacity={0.8}>
-              <LinearGradient
-                colors={['#6366f1', '#a855f7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.button}
-              >
-                <Text style={styles.buttonText}>{isLogin ? 'Login' : 'Register'}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity onPress={ssoLogin} activeOpacity={0.8}>
+                <LinearGradient
+                  colors={['#8b5cf6', '#6366f1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.button}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="log-in-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Login with Horizon Hub</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {isLogin && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 8 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#1e293b' : '#e2e8f0' }} />
+                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1 }}>OR</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#1e293b' : '#e2e8f0' }} />
+                </View>
+              )}
+
+              <TouchableOpacity onPress={isLogin ? handleLogin : handleRegister} activeOpacity={0.8}>
+                <View style={[styles.button, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9' }]}>
+                  <Text style={[styles.buttonText, { color: isDark ? '#f1f5f9' : '#1e293b' }]}>
+                    {isLogin ? 'Manual Login' : 'Manual Register'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           )}
 
           <TouchableOpacity style={styles.switchButton} onPress={() => setIsLogin(!isLogin)}>

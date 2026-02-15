@@ -1,4 +1,4 @@
-import { apiClient, ApiError } from '../utils/api-client';
+import { apiClient, authClient, ApiError } from '../utils/api-client';
 import { User, UpdateUserDto } from '../types';
 
 export class UsersService {
@@ -7,11 +7,8 @@ export class UsersService {
    */
   async getCurrent(): Promise<User> {
     try {
-      const response = await apiClient.get<User[]>('/users');
-      if (!response.data || response.data.length === 0) {
-        throw new ApiError(404, 'No authenticated user found');
-      }
-      return response.data[0];
+      const response = await authClient.get<User>('/users/me');
+      return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
@@ -25,7 +22,7 @@ export class UsersService {
    */
   async getById(id: string): Promise<User> {
     try {
-      const response = await apiClient.get<User>(`/users/${id}`);
+      const response = await authClient.get<User>(`/users/${id}`);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -40,7 +37,7 @@ export class UsersService {
    */
   async update(id: string, data: UpdateUserDto): Promise<User> {
     try {
-      const response = await apiClient.patch<User>(`/users/${id}`, data);
+      const response = await authClient.patch<User>(`/users/${id}`, data);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -68,7 +65,7 @@ export class UsersService {
         type: fileType,
       } as any);
 
-      const response = await apiClient.post<User>(`/users/${id}/upload-avatar`, formData, {
+      const response = await authClient.post<User>(`/users/${id}/upload-avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

@@ -12,11 +12,38 @@ import {
   updateDailyTasksNotification,
 } from './src/services/notifications.service';
 import { TokenStorage } from './src/utils/storage';
+import { configure } from '@tasks-management/frontend-services';
+import { API_CONFIG } from './src/config/api';
 import './src/i18n';
+
+// Configure shared services
+configure({
+  baseURL: API_CONFIG.baseURL,
+  authBaseURL: API_CONFIG.authBaseURL,
+});
+
+import * as Linking from 'expo-linking';
+import { useAuthStore } from './src/store/useAuthStore';
 
 function AppContent() {
   const { isDark } = useTheme();
+  const finalizeSsoLogin = useAuthStore((state) => state.finalizeSsoLogin);
+
   useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      const { path, queryParams } = Linking.parse(event.url);
+      if (path === 'auth-callback' && queryParams?.accessToken) {
+        finalizeSsoLogin(queryParams.accessToken as string, queryParams.refreshToken as string);
+      }
+    };
+
+    // Check if app was opened by a link
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
     const initializeNotifications = async () => {
       // Request notification permissions on app start (without guidance, as it may have been shown on login)
       const hasPermission = await requestNotificationPermissions(false);

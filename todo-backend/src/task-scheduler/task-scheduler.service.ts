@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListType } from '@prisma/client';
+import { IdentityServiceClient } from '../common/identity-service-client';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
@@ -20,8 +21,9 @@ export class TaskSchedulerService implements OnModuleInit {
   private readonly DB_ERROR_LOG_COOLDOWN_MS = 60_000; // 1 minute
 
   constructor(
-    private prisma: PrismaService,
-    @InjectQueue('reminders') private remindersQueue: Queue,
+    private readonly prisma: PrismaService,
+    private readonly identityServiceClient: IdentityServiceClient,
+    @InjectQueue('reminders') private readonly remindersQueue: Queue,
   ) {}
 
   private isSchedulerDisabled(): boolean {
@@ -463,10 +465,7 @@ export class TaskSchedulerService implements OnModuleInit {
   async purgeRecycleBin() {
     await this.runIfDbAvailable('purgeRecycleBin', async () => {
       // Fetch all users to get their specific retention days
-      const users = await this.prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { id: true, trashRetentionDays: true },
-      });
+      const users = await this.identityServiceClient.searchUsers('');
 
       let totalTasksPurged = 0;
       let totalListsPurged = 0;

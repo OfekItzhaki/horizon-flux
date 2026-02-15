@@ -16,7 +16,7 @@ export class ListSharesService {
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
     private identityServiceClient: IdentityServiceClient,
-  ) { }
+  ) {}
 
   private async ensureOwnedList(todoListId: string, ownerId: string) {
     const list = await this.prisma.toDoList.findFirst({

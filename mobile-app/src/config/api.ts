@@ -17,6 +17,11 @@ export const API_CONFIG = {
     (__DEV__
       ? 'http://192.168.68.54:3000/api/v1' // Dev fallback: use your machine's IP (ipconfig / ifconfig)
       : ''), // Production MUST set EXPO_PUBLIC_API_URL environment variable
+  authBaseURL:
+    ENV.EXPO_PUBLIC_AUTH_URL ||
+    (__DEV__
+      ? 'http://192.168.68.54:3001/api/v1' // Identity Service port
+      : ''),
 };
 
 /**
@@ -24,18 +29,17 @@ export const API_CONFIG = {
  * Automatically adds /api/v1 if not present in the baseURL
  */
 export const getApiUrl = (endpoint: string): string => {
-  let base = API_CONFIG.baseURL.replace(/\/$/, ''); // Remove trailing slash
+  let base = API_CONFIG.baseURL.replace(/\/$/, '');
+  if (!base.includes('/api/v1')) base = `${base}/api/v1`;
+  if (!endpoint) return base;
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${base}${path}`;
+};
 
-  // Ensure architecture matches backend (with api/v1 prefix)
-  if (!base.includes('/api/v1')) {
-    base = `${base}/api/v1`;
-  }
-
-  // If endpoint is empty, return base without trailing slash
-  if (!endpoint) {
-    return base;
-  }
-
+export const getAuthUrl = (endpoint: string): string => {
+  let base = API_CONFIG.authBaseURL.replace(/\/$/, '');
+  if (!base.includes('/api/v1')) base = `${base}/api/v1`;
+  if (!endpoint) return base;
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${base}${path}`;
 };

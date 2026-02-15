@@ -2,7 +2,7 @@
   "expo": {
     "name": "Horizon Flux",
     "slug": "tasks-management",
-    "scheme": "tasks-management",
+    "scheme": "horizon-flux",
     "version": "1.2.1",
     "description": "Organize your life with Horizon Flux by Horizon Labs - the intuitive to-do list app that helps you stay on top of your daily, weekly, monthly, and yearly tasks. Create custom lists, set reminders, track sub-tasks, and share lists with others. Available in English and Hebrew.",
     "orientation": "portrait",
@@ -29,7 +29,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": ["RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS"],
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.tasksmanagement.app"
@@ -43,7 +47,8 @@
         }
       ],
       "@sentry/react-native",
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

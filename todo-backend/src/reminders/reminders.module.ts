@@ -6,12 +6,14 @@ import { BullModule, getQueueToken } from '@nestjs/bullmq';
 import { RemindersProcessor } from './reminders.processor';
 import { EmailModule } from '../email/email.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { IdentityModule } from '../common/identity.module';
 
 @Module({
   imports: [
     TasksModule,
     EmailModule,
     PrismaModule,
+    IdentityModule,
     ...(process.env.REDIS_HOST
       ? [
           BullModule.registerQueue({

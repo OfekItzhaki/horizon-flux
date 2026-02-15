@@ -18,7 +18,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@marsidev/react-turnstile": "^1.4.2",
     "@tanstack/react-query": "^5.90.16",
-    "@tasks-management/frontend-services": "file:../frontend-services",
+    "@tasks-management/frontend-services": "file:../../horizon-auth-platform/packages/auth-sdk",
     "axios": "^1.13.5",
     "i18next": "^25.7.4",
     "i18next-browser-languagedetector": "^8.2.0",

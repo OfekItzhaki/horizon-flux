@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        '@tasks-management/frontend-services': path.resolve(__dirname, '../frontend-services/src/index.ts'),
+        '@tasks-management/frontend-services': path.resolve(__dirname, '../horizon-auth-platform/packages/auth-sdk/src/index.ts'),
       },
     },
     server: {
@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       commonjsOptions: {
-        include: [/node_modules/, /frontend-services[\\/]dist/],
+        include: [/node_modules/, /auth-sdk[\\/]dist/],
       },
     },
     test: {

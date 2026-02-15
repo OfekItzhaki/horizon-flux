@@ -1,4 +1,4 @@
-import { apiClient, ApiError } from '../utils/api-client';
+import { authClient, ApiError } from '../utils/api-client';
 import { TokenStorage, UserStorage } from '../utils/storage';
 import { LoginDto, LoginResponse, User, CreateUserDto } from '../types';
 
@@ -8,7 +8,7 @@ export class AuthService {
    */
   async login(credentials: LoginDto): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
+      const response = await authClient.post<LoginResponse>('/auth/login', credentials);
       // response.data is already normalized by api-client interceptor
       await TokenStorage.setToken(response.data.accessToken);
       await UserStorage.setUser(response.data.user);
@@ -26,7 +26,7 @@ export class AuthService {
    */
   async register(data: CreateUserDto): Promise<User> {
     try {
-      const response = await apiClient.post<User>('/users', data);
+      const response = await authClient.post<User>('/users', data);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -72,7 +72,7 @@ export class AuthService {
     try {
       // Encode token in path segment to handle special characters
       const encodedToken = encodeURIComponent(token);
-      const response = await apiClient.post<User>(`/auth/verify-email/${encodedToken}`);
+      const response = await authClient.post<User>(`/auth/verify-email/${encodedToken}`);
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -87,7 +87,7 @@ export class AuthService {
    */
   async resendVerification(email: string): Promise<User> {
     try {
-      const response = await apiClient.post<User>('/auth/resend-verification', {
+      const response = await authClient.post<User>('/auth/resend-verification', {
         email,
       });
       return response.data;

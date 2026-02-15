@@ -3,7 +3,7 @@ import { IdentityServiceClient } from './identity-service-client';
 
 @Global()
 @Module({
-    providers: [IdentityServiceClient],
-    exports: [IdentityServiceClient],
+  providers: [IdentityServiceClient],
+  exports: [IdentityServiceClient],
 })
-export class IdentityModule { }
+export class IdentityModule {}

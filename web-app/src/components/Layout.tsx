@@ -25,7 +25,7 @@ export default function Layout() {
     enabled: !!user,
   });
 
-  const doneList = lists?.find((l) => l.type === 'FINISHED');
+  const doneList = lists?.find((l) => l.type === 'DONE');
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -76,12 +76,11 @@ export default function Layout() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      location.pathname.startsWith('/lists') ||
-                      location.pathname.startsWith('/trash')
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname.startsWith('/lists') ||
+                        location.pathname.startsWith('/trash')
                         ? 'bg-accent/10 text-accent'
                         : 'text-secondary hover:text-primary hover:bg-hover'
-                    }`}
+                      }`}
                   >
                     {t('nav.lists')}
                     <svg
@@ -181,11 +180,10 @@ export default function Layout() {
 
                 <Link
                   to="/analytics"
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    location.pathname.startsWith('/analytics')
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname.startsWith('/analytics')
                       ? 'bg-accent text-white shadow-sm'
                       : 'text-secondary hover:text-primary hover:bg-hover'
-                  }`}
+                    }`}
                 >
                   {t('nav.analytics', { defaultValue: 'Analytics' })}
                 </Link>
@@ -202,11 +200,10 @@ export default function Layout() {
                   <button
                     key={mode}
                     onClick={() => setThemeMode(mode)}
-                    className={`p-1.5 rounded-md transition-all ${
-                      themeMode === mode
+                    className={`p-1.5 rounded-md transition-all ${themeMode === mode
                         ? 'bg-surface text-accent shadow-sm'
                         : 'text-tertiary hover:text-secondary'
-                    }`}
+                      }`}
                     title={t(`theme.${mode}`, {
                       defaultValue:
                         mode.charAt(0).toUpperCase() + mode.slice(1),

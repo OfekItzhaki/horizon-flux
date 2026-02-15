@@ -6,6 +6,7 @@ export { tasksService, TasksService } from './services/tasks.service';
 export { stepsService, StepsService } from './services/steps.service';
 export { remindersService, RemindersService } from './services/reminders.service';
 export { sharingService, SharingService } from './services/sharing.service';
+export { taskSharingService, TaskSharingService } from './services/task-sharing.service';
 
 // Export API client
 export { apiClient, ApiClient } from './utils/api-client';

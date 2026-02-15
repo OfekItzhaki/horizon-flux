@@ -14,6 +14,7 @@ interface SortableTaskItemProps {
   onDelete: () => void;
   onRestore: () => void;
   onPermanentDelete: () => void;
+  onShare: () => void;
   onClick: () => void;
   isOptimistic?: boolean;
 }
@@ -29,6 +30,7 @@ export function SortableTaskItem({
   onDelete,
   onRestore,
   onPermanentDelete,
+  onShare,
   onClick,
   isOptimistic = false,
 }: SortableTaskItemProps) {
@@ -55,15 +57,14 @@ export function SortableTaskItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group vibrant-hover-card p-5 mt-4 flex items-center gap-5 transition-all duration-300 ${isRtl ? 'flex-row-reverse' : ''} ${
-        isBulkMode
-          ? isSelected
-            ? 'ring-2 ring-accent shadow-glow bg-accent/5'
-            : 'hover:bg-hover cursor-pointer'
-          : isDragging
-            ? 'cursor-grabbing opacity-60 scale-[1.02] shadow-xl z-50 ring-2 ring-accent'
-            : 'cursor-pointer'
-      } ${isOptimistic ? 'opacity-60 pointer-events-none' : ''}`}
+      className={`group vibrant-hover-card p-5 mt-4 flex items-center gap-5 transition-all duration-300 ${isRtl ? 'flex-row-reverse' : ''} ${isBulkMode
+        ? isSelected
+          ? 'ring-2 ring-accent shadow-glow bg-accent/5'
+          : 'hover:bg-hover cursor-pointer'
+        : isDragging
+          ? 'cursor-grabbing opacity-60 scale-[1.02] shadow-xl z-50 ring-2 ring-accent'
+          : 'cursor-pointer'
+        } ${isOptimistic ? 'opacity-60 pointer-events-none' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
         if (isBulkMode) {
@@ -117,11 +118,10 @@ export function SortableTaskItem({
             if (!isOptimistic) onToggleComplete();
           }}
           disabled={isOptimistic}
-          className={`shrink-0 w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all ${
-            isCompletedRow
-              ? 'bg-accent-success border-accent-success shadow-lg'
-              : 'border-border-strong hover:border-accent bg-surface hover:scale-105 active:scale-95'
-          } ${isOptimistic ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+          className={`shrink-0 w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all ${isCompletedRow
+            ? 'bg-accent-success border-accent-success shadow-lg'
+            : 'border-border-strong hover:border-accent bg-surface hover:scale-105 active:scale-95'
+            } ${isOptimistic ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
         >
           {isCompletedRow && (
             <svg
@@ -265,29 +265,53 @@ export function SortableTaskItem({
               </button>
             </>
           ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              aria-label="delete-button"
-              className="p-2.5 text-accent-danger hover:bg-accent-danger/10 rounded-xl transition-all hover:scale-110 active:scale-95"
-              title={t('tasks.delete')}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShare();
+                }}
+                className="p-2.5 text-accent hover:bg-accent/10 rounded-xl transition-all hover:scale-110 active:scale-95"
+                title={t('sharing.shareButton', { defaultValue: 'Share' })}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                aria-label="delete-button"
+                className="p-2.5 text-accent-danger hover:bg-accent-danger/10 rounded-xl transition-all hover:scale-110 active:scale-95"
+                title={t('tasks.delete')}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            </>
           )}
         </div>
       )}

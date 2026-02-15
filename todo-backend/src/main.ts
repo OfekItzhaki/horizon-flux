@@ -30,7 +30,11 @@ async function bootstrap() {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
           'script-src': ["'self'", "'unsafe-inline'", 'https://challenges.cloudflare.com'],
           'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
-          'connect-src': ["'self'", 'https://challenges.cloudflare.com', 'https://api.horizon-flux.ofeklabs.dev'],
+          'connect-src': [
+            "'self'",
+            'https://challenges.cloudflare.com',
+            'https://api.horizon-flux.ofeklabs.dev',
+          ],
         },
       },
     }),
@@ -51,9 +55,9 @@ async function bootstrap() {
   const origin =
     isProduction && allowedOriginsEnv
       ? allowedOriginsEnv
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean)
+          .split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
       : true;
 
   app.enableCors({

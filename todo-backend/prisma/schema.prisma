@@ -27,6 +27,7 @@ model User {
   notificationFrequency   NotificationFrequency @default(NONE)
   trashRetentionDays      Int                    @default(30)
   shares                  ListShare[]
+  taskShares              TaskShare[]
   lists                   ToDoList[]
   refreshTokens           RefreshToken[]
 
@@ -100,7 +101,19 @@ model Task {
   specificDayOfWeek  Int?
   reminderConfig     Json?     // Store reminder configurations including "every day" reminders
   steps              Step[]
+  shares             TaskShare[]
   todoList           ToDoList  @relation(fields: [todoListId], references: [id])
+}
+
+model TaskShare {
+  id           String    @id @default(uuid())
+  sharedWithId String
+  taskId       String
+  role         ShareRole @default(EDITOR)
+  sharedWith   User      @relation(fields: [sharedWithId], references: [id])
+  task         Task      @relation(fields: [taskId], references: [id])
+
+  @@unique([sharedWithId, taskId])
 }
 
 model Step {

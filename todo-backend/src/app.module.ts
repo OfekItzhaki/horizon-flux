@@ -23,6 +23,7 @@ import { EmailModule } from './email/email.module';
 import { EventsModule } from './events/events.module';
 import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
 import { HealthModule } from './health/health.module';
+import { TaskSharesModule } from './task-shares/task-shares.module';
 
 import { validate } from './config/env.validation';
 
@@ -64,6 +65,7 @@ import { validate } from './config/env.validation';
     EventsModule,
     CloudinaryModule,
     HealthModule,
+    TaskSharesModule,
   ],
   controllers: [AppController],
   providers: [

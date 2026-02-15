@@ -8,12 +8,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ShareListDto } from './dto/share-list.dto';
 import { EventsGateway } from '../events/events.gateway';
 import { ShareRole } from '@prisma/client';
+import { IdentityServiceClient } from '../common/identity-service-client';
 
 @Injectable()
 export class ListSharesService {
   constructor(
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
+    private identityServiceClient: IdentityServiceClient,
   ) { }
 
   private async ensureOwnedList(todoListId: string, ownerId: string) {
@@ -36,13 +38,8 @@ export class ListSharesService {
     // Verify list exists and user owns it
     await this.ensureOwnedList(todoListId, ownerId);
 
-    // Verify user exists by email
-    const user = await this.prisma.user.findFirst({
-      where: {
-        email: shareListDto.email,
-        deletedAt: null,
-      },
-    });
+    // Verify user exists using Remote Identity Service
+    const user = await this.identityServiceClient.findUserByEmail(shareListDto.email);
 
     if (!user) {
       throw new NotFoundException(`User with email ${shareListDto.email} not found`);
@@ -74,14 +71,6 @@ export class ListSharesService {
         role: shareListDto.role ?? ShareRole.EDITOR,
       },
       include: {
-        sharedWith: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            profilePicture: true,
-          },
-        },
         toDoList: {
           include: {
             tasks: {
@@ -109,14 +98,6 @@ export class ListSharesService {
       include: {
         toDoList: {
           include: {
-            owner: {
-              select: {
-                id: true,
-                email: true,
-                name: true,
-                profilePicture: true,
-              },
-            },
             tasks: {
               where: {
                 deletedAt: null,
@@ -142,16 +123,6 @@ export class ListSharesService {
     return this.prisma.listShare.findMany({
       where: {
         toDoListId: todoListId,
-      },
-      include: {
-        sharedWith: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            profilePicture: true,
-          },
-        },
       },
     });
   }
@@ -204,11 +175,6 @@ export class ListSharesService {
     const updated = await this.prisma.listShare.update({
       where: { id: share.id },
       data: { role },
-      include: {
-        sharedWith: {
-          select: { id: true, email: true, name: true, profilePicture: true },
-        },
-      },
     });
 
     // Notify the shared user about their new role

@@ -1,4 +1,4 @@
-import { apiClient } from '../utils/api-client';
+import { authClient } from '../utils/api-client';
 import { TokenStorage } from '../utils/storage';
 import { LoginDto, LoginResponse, User } from '../types';
 
@@ -7,7 +7,7 @@ export class AuthService {
    * Login with email and password
    */
   async login(credentials: LoginDto): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
+    const response = await authClient.post<LoginResponse>('/auth/login', credentials);
     TokenStorage.setToken(response.accessToken);
     return response;
   }
@@ -16,10 +16,11 @@ export class AuthService {
    * Refresh access token
    */
   async refresh(): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>('/auth/refresh');
+    const response = await authClient.post<LoginResponse>('/auth/refresh');
     TokenStorage.setToken(response.accessToken);
     return response;
   }
+
 
   /**
    * Logout (removes token from storage)
@@ -48,21 +49,21 @@ export class AuthService {
   async verifyEmail(token: string): Promise<User> {
     // Encode token in path segment to handle special characters
     const encodedToken = encodeURIComponent(token);
-    return apiClient.post<User>(`/auth/verify-email/${encodedToken}`);
+    return authClient.post<User>(`/auth/verify-email/${encodedToken}`);
   }
 
   /**
    * Resend verification email
    */
   async resendVerification(email: string): Promise<User> {
-    return apiClient.post<User>('/auth/resend-verification', { email });
+    return authClient.post<User>('/auth/resend-verification', { email });
   }
 
   /**
    * Start registration (send OTP)
    */
   async registerStart(email: string, captchaToken?: string): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/register/start', {
+    return authClient.post<{ message: string }>('/auth/register/start', {
       email,
       captchaToken,
     });
@@ -72,7 +73,7 @@ export class AuthService {
    * Verify OTP for registration
    */
   async registerVerify(email: string, otp: string): Promise<{ registrationToken: string }> {
-    return apiClient.post<{ registrationToken: string }>('/auth/register/verify', {
+    return authClient.post<{ registrationToken: string }>('/auth/register/verify', {
       email,
       otp,
     });
@@ -86,7 +87,7 @@ export class AuthService {
     password: string;
     passwordConfirm: string;
   }): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>('/auth/register/finish', data);
+    const response = await authClient.post<LoginResponse>('/auth/register/finish', data);
     TokenStorage.setToken(response.accessToken);
     return response;
   }
@@ -95,7 +96,7 @@ export class AuthService {
    * Request password reset OTP
    */
   async forgotPassword(email: string, captchaToken?: string): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/forgot-password', {
+    return authClient.post<{ message: string }>('/auth/forgot-password', {
       email,
       captchaToken,
     });
@@ -105,7 +106,7 @@ export class AuthService {
    * Verify reset OTP
    */
   async verifyResetOtp(email: string, otp: string): Promise<{ resetToken: string }> {
-    return apiClient.post<{ resetToken: string }>('/auth/reset-password/verify', {
+    return authClient.post<{ resetToken: string }>('/auth/reset-password/verify', {
       email,
       otp,
     });
@@ -120,7 +121,7 @@ export class AuthService {
     password: string;
     passwordConfirm: string;
   }): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/reset-password/finish', data);
+    return authClient.post<{ message: string }>('/auth/reset-password/finish', data);
   }
 }
 

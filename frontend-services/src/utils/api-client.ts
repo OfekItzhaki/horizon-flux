@@ -1,4 +1,4 @@
-import { getApiUrl } from '../config';
+import { getApiUrl, getAuthUrl } from '../config';
 import { TokenStorage } from './storage';
 import { ApiError } from '../types';
 
@@ -6,8 +6,10 @@ export class ApiClient {
   private isRefreshing = false;
   private refreshPromise: Promise<any> | null = null;
 
+  constructor(private urlResolver: (path: string) => string = getApiUrl) { }
+
   private async request<T>(method: string, path: string, options: RequestInit = {}): Promise<T> {
-    const url = getApiUrl(path);
+    const url = this.urlResolver(path);
     const token = TokenStorage.getToken();
 
     const { headers: optionsHeaders, method: optionsMethod, ...restOptions } = options;
@@ -31,7 +33,7 @@ export class ApiClient {
       ...restOptions,
       method,
       headers,
-      credentials: 'include', // Ensure cookies are sent (especially for the refresh token fallback)
+      credentials: 'include',
     };
 
     try {
@@ -108,21 +110,17 @@ export class ApiClient {
       this.isRefreshing = false;
       this.refreshPromise = null;
       TokenStorage.removeToken();
-      // We don't redirect here to keep the service pure,
-      // but we throw so the UI can handle it
       throw refreshError;
     }
   }
 
   private async refreshToken(): Promise<any> {
-    const url = getApiUrl('/auth/refresh');
+    const url = this.urlResolver('/auth/refresh');
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Refresh token is in an HttpOnly cookie, so no body/auth header needed
-      // but we need to include credentials
       credentials: 'include',
     });
 
@@ -163,4 +161,5 @@ export class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient();
+export const apiClient = new ApiClient(getApiUrl);
+export const authClient = new ApiClient(getAuthUrl);

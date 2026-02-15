@@ -9,6 +9,7 @@ import { ShareTaskDto } from './dto/share-task.dto';
 import { EventsGateway } from '../events/events.gateway';
 import { ShareRole } from '@prisma/client';
 import { TaskAccessHelper } from '../tasks/helpers/task-access.helper';
+import { IdentityServiceClient } from '../common/identity-service-client';
 
 @Injectable()
 export class TaskSharesService {
@@ -16,7 +17,8 @@ export class TaskSharesService {
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
     private taskAccessHelper: TaskAccessHelper,
-  ) {}
+    private identityServiceClient: IdentityServiceClient,
+  ) { }
 
   async shareTask(taskId: string, shareTaskDto: ShareTaskDto, ownerId: string) {
     // Verify task exists and user owns it (or has editor access to the list)
@@ -24,13 +26,8 @@ export class TaskSharesService {
     // or we can allow editors. Let's start with owner/editor access to the parent list.
     await this.taskAccessHelper.findTaskForUser(taskId, ownerId, ShareRole.EDITOR);
 
-    // Verify user exists by email
-    const user = await this.prisma.user.findFirst({
-      where: {
-        email: shareTaskDto.email,
-        deletedAt: null,
-      },
-    });
+    // Verify user exists using Remote Identity Service
+    const user = await this.identityServiceClient.findUserByEmail(shareTaskDto.email);
 
     if (!user) {
       throw new NotFoundException(`User with email ${shareTaskDto.email} not found`);
@@ -62,14 +59,6 @@ export class TaskSharesService {
         role: shareTaskDto.role ?? ShareRole.EDITOR,
       },
       include: {
-        sharedWith: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            profilePicture: true,
-          },
-        },
         task: {
           include: {
             steps: { where: { deletedAt: null } },
@@ -92,16 +81,6 @@ export class TaskSharesService {
     return this.prisma.taskShare.findMany({
       where: {
         taskId: taskId,
-      },
-      include: {
-        sharedWith: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            profilePicture: true,
-          },
-        },
       },
     });
   }
@@ -156,11 +135,6 @@ export class TaskSharesService {
     const updated = await this.prisma.taskShare.update({
       where: { id: share.id },
       data: { role },
-      include: {
-        sharedWith: {
-          select: { id: true, email: true, name: true, profilePicture: true },
-        },
-      },
     });
 
     // Notify the shared user about their new role

@@ -12,6 +12,7 @@ import AppController from './app.controller';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { IdentityModule } from './common/identity.module';
 import { TodoListsModule } from './todo-lists/todo-lists.module';
 import { TasksModule } from './tasks/tasks.module';
 import { StepsModule } from './steps/steps.module';
@@ -52,8 +53,8 @@ import { validate } from './config/env.validation';
       inject: [ConfigService],
     }),
     PrismaModule,
+    IdentityModule,
     EmailModule,
-    UsersModule,
     AuthModule,
     TodoListsModule,
     TasksModule,
@@ -75,4 +76,4 @@ import { validate } from './config/env.validation';
     { provide: APP_FILTER, useClass: PrismaClientExceptionFilter },
   ],
 })
-export class AppModule {}
+export class AppModule { }

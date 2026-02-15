@@ -1,12 +1,15 @@
 let internalBaseUrl: string | null = null;
+let internalAuthBaseUrl: string | null = null;
 let internalTurnstileSiteKey: string | null = null;
 
-export const configure = (config: { baseURL?: string; turnstileSiteKey?: string }) => {
+export const configure = (config: { baseURL?: string; authBaseURL?: string; turnstileSiteKey?: string }) => {
   if (config.baseURL) {
     internalBaseUrl = config.baseURL;
-    // Update the exported config object so immediate consumers get the new value
-    // Re-evaluate to ensure /api/v1 prefix and other logic is applied
     API_CONFIG.baseURL = getApiBaseUrl();
+  }
+  if (config.authBaseURL) {
+    internalAuthBaseUrl = config.authBaseURL;
+    AUTH_CONFIG.baseURL = getAuthBaseUrl();
   }
   if (config.turnstileSiteKey) internalTurnstileSiteKey = config.turnstileSiteKey;
 };
@@ -15,7 +18,6 @@ export const configure = (config: { baseURL?: string; turnstileSiteKey?: string 
 const getApiBaseUrl = (): string => {
   let url = internalBaseUrl || 'http://localhost:3000';
 
-  // In Vite/Browser, we check both process.env (if polyfilled) and import.meta.env
   if (typeof process !== 'undefined' && (process as any).env) {
     const env = (process as any).env;
     const vUrl = env['VITE_API_URL'];
@@ -41,7 +43,6 @@ const getApiBaseUrl = (): string => {
   url = url.replace(/\/$/, '');
 
   // CRITICAL: Ensure /api/v1 prefix is present for ALL environments.
-  // We check for /api/v1, /api/v1/, etc.
   const hasPrefix = url.toLowerCase().includes('/api/v1');
 
   if (!hasPrefix) {
@@ -59,22 +60,44 @@ export const getTurnstileSiteKey = (): string | null => {
   return null;
 };
 
+// Get Auth base URL (Identity Service)
+const getAuthBaseUrl = (): string => {
+  let url = internalAuthBaseUrl || '';
+
+  if (!url && typeof process !== 'undefined' && (process as any).env) {
+    const env = (process as any).env;
+    url = env['VITE_AUTH_API_URL'] || env['AUTH_API_URL'] || '';
+  }
+
+  // If no specific auth URL, fall back to the main API root (legacy support)
+  if (!url || url.trim().length === 0) {
+    return getApiBaseUrl().split('/api/v1')[0];
+  }
+
+  return url.replace(/\/$/, '');
+};
+
 export const API_CONFIG = {
   baseURL: getApiBaseUrl(),
   timeout: 30000, // 30 seconds
 };
 
+export const AUTH_CONFIG = {
+  baseURL: getAuthBaseUrl(),
+  timeout: 30000,
+};
+
 export const getApiUrl = (path: string): string => {
   const base = API_CONFIG.baseURL.replace(/\/$/, '');
-
-  // Handle absolute paths by stripping the leading slash
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${base}${cleanPath}`;
+};
 
-  // Special case: if path is already an absolute URL, return it
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
-  }
-
+export const getAuthUrl = (path: string): string => {
+  const base = AUTH_CONFIG.baseURL.replace(/\/$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
   return `${base}${cleanPath}`;
 };
 
@@ -84,14 +107,11 @@ export const getApiUrl = (path: string): string => {
 export const getAssetUrl = (path: string, includeCacheBuster = true): string => {
   if (!path) return '';
 
-  // If already an absolute URL, return as is
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
 
   const root = API_CONFIG.baseURL.split('/api/v1')[0].replace(/\/$/, '');
-
-  // Normalize path and strip any existing /uploads/ or uploads/ prefix
   let cleanPath = path.replace(/\\/g, '/');
   cleanPath = cleanPath.replace(/^(\/)?uploads\//, '');
   cleanPath = cleanPath.replace(/^\//, '');
@@ -99,8 +119,6 @@ export const getAssetUrl = (path: string, includeCacheBuster = true): string => 
   const url = `${root}/uploads/${cleanPath}`;
 
   if (includeCacheBuster) {
-    // Add a timestamp or hash based on the filename if possible,
-    // but a simple ?t= is most reliable for immediate updates
     const buster = Date.now();
     return `${url}?t=${buster}`;
   }

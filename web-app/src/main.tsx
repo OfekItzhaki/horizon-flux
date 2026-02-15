@@ -3,6 +3,7 @@ import { configure } from '@tasks-management/frontend-services';
 // Configure shared services immediately with Vite environment variables
 configure({
   baseURL: import.meta.env.VITE_API_URL,
+  authBaseURL: import.meta.env.VITE_AUTH_URL,
   turnstileSiteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
 });
 

@@ -8,31 +8,7 @@ datasource db {
   directUrl = env("DIRECT_URL")  // For migrations
 }
 
-model User {
-  id                      String                 @id @default(uuid())
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  email                   String                 @unique @db.VarChar(255)
-  name                    String?                @db.VarChar(100)
-  passwordHash            String?                @db.VarChar(255)
-  deletedAt               DateTime?
-  profilePicture          String?                @db.VarChar(500)
-  emailVerified           Boolean                @default(false)
-  emailVerificationOtp    String?                @db.VarChar(6)
-  emailVerificationSentAt DateTime?
-  emailVerificationExpiresAt DateTime?
-  emailVerificationAttempts Int          @default(0)
-  passwordResetOtp        String?                @db.VarChar(6)
-  passwordResetExpiresAt  DateTime?
-  notificationFrequency   NotificationFrequency @default(NONE)
-  trashRetentionDays      Int                    @default(30)
-  shares                  ListShare[]
-  taskShares              TaskShare[]
-  lists                   ToDoList[]
-  refreshTokens           RefreshToken[]
-
-  @@index([email])
-}
+// User model removed - managed by external identity-service
 
 enum NotificationFrequency {
   NONE
@@ -49,12 +25,11 @@ model ToDoList {
   order            Int              @default(autoincrement())
   deletedAt        DateTime?
   type             ListType         @default(CUSTOM)
-  isSystem         Boolean          @default(false) // System lists (like "Finished Tasks") cannot be deleted
+  isSystem         Boolean          @default(false) 
   taskBehavior     TaskBehavior     @default(ONE_OFF)
   completionPolicy CompletionPolicy @default(KEEP)
   shares           ListShare[]
   tasks            Task[]
-  owner            User             @relation(fields: [ownerId], references: [id])
 }
 
 enum TaskBehavior {
@@ -73,7 +48,6 @@ model ListShare {
   sharedWithId String
   toDoListId   String
   role         ShareRole @default(EDITOR)
-  sharedWith   User      @relation(fields: [sharedWithId], references: [id])
   toDoList     ToDoList  @relation(fields: [toDoListId], references: [id])
 
   @@unique([sharedWithId, toDoListId])
@@ -110,7 +84,6 @@ model TaskShare {
   sharedWithId String
   taskId       String
   role         ShareRole @default(EDITOR)
-  sharedWith   User      @relation(fields: [sharedWithId], references: [id])
   task         Task      @relation(fields: [taskId], references: [id])
 
   @@unique([sharedWithId, taskId])
@@ -138,14 +111,6 @@ enum ListType {
   TRASH    // System list for soft-deleted tasks
 }
 
-model RefreshToken {
-  id        String    @id @default(uuid())
-  token     String    @unique
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-}
+// RefreshToken model removed - managed by external identity-service
 
 

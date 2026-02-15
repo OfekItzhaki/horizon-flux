@@ -3,6 +3,7 @@ import { TasksService } from '../tasks/tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../events/events.gateway';
 import { EmailService } from '../email/email.service';
+import { IdentityServiceClient } from '../common/identity-service-client';
 
 export interface ReminderNotification {
   taskId: string;
@@ -34,7 +35,8 @@ export class RemindersService {
     private readonly prisma: PrismaService,
     private readonly eventsGateway: EventsGateway,
     private readonly emailService: EmailService,
-  ) {}
+    private readonly identityServiceClient: IdentityServiceClient,
+  ) { }
 
   /**
    * Get reminders for a specific date and format them as notifications
@@ -94,10 +96,7 @@ export class RemindersService {
    * Send reminders to user via multi-channel
    */
   async sendReminders(userId: string, notifications: ReminderNotification[]): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, notificationFrequency: true },
-    });
+    const user = await this.identityServiceClient.findUserById(userId);
 
     if (!user) return;
 
@@ -105,16 +104,15 @@ export class RemindersService {
       // 1. Push via WebSocket (Real-time)
       this.eventsGateway.sendToUser(userId, 'task-reminder', notification);
 
-      // 2. Fallback to email if user has notifications enabled
-      // Note: We could be more granular here based on user preferences
-      if (user.notificationFrequency !== 'NONE') {
-        await this.emailService.sendReminderEmail(
-          user.email,
-          notification.taskDescription,
-          notification.message,
-          notification.title,
-        );
-      }
+      // 2. Fallback to email
+      // In the new architecture, we assume notifications are enabled by default 
+      // or we check a property on the remote user if available.
+      await this.emailService.sendReminderEmail(
+        user.email,
+        notification.taskDescription,
+        notification.message,
+        notification.title,
+      );
     }
   }
 

@@ -24,7 +24,7 @@ export class TasksService {
     private taskAccess: TaskAccessHelper,
     @Inject(forwardRef(() => TaskSchedulerService))
     private taskScheduler: TaskSchedulerService,
-  ) { }
+  ) {}
 
   async create(todoListId: string, createTaskDto: CreateTaskDto, ownerId: string) {
     await this.taskAccess.ensureListAccess(todoListId, ownerId, ShareRole.EDITOR);

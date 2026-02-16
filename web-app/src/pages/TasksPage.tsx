@@ -1000,7 +1000,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                     const listName =
                       allLists.find((l) => l.id === sourceListId)?.name ||
                       // Fallback for shared tasks where we might not have the list in allLists
-                      (task as any).todoList?.name ||
+                      (task.todoList?.name) ||
                       (sourceListId === 'unknown'
                         ? t('tasks.unknownList', {
                           defaultValue: 'Unknown List',

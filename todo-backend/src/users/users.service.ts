@@ -42,7 +42,7 @@ export class UsersService {
     private prisma: PrismaService,
     private emailService: EmailService,
     private todoListsService: TodoListsService,
-  ) { }
+  ) {}
 
   private sanitizeUser<
     T extends {
@@ -156,7 +156,6 @@ export class UsersService {
     }
     return result;
   }
-
 
   async initUser(email: string): Promise<User> {
     const existingUser = await this.findByEmail(email);

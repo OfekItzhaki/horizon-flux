@@ -16,7 +16,7 @@ export class TaskSharesService {
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
     private taskAccessHelper: TaskAccessHelper,
-  ) { }
+  ) {}
 
   async shareTask(taskId: string, shareTaskDto: ShareTaskDto, ownerId: string) {
     // Verify task exists and user owns it (or has editor access to the list)

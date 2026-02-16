@@ -4,6 +4,23 @@ import { Inject, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import { ConfigService } from '@nestjs/config';
 
+interface VerificationEmailData {
+  email: string;
+  otp: string;
+  name?: string;
+}
+interface PasswordResetEmailData {
+  email: string;
+  otp: string;
+  name?: string;
+}
+interface ReminderEmailData {
+  email: string;
+  taskDescription: string;
+  message: string;
+  title: string;
+}
+
 @Processor('email')
 export class EmailProcessor extends WorkerHost {
   private readonly logger = new Logger(EmailProcessor.name);
@@ -29,11 +46,11 @@ export class EmailProcessor extends WorkerHost {
 
     switch (job.name) {
       case 'sendVerificationEmail':
-        return this.sendVerificationEmail(job.data);
+        return this.sendVerificationEmail(job.data as VerificationEmailData);
       case 'sendPasswordResetEmail':
-        return this.sendPasswordResetEmail(job.data);
+        return this.sendPasswordResetEmail(job.data as PasswordResetEmailData);
       case 'sendReminderEmail':
-        return this.sendReminderEmail(job.data);
+        return this.sendReminderEmail(job.data as ReminderEmailData);
       default:
         this.logger.warn(`Unknown job name: ${job.name}`);
     }
@@ -215,7 +232,9 @@ OTP: ${otp}`);
         throw new Error(error.message);
       }
 
-      this.logger.log(`Successfully sent verification email to ${email} via ${this.fromAddress}. ID: ${result?.id}`);
+      this.logger.log(
+        `Successfully sent verification email to ${email} via ${this.fromAddress}. ID: ${result?.id}`,
+      );
     } catch (error: unknown) {
       const stack = error instanceof Error ? error.stack : undefined;
       const message = error instanceof Error ? error.message : String(error);

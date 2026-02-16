@@ -41,7 +41,7 @@ export default function SharedPage() {
         }
         acc[ownerId].tasks.push(share);
         return acc;
-    }, {} as Record<string, { owner?: any; tasks: TaskShare[] }>);
+    }, {} as Record<string, { owner?: User; tasks: TaskShare[] }>);
 
     if (isLoading) {
         return (

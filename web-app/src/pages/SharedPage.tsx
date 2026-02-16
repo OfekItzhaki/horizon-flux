@@ -7,6 +7,7 @@ import {
     taskSharingService,
     sharingService,
     ToDoList,
+    User,
 } from '@tasks-management/frontend-services';
 
 export default function SharedPage() {

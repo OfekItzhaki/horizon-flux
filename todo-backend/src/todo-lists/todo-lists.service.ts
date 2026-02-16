@@ -13,7 +13,7 @@ export class TodoListsService {
   constructor(
     private prisma: PrismaService,
     private taskAccess: TaskAccessHelper,
-  ) {}
+  ) { }
 
   async create(createToDoListDto: CreateToDoListDto, ownerId: string) {
     const list = await this.prisma.toDoList.create({
@@ -37,51 +37,51 @@ export class TodoListsService {
       completionPolicy: 'KEEP' | 'AUTO_DELETE' | 'MOVE_TO_DONE';
       isSystem?: boolean;
     }[] = [
-      {
-        name: 'Daily Tasks',
-        type: ListType.DAILY,
-        taskBehavior: 'RECURRING',
-        completionPolicy: 'KEEP',
-      },
-      {
-        name: 'Weekly Tasks',
-        type: ListType.WEEKLY,
-        taskBehavior: 'RECURRING',
-        completionPolicy: 'KEEP',
-      },
-      {
-        name: 'Monthly Tasks',
-        type: ListType.MONTHLY,
-        taskBehavior: 'RECURRING',
-        completionPolicy: 'KEEP',
-      },
-      {
-        name: 'Yearly Tasks',
-        type: ListType.YEARLY,
-        taskBehavior: 'RECURRING',
-        completionPolicy: 'KEEP',
-      },
-      {
-        name: 'Hot Tasks',
-        type: ListType.CUSTOM,
-        taskBehavior: 'ONE_OFF',
-        completionPolicy: 'MOVE_TO_DONE',
-      },
-      {
-        name: 'Done',
-        type: ListType.DONE,
-        taskBehavior: 'ONE_OFF',
-        completionPolicy: 'KEEP',
-        isSystem: true,
-      },
-      {
-        name: 'Trash',
-        type: ListType.TRASH,
-        taskBehavior: 'ONE_OFF',
-        completionPolicy: 'KEEP',
-        isSystem: true,
-      },
-    ];
+        {
+          name: 'Daily Tasks',
+          type: ListType.DAILY,
+          taskBehavior: 'RECURRING',
+          completionPolicy: 'KEEP',
+        },
+        {
+          name: 'Weekly Tasks',
+          type: ListType.WEEKLY,
+          taskBehavior: 'RECURRING',
+          completionPolicy: 'KEEP',
+        },
+        {
+          name: 'Monthly Tasks',
+          type: ListType.MONTHLY,
+          taskBehavior: 'RECURRING',
+          completionPolicy: 'KEEP',
+        },
+        {
+          name: 'Yearly Tasks',
+          type: ListType.YEARLY,
+          taskBehavior: 'RECURRING',
+          completionPolicy: 'KEEP',
+        },
+        {
+          name: 'Hot Tasks',
+          type: ListType.CUSTOM,
+          taskBehavior: 'ONE_OFF',
+          completionPolicy: 'MOVE_TO_DONE',
+        },
+        {
+          name: 'Done',
+          type: ListType.DONE,
+          taskBehavior: 'ONE_OFF',
+          completionPolicy: 'KEEP',
+          isSystem: true,
+        },
+        {
+          name: 'Trash',
+          type: ListType.TRASH,
+          taskBehavior: 'ONE_OFF',
+          completionPolicy: 'KEEP',
+          isSystem: true,
+        },
+      ];
 
     for (const dl of defaultLists) {
       const list = await this.prisma.toDoList.create({

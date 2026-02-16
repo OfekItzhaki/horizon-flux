@@ -82,6 +82,7 @@ export interface ToDoList {
   id: string;
   name: string;
   ownerId: string;
+  owner?: User;
   order: number;
   type: ListType;
   taskBehavior: TaskBehavior;

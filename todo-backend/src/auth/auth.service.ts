@@ -30,7 +30,7 @@ export class AuthService {
     private readonly todoListsService: TodoListsService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async validateUser(email: string, password: string) {
     this.logger.debug(`Validating user: ${email}`);
@@ -309,7 +309,7 @@ export class AuthService {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          timeout: 5000, // Add timeout for resilience
+          timeout: 5000,
         },
       );
 
@@ -318,9 +318,11 @@ export class AuthService {
         'error-codes'?: string[];
       };
 
+      this.logger.debug(`Turnstile Response: ${JSON.stringify(data)}`);
+
       if (!data.success) {
         this.logger.warn(
-          `Turnstile verification failed. Success: ${data.success}, Errors: ${JSON.stringify(data['error-codes'] || [])}`,
+          `Turnstile verification failed. Site Key starts with: ${process.env.VITE_TURNSTILE_SITE_KEY?.substring(0, 5)}, Success: ${data.success}, Errors: ${JSON.stringify(data['error-codes'] || [])}`,
         );
         throw new ForbiddenException('CAPTCHA verification failed');
       }

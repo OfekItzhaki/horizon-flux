@@ -254,8 +254,8 @@ export default function ProfilePage() {
                       key={freq}
                       onClick={() => handleFrequencyChange(freq)}
                       className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${user?.notificationFrequency === freq
-                          ? 'bg-accent text-white shadow-lg'
-                          : 'bg-hover text-secondary hover:bg-hover/80'
+                        ? 'bg-accent text-white shadow-lg'
+                        : 'bg-hover text-secondary hover:bg-hover/80'
                         }`}
                     >
                       {freq.charAt(0) + freq.slice(1).toLowerCase()}
@@ -282,8 +282,8 @@ export default function ProfilePage() {
                         key={days}
                         onClick={() => handleTrashRetentionChange(days)}
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all border ${user?.trashRetentionDays === days
-                            ? 'bg-accent text-white border-accent shadow-md'
-                            : 'bg-surface text-secondary border-border-subtle hover:border-accent hover:text-primary'
+                          ? 'bg-accent text-white border-accent shadow-md'
+                          : 'bg-surface text-secondary border-border-subtle hover:border-accent hover:text-primary'
                           }`}
                       >
                         {days} {t('common.days', { defaultValue: 'days' })}
@@ -322,7 +322,7 @@ export default function ProfilePage() {
                   {t('profile.memberSince')}
                 </label>
                 <p className="text-primary font-medium">
-                  {new Date(user.createdAt).toLocaleDateString(undefined, {
+                  {new Date(user.createdAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',

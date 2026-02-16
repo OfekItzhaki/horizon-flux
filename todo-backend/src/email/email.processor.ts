@@ -2,12 +2,16 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Inject, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
+import { ConfigService } from '@nestjs/config';
 
 @Processor('email')
 export class EmailProcessor extends WorkerHost {
   private readonly logger = new Logger(EmailProcessor.name);
 
-  constructor(@Inject('RESEND_CLIENT') private readonly resend: Resend | null) {
+  constructor(
+    @Inject('RESEND_CLIENT') private readonly resend: Resend | null,
+    private readonly configService: ConfigService,
+  ) {
     super();
     if (!this.resend) {
       this.logger.warn('RESEND_API_KEY not configured - email sending will be disabled');
@@ -48,14 +52,22 @@ export class EmailProcessor extends WorkerHost {
     const { email, taskDescription, message, title } = data;
     this.logger.log(`Processing reminder email for: ${email}`);
 
+    const from = this.configService.get<string>('RESEND_EMAIL_FROM') || 'Horizon Flux <onboarding@resend.dev>';
+
     if (!this.resend) {
-      this.logger.warn('Resend client not configured, skipping email');
+      this.logger.warn('Resend client not configured, skipping email delivery');
+      if (this.configService.get('NODE_ENV') === 'development') {
+        this.logger.debug(`[DEV ONLY] Reminder Email Content:
+To: ${email}
+Subject: ${title}
+Text: ${message}`);
+      }
       return;
     }
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Horizon Flux <noreply@ofeklabs.dev>',
+        from,
         replyTo: 'horizon-flux@ofeklabs.dev',
         to: email,
         subject: title,
@@ -102,14 +114,24 @@ export class EmailProcessor extends WorkerHost {
     const { email, otp, name } = data;
     this.logger.log(`Processing verification email for: ${email}`);
 
+    const from = this.configService.get<string>('RESEND_EMAIL_FROM') || 'Horizon Flux <onboarding@resend.dev>';
+
+    // Always log in development for easier debugging
+    if (this.configService.get('NODE_ENV') === 'development') {
+      this.logger.debug(`[DEV ONLY] Verification Email Content:
+To: ${email}
+Subject: Welcome to Horizon Flux
+OTP: ${otp}`);
+    }
+
     if (!this.resend) {
-      this.logger.warn('Resend client not configured, skipping email');
+      this.logger.warn('Resend client not configured, skipping email delivery');
       return;
     }
 
     try {
       const { data: result, error } = await this.resend.emails.send({
-        from: 'Horizon Flux <noreply@ofeklabs.dev>',
+        from,
         replyTo: 'horizon-flux@ofeklabs.dev',
         to: email,
         subject: 'Welcome to Horizon Flux',
@@ -153,14 +175,16 @@ export class EmailProcessor extends WorkerHost {
       });
 
       if (error) {
+        this.logger.error(`Resend API Error for ${email}: ${JSON.stringify(error)}`);
         throw new Error(error.message);
       }
 
-      this.logger.log(`Successfully sent verification email to: ${email}, ID: ${result?.id}`);
+      this.logger.log(`Successfully sent verification email to ${email} via ${from}. ID: ${result?.id}`);
     } catch (error: unknown) {
       const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to send email to ${email}:`, stack);
-      throw error; // BullMQ will retry based on config
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to send email to ${email}: ${message}`, stack);
+      throw error;
     }
   }
 }

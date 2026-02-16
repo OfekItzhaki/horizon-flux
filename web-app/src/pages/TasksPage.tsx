@@ -559,7 +559,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
 
       reorderMutation.mutate(updates);
     },
-    [sortedTasks, effectiveListId, queryClient, reorderMutation]
+    [sortedTasks, effectiveListId, ownerId, queryClient, reorderMutation]
   );
 
   const toggleBulkMode = () => {

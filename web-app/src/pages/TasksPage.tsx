@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useQueuedMutation } from '../hooks/useQueuedMutation';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   DndContext,
@@ -118,6 +118,9 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
   const activeList = isSharedView ? sharedListMock : list;
 
 
+  const [searchParams] = useSearchParams();
+  const ownerId = searchParams.get('ownerId');
+
   const {
     data: tasks = [],
     isLoading,
@@ -125,10 +128,10 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     isError,
     error,
   } = useQuery<Task[], ApiError>({
-    queryKey: ['tasks', effectiveListId],
+    queryKey: ['tasks', effectiveListId, ownerId],
     enabled: effectiveListId !== null && effectiveListId !== undefined,
     // Don't show stale data - show loading state instead
-    queryFn: () => tasksService.getTasksByList(effectiveListId!),
+    queryFn: () => tasksService.getTasksByList(effectiveListId!, ownerId),
   });
 
   // Restore task mutation
@@ -627,11 +630,11 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
 
       <div className="mb-8 animate-slide-up">
         <Link
-          to="/lists"
+          to={isSharedView ? "/shared" : "/lists"}
           className={`inline-flex items-center gap-2 text-accent hover:text-accent/80 font-semibold text-sm transition-all ${isRtl ? 'flex-row-reverse' : ''}`}
         >
           <span className={isRtl ? 'rotate-180' : ''}>←</span>
-          {t('tasks.backToLists')}
+          {isSharedView ? "Back to Shared" : t('tasks.backToLists')}
         </Link>
       </div>
 

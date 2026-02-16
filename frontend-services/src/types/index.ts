@@ -123,6 +123,7 @@ export interface Task {
   deletedAt: string | null;
   steps?: Step[];
   todoList?: ToDoList;
+  role?: ShareRole;
 }
 
 export interface CreateTaskDto {

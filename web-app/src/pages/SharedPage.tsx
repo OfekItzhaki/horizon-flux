@@ -29,6 +29,20 @@ export default function SharedPage() {
     const sharedListIds = new Set(sharedLists.map(l => l.id));
     const orphanTasks = sharedTasks.filter(share => !sharedListIds.has(share.task?.todoListId || ''));
 
+    // Group orphan tasks by owner
+    const orphanTasksByOwner = orphanTasks.reduce((acc, share) => {
+        const owner = share.task?.todoList?.owner;
+        const ownerId = owner?.id || 'unknown';
+        if (!acc[ownerId]) {
+            acc[ownerId] = {
+                owner,
+                tasks: []
+            };
+        }
+        acc[ownerId].tasks.push(share);
+        return acc;
+    }, {} as Record<string, { owner?: any; tasks: TaskShare[] }>);
+
     if (isLoading) {
         return (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -89,49 +103,34 @@ export default function SharedPage() {
                 </div>
             )}
 
-            {/* Individual Shared Tasks Section */}
-            {orphanTasks.length > 0 && (
-                <div>
+            {/* Shared Individual Tasks Section */}
+            {Object.keys(orphanTasksByOwner).length > 0 && (
+                <div className="mb-12">
                     <h2 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 px-1">
-                        Individual Shared Tasks
+                        Shared Individual Tasks
                     </h2>
-                    <div className="space-y-4">
-                        {Object.entries(
-                            orphanTasks
-                                .filter((share) => share.task)
-                                .reduce((acc, share) => {
-                                    const listName = share.task!.todoList?.name || 'Other Tasks';
-                                    if (!acc[listName]) acc[listName] = [];
-                                    acc[listName].push(share);
-                                    return acc;
-                                }, {} as Record<string, TaskShare[]>)
-                        ).map(([listName, tasks]) => {
-                            const listId = tasks[0]?.task?.todoListId;
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {Object.entries(orphanTasksByOwner).map(([ownerId, group]) => {
+                            const ownerName = group.owner?.name || group.owner?.email.split('@')[0] || 'Unknown User';
                             return (
-                                <div key={listName} className="premium-card p-6">
-                                    <div className="mb-4">
-                                        <h3 className="text-lg font-bold text-primary">
-                                            From: {listName}
-                                        </h3>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        {tasks.map((share) => (
-                                            <Link
-                                                key={share.task!.id}
-                                                to={listId ? `/lists/${listId}/tasks?taskId=${share.task!.id}` : '#'}
-                                                className="block p-3 rounded-lg bg-hover border border-border-subtle hover:border-accent transition-all cursor-pointer"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-primary">{share.task!.description}</span>
-                                                    <span className="text-xs text-tertiary uppercase px-2 py-1 bg-surface rounded">
-                                                        {share.role}
-                                                    </span>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
+                                <div key={ownerId} className="premium-card p-6">
+                                    <Link
+                                        to={`/lists/shared/tasks?ownerId=${ownerId}`}
+                                        className="block group"
+                                    >
+                                        <div className="flex items-start justify-between gap-4 mb-3">
+                                            <h3 className="text-lg font-bold text-primary group-hover:text-accent transition-colors leading-tight">
+                                                Tasks from {ownerName}
+                                            </h3>
+                                            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2 py-1 rounded border border-accent/20 group-hover:bg-accent group-hover:text-white transition-all whitespace-nowrap">
+                                                View Tasks
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-tertiary">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
+                                            <span>{group.tasks.length} tasks shared with you</span>
+                                        </div>
+                                    </Link>
                                 </div>
                             );
                         })}

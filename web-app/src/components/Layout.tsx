@@ -82,13 +82,13 @@ export default function Layout() {
                 >
                   <button
                     onClick={() => {
-                      setIsDropdownOpen(false);
+                      setIsDropdownOpen(!isDropdownOpen);
                       navigate('/lists');
                     }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname.startsWith('/lists') ||
-                      location.pathname.startsWith('/trash')
-                      ? 'bg-accent/10 text-accent'
-                      : 'text-secondary hover:text-primary hover:bg-hover'
+                        location.pathname.startsWith('/trash')
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-secondary hover:text-primary hover:bg-hover'
                       }`}
                   >
                     {t('nav.lists')}

@@ -9,8 +9,9 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
-import { User, Prisma, ListType } from '@prisma/client';
+import { User, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { TodoListsService } from '../todo-lists/todo-lists.service';
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
@@ -40,6 +41,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private todoListsService: TodoListsService,
   ) { }
 
   private sanitizeUser<
@@ -156,7 +158,6 @@ export class UsersService {
   }
 
 
-
   async initUser(email: string): Promise<User> {
     const existingUser = await this.findByEmail(email);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -192,7 +193,7 @@ export class UsersService {
     });
 
     // Create default lists for the new user
-
+    await this.todoListsService.seedDefaultLists(user.id);
 
     return user;
   }
@@ -281,6 +282,7 @@ export class UsersService {
       } as Prisma.UserCreateInput,
     });
 
+    await this.todoListsService.seedDefaultLists(user.id);
     this.sendOtp(user.email, otp, user.name || undefined).catch(console.error);
 
     return this.sanitizeUser(user)!;

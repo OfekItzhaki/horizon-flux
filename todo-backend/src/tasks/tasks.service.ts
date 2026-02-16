@@ -9,10 +9,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { ListType, Prisma } from '@prisma/client';
+import { ListType, Prisma, ShareRole } from '@prisma/client';
 import { TaskSchedulerService } from '../task-scheduler/task-scheduler.service';
 import { TaskAccessHelper } from './helpers/task-access.helper';
-import { ShareRole } from '@prisma/client';
 
 import { TaskOccurrenceHelper } from './helpers/task-occurrence.helper';
 
@@ -30,15 +29,17 @@ export class TasksService {
   async create(todoListId: string, createTaskDto: CreateTaskDto, ownerId: string) {
     await this.taskAccess.ensureListAccess(todoListId, ownerId, ShareRole.EDITOR);
 
-    // Prevent creating tasks in system lists (Trash and Done)
     const list = await this.prisma.toDoList.findUnique({
       where: { id: todoListId },
-      select: { type: true, name: true },
     });
 
-    if (list && (list.type === ListType.TRASH || list.type === ListType.DONE)) {
+    if (!list) {
+      throw new NotFoundException(`List with ID ${todoListId} not found`);
+    }
+
+    if (list.type === ListType.DONE || list.type === ListType.TRASH) {
       throw new BadRequestException(
-        `Cannot create tasks directly in "${list.name}" list. Tasks are moved here automatically.`
+        `Cannot manually add tasks to ${list.type.toLowerCase()} lists`,
       );
     }
 

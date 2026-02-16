@@ -133,8 +133,8 @@ enum ListType {
   MONTHLY
   YEARLY
   CUSTOM
-  DONE
-  TRASH
+  DONE     // System list for archived completed tasks
+  TRASH    // System list for soft-deleted tasks
 }
 
 enum TaskBehavior {

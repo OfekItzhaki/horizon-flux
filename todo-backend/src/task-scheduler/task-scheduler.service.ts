@@ -13,7 +13,7 @@ export class TaskSchedulerService implements OnModuleInit {
   private readonly ARCHIVE_DELAY_MINUTES = 5;
 
   // System list name for finished tasks
-  private readonly FINISHED_LIST_NAME = 'Finished Tasks';
+  private readonly FINISHED_LIST_NAME = 'Done';
 
   // Prevent log spam when DB is down/misconfigured
   private lastDbErrorLogAtMs = 0;

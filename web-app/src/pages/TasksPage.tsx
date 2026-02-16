@@ -141,7 +141,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       toast.success(t('tasks.restored'));
       if (effectiveListId) {
         void queryClient.invalidateQueries({
-          queryKey: ['tasks', effectiveListId],
+          queryKey: ['tasks', effectiveListId, ownerId],
         });
       }
     },
@@ -157,7 +157,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       toast.success(t('tasks.deletedForever'));
       if (effectiveListId) {
         void queryClient.invalidateQueries({
-          queryKey: ['tasks', effectiveListId],
+          queryKey: ['tasks', effectiveListId, ownerId],
         });
       }
     },
@@ -314,7 +314,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       setShowCreate(false);
       setNewTaskDescription('');
 
-      await queryClient.cancelQueries({ queryKey: ['tasks', effectiveListId] });
+      await queryClient.cancelQueries({ queryKey: ['tasks', effectiveListId, ownerId] });
 
       const previousTasks = queryClient.getQueryData<Task[]>([
         'tasks',
@@ -340,7 +340,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       };
 
       queryClient.setQueryData<Task[]>(
-        ['tasks', effectiveListId],
+        ['tasks', effectiveListId, ownerId],
         (old = []) => [optimistic, ...old]
       );
 
@@ -348,7 +348,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     },
     onError: (err, _data, ctx) => {
       if (effectiveListId && ctx?.previousTasks) {
-        queryClient.setQueryData(['tasks', effectiveListId], ctx.previousTasks);
+        queryClient.setQueryData(['tasks', effectiveListId, ownerId], ctx.previousTasks);
       }
       // Show the create form again on error so user can retry
       setShowCreate(true);
@@ -358,7 +358,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       // Replace the optimistic task with the real one from the server
       if (effectiveListId) {
         queryClient.setQueryData<Task[]>(
-          ['tasks', effectiveListId],
+          ['tasks', effectiveListId, ownerId],
           (old = []) => {
             // Remove any temporary tasks (negative IDs) and add the real task
             const withoutTemp = old.filter(
@@ -381,7 +381,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     onSettled: async () => {
       if (effectiveListId) {
         await queryClient.invalidateQueries({
-          queryKey: ['tasks', effectiveListId],
+          queryKey: ['tasks', effectiveListId, ownerId],
         });
       }
     },
@@ -396,7 +396,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     mutationFn: ({ id, data }) => tasksService.updateTask(id, data),
     onMutate: async ({ id, data }) => {
       const previousTasks = effectiveListId
-        ? queryClient.getQueryData<Task[]>(['tasks', effectiveListId])
+        ? queryClient.getQueryData<Task[]>(['tasks', effectiveListId, ownerId])
         : undefined;
       const previousTask = queryClient.getQueryData<Task>(['task', id]);
       const currentList = effectiveListId
@@ -412,7 +412,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       if (!data.description) {
         if (effectiveListId) {
           queryClient.setQueryData<Task[]>(
-            ['tasks', effectiveListId],
+            ['tasks', effectiveListId, ownerId],
             (old = []) => {
               // Check if task should be removed based on completion policy
               if (
@@ -445,7 +445,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     },
     onError: (err, vars, ctx) => {
       if (effectiveListId && ctx?.previousTasks) {
-        queryClient.setQueryData(['tasks', effectiveListId], ctx.previousTasks);
+        queryClient.setQueryData(['tasks', effectiveListId, ownerId], ctx.previousTasks);
       }
       if (ctx?.previousTask) {
         queryClient.setQueryData(['task', vars.id], ctx.previousTask);
@@ -455,7 +455,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     onSettled: async (_data, _err, vars) => {
       if (effectiveListId) {
         await queryClient.invalidateQueries({
-          queryKey: ['tasks', effectiveListId],
+          queryKey: ['tasks', effectiveListId, ownerId],
         });
       }
       await queryClient.invalidateQueries({ queryKey: ['task', vars.id] });
@@ -475,14 +475,14 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
         'tasks',
         effectiveListId,
       ]);
-      queryClient.setQueryData<Task[]>(['tasks', effectiveListId], (old = []) =>
+      queryClient.setQueryData<Task[]>(['tasks', effectiveListId, ownerId], (old = []) =>
         old.filter((t) => t.id !== id)
       );
       return { previousTasks };
     },
     onError: (err, _vars, ctx) => {
       if (effectiveListId && ctx?.previousTasks) {
-        queryClient.setQueryData(['tasks', effectiveListId], ctx.previousTasks);
+        queryClient.setQueryData(['tasks', effectiveListId, ownerId], ctx.previousTasks);
       }
       toast.error(formatApiError(err, t('tasks.deleteFailed')));
     },
@@ -492,7 +492,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
     onSettled: async () => {
       if (effectiveListId) {
         await queryClient.invalidateQueries({
-          queryKey: ['tasks', effectiveListId],
+          queryKey: ['tasks', effectiveListId, ownerId],
         });
       }
     },
@@ -504,7 +504,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       tasksService.reorderTasks(reorderedTasks),
     onSuccess: () => {
       if (effectiveListId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveListId] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveListId, ownerId] });
       }
     },
   });
@@ -518,7 +518,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       setIsBulkMode(false);
       setSelectedTasks(new Set());
       if (effectiveListId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveListId] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveListId, ownerId] });
       }
     },
   });
@@ -530,7 +530,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       setIsBulkMode(false);
       setSelectedTasks(new Set());
       if (effectiveListId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveListId] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveListId, ownerId] });
       }
     },
   });
@@ -547,7 +547,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
       const newTasks = arrayMove(sortedTasks, oldIndex, newIndex);
 
       // Optimistically update query data
-      queryClient.setQueryData(['tasks', effectiveListId], newTasks);
+      queryClient.setQueryData(['tasks', effectiveListId, ownerId], newTasks);
 
       // Prepare updates for backend
       // We only strictly need to update the orders to reflect the new sequence.
@@ -754,13 +754,13 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
             </form>
           ) : (
             <div className="flex items-center gap-4">
-              <h1 className="text-4xl font-bold text-primary flex items-center gap-3">
+              <h1
+                className="text-4xl font-bold text-primary flex items-center gap-3 cursor-pointer hover:text-accent transition-all"
+                onClick={() => !isTrashView && !isFinishedList && !isSharedView && !activeList?.isSystem && setIsEditingListName(true)}
+              >
                 {activeList?.name || t('tasks.defaultTitle', { defaultValue: 'Tasks' })}
                 {!isTrashView && !isFinishedList && !isSharedView && !activeList?.isSystem && (
-                  <button
-                    onClick={() => setIsEditingListName(true)}
-                    className="text-tertiary hover:text-accent transition-colors"
-                  >
+                  <span className="text-tertiary hover:text-accent transition-colors">
                     <svg
                       className="w-6 h-6"
                       fill="none"
@@ -774,7 +774,7 @@ export default function TasksPage({ isTrashView = false }: TasksPageProps) {
                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                       />
                     </svg>
-                  </button>
+                  </span>
                 )}
               </h1>
               {!isTrashView && !isSharedView && (

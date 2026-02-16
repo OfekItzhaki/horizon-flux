@@ -10,12 +10,14 @@ export const envSchema = z.object({
 
   // Email config
   RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_EMAIL_FROM: z.string().optional().default('Horizon Flux <onboarding@resend.dev>'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().transform(Number).optional(),
   SMTP_SECURE: z.string().optional().default('false'),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  RESEND_FROM: z.string().default('Horizon Flux <noreply@ofeklabs.dev>'),
 
   // Redis config
   REDIS_HOST: z.string().default('localhost'),

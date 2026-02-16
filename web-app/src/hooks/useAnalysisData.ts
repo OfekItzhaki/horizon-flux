@@ -30,7 +30,7 @@ export function useAnalysisData() {
 
   // Filter out system lists that shouldn't be in analytics (Trash, Done)
   const lists = useMemo(() => {
-    return allLists.filter((l) => l.type !== 'TRASH' && l.type !== 'FINISHED');
+    return allLists.filter((l) => l.type !== 'TRASH' && l.type !== 'DONE');
   }, [allLists]);
 
   const {

@@ -215,7 +215,7 @@ export default function TaskDetailsPage() {
     ApiError,
     { task: Task; id: string }
   >({
-    mutationFn: ({ id }) => stepsService.deleteStep(id).then(() => {}),
+    mutationFn: ({ id }) => stepsService.deleteStep(id).then(() => { }),
     onSuccess: (_data, vars) => {
       toast.success(t('taskDetails.stepDeleted'));
       queryClient.invalidateQueries({
@@ -260,7 +260,7 @@ export default function TaskDetailsPage() {
     );
   }
 
-  const isArchivedTask = task.todoList?.type === ListType.FINISHED;
+  const isArchivedTask = task.todoList?.type === ListType.DONE;
 
   return (
     <div className={`max-w-4xl mx-auto pb-24 ${isRtl ? 'rtl' : 'ltr'}`}>

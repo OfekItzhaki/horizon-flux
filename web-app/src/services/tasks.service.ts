@@ -11,7 +11,21 @@ class TasksService {
     return frontendTasksService.getAll(todoListId);
   }
 
-  async getTasksByList(todoListId: string): Promise<Task[]> {
+  async getTasksByList(todoListId: string, ownerId?: string | null): Promise<Task[]> {
+    if (todoListId === 'shared') {
+      const { taskSharingService } = await import('@tasks-management/frontend-services');
+      const shares = await taskSharingService.getTasksSharedWithMe();
+
+      let filteredShares = shares;
+      if (ownerId) {
+        filteredShares = shares.filter(share => share.task?.todoList?.ownerId === ownerId);
+      }
+
+      return filteredShares.map(share => ({
+        ...share.task!,
+        role: share.role
+      }));
+    }
     return frontendTasksService.getAll(todoListId);
   }
 

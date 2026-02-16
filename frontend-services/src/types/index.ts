@@ -63,7 +63,7 @@ export enum ListType {
   MONTHLY = 'MONTHLY',
   YEARLY = 'YEARLY',
   CUSTOM = 'CUSTOM',
-  FINISHED = 'FINISHED',
+  DONE = 'DONE',
   TRASH = 'TRASH',
 }
 
@@ -82,6 +82,7 @@ export interface ToDoList {
   id: string;
   name: string;
   ownerId: string;
+  owner?: User;
   order: number;
   type: ListType;
   taskBehavior: TaskBehavior;
@@ -122,6 +123,7 @@ export interface Task {
   deletedAt: string | null;
   steps?: Step[];
   todoList?: ToDoList;
+  role?: ShareRole;
 }
 
 export interface CreateTaskDto {
@@ -192,7 +194,12 @@ export enum ShareRole {
 export interface ShareListDto {
   email: string;
   role?: ShareRole;
-  sharedWithId?: string; // Temporarily keeping both to see backend preference
+  sharedWithId?: string;
+}
+
+export interface ShareTaskDto {
+  email: string;
+  role?: ShareRole;
 }
 
 export interface ListShare {
@@ -202,6 +209,15 @@ export interface ListShare {
   role: ShareRole;
   sharedWith?: User;
   toDoList?: ToDoList;
+}
+
+export interface TaskShare {
+  id: string;
+  sharedWithId: string;
+  taskId: string;
+  role: ShareRole;
+  sharedWith?: User;
+  task?: Task;
 }
 
 export interface TrashResponse {

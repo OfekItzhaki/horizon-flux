@@ -3,40 +3,35 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")  // For migrations
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id                      String                 @id @default(uuid())
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  email                   String                 @unique @db.VarChar(255)
-  name                    String?                @db.VarChar(100)
-  passwordHash            String?                @db.VarChar(255)
-  deletedAt               DateTime?
-  profilePicture          String?                @db.VarChar(500)
-  emailVerified           Boolean                @default(false)
-  emailVerificationOtp    String?                @db.VarChar(6)
-  emailVerificationSentAt DateTime?
+  id                         String                @id @default(uuid())
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  email                      String                @unique @db.VarChar(255)
+  name                       String?               @db.VarChar(100)
+  passwordHash               String?               @db.VarChar(255)
+  deletedAt                  DateTime?
+  profilePicture             String?               @db.VarChar(500)
+  emailVerified              Boolean               @default(false)
+  emailVerificationOtp       String?               @db.VarChar(6)
+  emailVerificationSentAt    DateTime?
   emailVerificationExpiresAt DateTime?
-  emailVerificationAttempts Int          @default(0)
-  passwordResetOtp        String?                @db.VarChar(6)
-  passwordResetExpiresAt  DateTime?
-  notificationFrequency   NotificationFrequency @default(NONE)
-  trashRetentionDays      Int                    @default(30)
-  shares                  ListShare[]
-  lists                   ToDoList[]
-  refreshTokens           RefreshToken[]
+  emailVerificationAttempts  Int                   @default(0)
+  passwordResetOtp           String?               @db.VarChar(6)
+  passwordResetExpiresAt     DateTime?
+  notificationFrequency      NotificationFrequency @default(NONE)
+  trashRetentionDays         Int                   @default(30)
+  refreshTokens              RefreshToken[]
+  lists                      ToDoList[]
+  shares                     ListShare[]
+  taskShares                 TaskShare[]
 
   @@index([email])
-}
-
-enum NotificationFrequency {
-  NONE
-  DAILY
-  WEEKLY
 }
 
 model ToDoList {
@@ -48,7 +43,7 @@ model ToDoList {
   order            Int              @default(autoincrement())
   deletedAt        DateTime?
   type             ListType         @default(CUSTOM)
-  isSystem         Boolean          @default(false) // System lists (like "Finished Tasks") cannot be deleted
+  isSystem         Boolean          @default(false)
   taskBehavior     TaskBehavior     @default(ONE_OFF)
   completionPolicy CompletionPolicy @default(KEEP)
   shares           ListShare[]
@@ -56,51 +51,36 @@ model ToDoList {
   owner            User             @relation(fields: [ownerId], references: [id])
 }
 
-enum TaskBehavior {
-  RECURRING
-  ONE_OFF
-}
-
-enum CompletionPolicy {
-  AUTO_DELETE
-  KEEP
-  MOVE_TO_DONE
-}
-
 model ListShare {
   id           String    @id @default(uuid())
   sharedWithId String
   toDoListId   String
   role         ShareRole @default(EDITOR)
-  sharedWith   User      @relation(fields: [sharedWithId], references: [id])
   toDoList     ToDoList  @relation(fields: [toDoListId], references: [id])
+  sharedWith   User      @relation(fields: [sharedWithId], references: [id])
 
   @@unique([sharedWithId, toDoListId])
 }
 
-enum ShareRole {
-  VIEWER
-  EDITOR
-}
-
 model Task {
-  id                 String    @id @default(uuid())
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  description        String    @db.VarChar(255)
-  completed          Boolean   @default(false)
-  completedAt        DateTime? // When the task was marked complete (for auto-archive timing)
-  completionCount    Int       @default(0) // How many times this repeating task has been completed
+  id                 String      @id @default(uuid())
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  description        String      @db.VarChar(255)
+  completed          Boolean     @default(false)
+  completedAt        DateTime?
+  completionCount    Int         @default(0)
   todoListId         String
-  originalListId     String?   // Remember original list when archived (for restore)
-  order              Int       @default(autoincrement())
+  originalListId     String?
+  order              Int         @default(autoincrement())
   deletedAt          DateTime?
   dueDate            DateTime?
-  reminderDaysBefore Int[]     @default([1])
+  reminderDaysBefore Int[]       @default([1])
   specificDayOfWeek  Int?
-  reminderConfig     Json?     // Store reminder configurations including "every day" reminders
+  reminderConfig     Json?
   steps              Step[]
-  todoList           ToDoList  @relation(fields: [todoListId], references: [id])
+  todoList           ToDoList    @relation(fields: [todoListId], references: [id])
+  shares             TaskShare[]
 }
 
 model Step {
@@ -115,6 +95,38 @@ model Step {
   task        Task      @relation(fields: [taskId], references: [id])
 }
 
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model TaskShare {
+  id           String    @id @default(uuid())
+  sharedWithId String
+  taskId       String
+  role         ShareRole @default(EDITOR)
+  task         Task      @relation(fields: [taskId], references: [id])
+  sharedWith   User      @relation(fields: [sharedWithId], references: [id])
+
+  @@unique([sharedWithId, taskId])
+}
+
+enum NotificationFrequency {
+  NONE
+  DAILY
+  WEEKLY
+}
+
+enum ShareRole {
+  VIEWER
+  EDITOR
+}
+
 enum ListType {
   DAILY
   WEEKLY
@@ -125,14 +137,13 @@ enum ListType {
   TRASH    // System list for soft-deleted tasks
 }
 
-model RefreshToken {
-  id        String    @id @default(uuid())
-  token     String    @unique
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+enum TaskBehavior {
+  RECURRING
+  ONE_OFF
 }
 
-
+enum CompletionPolicy {
+  AUTO_DELETE
+  KEEP
+  MOVE_TO_DONE
+}

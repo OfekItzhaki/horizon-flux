@@ -4,6 +4,23 @@ import { Inject, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import { ConfigService } from '@nestjs/config';
 
+interface VerificationEmailData {
+  email: string;
+  otp: string;
+  name?: string;
+}
+interface PasswordResetEmailData {
+  email: string;
+  otp: string;
+  name?: string;
+}
+interface ReminderEmailData {
+  email: string;
+  taskDescription: string;
+  message: string;
+  title: string;
+}
+
 @Processor('email')
 export class EmailProcessor extends WorkerHost {
   private readonly logger = new Logger(EmailProcessor.name);
@@ -29,11 +46,11 @@ export class EmailProcessor extends WorkerHost {
 
     switch (job.name) {
       case 'sendVerificationEmail':
-        return this.sendVerificationEmail(job.data);
+        return this.sendVerificationEmail(job.data as VerificationEmailData);
       case 'sendPasswordResetEmail':
-        return this.sendPasswordResetEmail(job.data);
+        return this.sendPasswordResetEmail(job.data as PasswordResetEmailData);
       case 'sendReminderEmail':
-        return this.sendReminderEmail(job.data);
+        return this.sendReminderEmail(job.data as ReminderEmailData);
       default:
         this.logger.warn(`Unknown job name: ${job.name}`);
     }
@@ -93,7 +110,13 @@ export class EmailProcessor extends WorkerHost {
     this.logger.log(`Processing reminder email for: ${email}`);
 
     if (!this.resend) {
-      this.logger.warn('Resend client not configured, skipping email');
+      this.logger.warn('Resend client not configured, skipping email delivery');
+      if (this.configService.get('NODE_ENV') === 'development') {
+        this.logger.debug(`[DEV ONLY] Reminder Email Content:
+To: ${email}
+Subject: ${title}
+Text: ${message}`);
+      }
       return;
     }
 
@@ -146,8 +169,16 @@ export class EmailProcessor extends WorkerHost {
     const { email, otp, name } = data;
     this.logger.log(`Processing verification email for: ${email}`);
 
+    // Always log in development for easier debugging
+    if (this.configService.get('NODE_ENV') === 'development') {
+      this.logger.debug(`[DEV ONLY] Verification Email Content:
+To: ${email}
+Subject: Welcome to Horizon Flux
+OTP: ${otp}`);
+    }
+
     if (!this.resend) {
-      this.logger.warn('Resend client not configured, skipping email');
+      this.logger.warn('Resend client not configured, skipping email delivery');
       return;
     }
 
@@ -197,14 +228,18 @@ export class EmailProcessor extends WorkerHost {
       });
 
       if (error) {
+        this.logger.error(`Resend API Error for ${email}: ${JSON.stringify(error)}`);
         throw new Error(error.message);
       }
 
-      this.logger.log(`Successfully sent verification email to: ${email}, ID: ${result?.id}`);
+      this.logger.log(
+        `Successfully sent verification email to ${email} via ${this.fromAddress}. ID: ${result?.id}`,
+      );
     } catch (error: unknown) {
       const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to send email to ${email}:`, stack);
-      throw error; // BullMQ will retry based on config
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to send email to ${email}: ${message}`, stack);
+      throw error;
     }
   }
 }

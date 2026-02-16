@@ -58,6 +58,9 @@ export class TaskAccessHelper {
           where: { deletedAt: null },
           orderBy: { order: 'asc' },
         },
+        shares: {
+          where: { sharedWithId: userId },
+        },
         todoList: {
           include: {
             shares: {
@@ -69,31 +72,32 @@ export class TaskAccessHelper {
     });
 
     if (!task) {
-      const existsButDeleted = await this.prisma.task.findUnique({
-        where: { id },
-      });
-      if (existsButDeleted) {
-        // Find it anyway for recovery purposes if it's the owner or has access to the list
-        // However, for regular "findTaskForUser" we strictly check deletedAt: null
-        // findById/restore will use separate logic if needed or we could add a flag.
-      }
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
-    // Owner check
+    // 1. Owner check
     if (task.todoList.ownerId === userId) {
       return task;
     }
 
-    const share = task.todoList.shares[0];
-    if (!share) {
-      throw new ForbiddenException('You do not have access to this task');
+    // 2. List-level access check
+    const listShare = task.todoList.shares[0];
+    if (listShare) {
+      if (requiredRole === ShareRole.VIEWER || listShare.role === ShareRole.EDITOR) {
+        return task;
+      }
     }
 
-    if (requiredRole === ShareRole.EDITOR && share.role !== ShareRole.EDITOR) {
-      throw new ForbiddenException('You need Editor permissions for this action');
+    // 3. Task-level access check
+    const taskShare = task.shares[0];
+    if (taskShare) {
+      if (requiredRole === ShareRole.VIEWER || taskShare.role === ShareRole.EDITOR) {
+        return task;
+      }
     }
 
-    return task;
+    throw new ForbiddenException(
+      `You do not have ${requiredRole.toLowerCase()} access to this task`,
+    );
   }
 }

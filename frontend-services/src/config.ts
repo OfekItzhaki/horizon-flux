@@ -1,12 +1,15 @@
 let internalBaseUrl: string | null = null;
+let internalAuthBaseUrl: string | null = null;
 let internalTurnstileSiteKey: string | null = null;
 
-export const configure = (config: { baseURL?: string; turnstileSiteKey?: string }) => {
+export const configure = (config: { baseURL?: string; authBaseURL?: string; turnstileSiteKey?: string }) => {
   if (config.baseURL) {
     internalBaseUrl = config.baseURL;
-    // Update the exported config object so immediate consumers get the new value
-    // Re-evaluate to ensure /api/v1 prefix and other logic is applied
     API_CONFIG.baseURL = getApiBaseUrl();
+  }
+  if (config.authBaseURL) {
+    internalAuthBaseUrl = config.authBaseURL;
+    API_CONFIG.authBaseURL = getAuthBaseUrl();
   }
   if (config.turnstileSiteKey) internalTurnstileSiteKey = config.turnstileSiteKey;
 };
@@ -15,16 +18,13 @@ export const configure = (config: { baseURL?: string; turnstileSiteKey?: string 
 const getApiBaseUrl = (): string => {
   let url = internalBaseUrl || 'http://localhost:3000';
 
-  // In Vite/Browser, we check both process.env (if polyfilled) and import.meta.env
   if (typeof process !== 'undefined' && (process as any).env) {
     const env = (process as any).env;
     const vUrl = env['VITE_API_URL'];
     const aUrl = env['API_BASE_URL'];
-    const eUrl = env['EXPO_PUBLIC_API_URL'];
 
     if (vUrl && vUrl.trim().length > 0) url = vUrl;
     else if (aUrl && aUrl.trim().length > 0) url = aUrl;
-    else if (eUrl && eUrl.trim().length > 0) url = eUrl;
   }
 
   // Final Safety Check for Production Domains
@@ -37,18 +37,31 @@ const getApiBaseUrl = (): string => {
     }
   }
 
-  // Cleanup: Remove trailing slash
   url = url.replace(/\/$/, '');
-
-  // CRITICAL: Ensure /api/v1 prefix is present for ALL environments.
-  // We check for /api/v1, /api/v1/, etc.
   const hasPrefix = url.toLowerCase().includes('/api/v1');
+  return hasPrefix ? url : `${url}/api/v1`;
+};
 
-  if (!hasPrefix) {
-    return `${url}/api/v1`;
+const getAuthBaseUrl = (): string => {
+  let url = internalAuthBaseUrl || 'http://localhost:3001'; // Default auth port
+
+  if (typeof process !== 'undefined' && (process as any).env) {
+    const env = (process as any).env;
+    const vAuthUrl = env['VITE_AUTH_API_URL'];
+    if (vAuthUrl && vAuthUrl.trim().length > 0) url = vAuthUrl;
   }
 
-  return url;
+  // Final Safety Check for Production
+  if (typeof window !== 'undefined' && window.location) {
+    const hostname = window.location.hostname;
+    if (hostname.includes('ofeklabs.dev') && url.includes('localhost')) {
+      url = 'https://auth.ofeklabs.dev';
+    }
+  }
+
+  url = url.replace(/\/$/, '');
+  const hasPrefix = url.toLowerCase().includes('/api/v1');
+  return hasPrefix ? url : `${url}/api/v1`;
 };
 
 export const getTurnstileSiteKey = (): string | null => {
@@ -61,16 +74,17 @@ export const getTurnstileSiteKey = (): string | null => {
 
 export const API_CONFIG = {
   baseURL: getApiBaseUrl(),
-  timeout: 30000, // 30 seconds
+  authBaseURL: getAuthBaseUrl(),
+  timeout: 30000,
 };
 
 export const getApiUrl = (path: string): string => {
-  const base = API_CONFIG.baseURL.replace(/\/$/, '');
+  // Determine which base URL to use
+  const isAuthPath = path.startsWith('/auth') || path.startsWith('auth');
+  const base = (isAuthPath ? API_CONFIG.authBaseURL : API_CONFIG.baseURL).replace(/\/$/, '');
 
-  // Handle absolute paths by stripping the leading slash
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-  // Special case: if path is already an absolute URL, return it
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
@@ -84,14 +98,12 @@ export const getApiUrl = (path: string): string => {
 export const getAssetUrl = (path: string, includeCacheBuster = true): string => {
   if (!path) return '';
 
-  // If already an absolute URL, return as is
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
 
   const root = API_CONFIG.baseURL.split('/api/v1')[0].replace(/\/$/, '');
 
-  // Normalize path and strip any existing /uploads/ or uploads/ prefix
   let cleanPath = path.replace(/\\/g, '/');
   cleanPath = cleanPath.replace(/^(\/)?uploads\//, '');
   cleanPath = cleanPath.replace(/^\//, '');
@@ -99,8 +111,6 @@ export const getAssetUrl = (path: string, includeCacheBuster = true): string => 
   const url = `${root}/uploads/${cleanPath}`;
 
   if (includeCacheBuster) {
-    // Add a timestamp or hash based on the filename if possible,
-    // but a simple ?t= is most reliable for immediate updates
     const buster = Date.now();
     return `${url}?t=${buster}`;
   }

@@ -9,27 +9,19 @@ datasource db {
 }
 
 model User {
-  id                         String                @id @default(uuid())
-  createdAt                  DateTime              @default(now())
-  updatedAt                  DateTime              @updatedAt
-  email                      String                @unique @db.VarChar(255)
-  name                       String?               @db.VarChar(100)
-  passwordHash               String?               @db.VarChar(255)
-  deletedAt                  DateTime?
-  profilePicture             String?               @db.VarChar(500)
-  emailVerified              Boolean               @default(false)
-  emailVerificationOtp       String?               @db.VarChar(6)
-  emailVerificationSentAt    DateTime?
-  emailVerificationExpiresAt DateTime?
-  emailVerificationAttempts  Int                   @default(0)
-  passwordResetOtp           String?               @db.VarChar(6)
-  passwordResetExpiresAt     DateTime?
-  notificationFrequency      NotificationFrequency @default(NONE)
-  trashRetentionDays         Int                   @default(30)
-  refreshTokens              RefreshToken[]
-  lists                      ToDoList[]
-  shares                     ListShare[]
-  taskShares                 TaskShare[]
+  id                    String                @id @default(uuid())
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  email                 String                @unique @db.VarChar(255)
+  name                  String?               @db.VarChar(100)
+  deletedAt             DateTime?
+  profilePicture        String?               @db.VarChar(500)
+  emailVerified         Boolean               @default(false)
+  notificationFrequency NotificationFrequency @default(NONE)
+  trashRetentionDays    Int                   @default(30)
+  lists                 ToDoList[]
+  shares                ListShare[]
+  taskShares            TaskShare[]
 
   @@index([email])
 }
@@ -93,16 +85,6 @@ model Step {
   order       Int       @default(autoincrement())
   deletedAt   DateTime?
   task        Task      @relation(fields: [taskId], references: [id])
-}
-
-model RefreshToken {
-  id        String    @id @default(uuid())
-  token     String    @unique
-  userId    String
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id])
 }
 
 model TaskShare {

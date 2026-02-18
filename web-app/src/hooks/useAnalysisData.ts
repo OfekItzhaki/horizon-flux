@@ -9,7 +9,7 @@ import {
   calculateStreak,
   calculateTrendData,
   calculateStats,
-} from '../utils/analysis-utils';
+} from '@tasks-management/frontend-services';
 
 const EMPTY_LISTS: ToDoList[] = [];
 const EMPTY_TASKS: Task[] = [];

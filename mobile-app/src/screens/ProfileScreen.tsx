@@ -323,11 +323,11 @@ export default function ProfileScreen() {
               });
 
               if (!result.canceled && result.assets[0]) {
-                await uploadImage(
-                  result.assets[0].uri,
-                  result.assets[0].fileName || 'photo.jpg',
-                  result.assets[0].type || 'image/jpeg',
-                );
+                const asset = result.assets[0];
+                const uri = asset.uri;
+                const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+                const mimeType = asset.mimeType || (extension === 'heic' ? 'image/heic' : extension === 'heif' ? 'image/heif' : 'image/jpeg');
+                await uploadImage(uri, asset.fileName || `photo.${extension}`, mimeType);
               }
             },
           },
@@ -342,11 +342,11 @@ export default function ProfileScreen() {
               });
 
               if (!result.canceled && result.assets[0]) {
-                await uploadImage(
-                  result.assets[0].uri,
-                  result.assets[0].fileName || 'photo.jpg',
-                  result.assets[0].type || 'image/jpeg',
-                );
+                const asset = result.assets[0];
+                const uri = asset.uri;
+                const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+                const mimeType = asset.mimeType || (extension === 'heic' ? 'image/heic' : extension === 'heif' ? 'image/heif' : 'image/jpeg');
+                await uploadImage(uri, asset.fileName || `photo.${extension}`, mimeType);
               }
             },
           },
@@ -367,13 +367,22 @@ export default function ProfileScreen() {
     setUploading(true);
     try {
       // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(fileType)) {
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+        'image/heif-sequence',
+      ];
+      if (!allowedTypes.includes(fileType.toLowerCase())) {
         Alert.alert(
           t('profile.error'),
-          t('profile.invalidFileType', {
-            defaultValue: 'Invalid file type. Please select an image file.',
-          }),
+          `${t('profile.invalidFileType', {
+            defaultValue: 'Invalid file type',
+          })}: ${fileType}. Please select a standard image file.`,
         );
         return;
       }
@@ -381,12 +390,6 @@ export default function ProfileScreen() {
       const updatedUser = await usersService.uploadAvatar(user.id, uri, fileName, fileType);
       setImageError(false); // Reset error state when new image is uploaded
       await refreshUser();
-      Alert.alert(
-        t('profile.pictureUpdated'),
-        t('profile.pictureUpdatedMessage', {
-          defaultValue: 'Profile picture updated successfully',
-        }),
-      );
     } catch (error: unknown) {
       console.error('Error uploading image:', error);
       handleApiError(
@@ -626,6 +629,58 @@ export default function ProfileScreen() {
             <Text style={styles.profileLabel}>{t('profile.memberSince')}</Text>
             <Text style={[styles.profileValue, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
               {formatDate(user.createdAt)}
+            </Text>
+          </View>
+
+          {/* Trash Retention Setting */}
+          <View style={[styles.profileSection, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16, marginTop: 8 }]}>
+            <Text style={styles.profileLabel}>Trash Retention (Days)</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              {[7, 30, 90].map((days) => (
+                <TouchableOpacity
+                  key={days}
+                  onPress={async () => {
+                    if (!user) return;
+                    try {
+                      setRefreshing(true);
+                      await usersService.update(user.id, { trashRetentionDays: days });
+                      await refreshUser();
+                    } catch (error) {
+                      handleApiError(error, 'Failed to update trash retention');
+                    } finally {
+                      setRefreshing(false);
+                    }
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    backgroundColor:
+                      user.trashRetentionDays === days ? colors.primary : colors.surface,
+                    borderWidth: 1,
+                    borderColor:
+                      user.trashRetentionDays === days ? colors.primary : colors.border,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: user.trashRetentionDays === days ? '#fff' : colors.text,
+                      fontWeight: 'bold',
+                      fontSize: 12,
+                    }}
+                  >
+                    {days} Days
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text
+              style={[
+                styles.profileValue,
+                { fontSize: 12, marginTop: 8, color: colors.textSecondary },
+              ]}
+            >
+              Number of days tasks stay in trash before permanent deletion.
             </Text>
           </View>
         </View>

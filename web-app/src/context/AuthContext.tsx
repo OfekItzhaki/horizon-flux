@@ -5,8 +5,8 @@ import {
   useEffect,
   ReactNode,
 } from 'react';
-import { authService } from '../services/auth.service';
-import { User, LoginDto } from '@tasks-management/frontend-services';
+import { User, LoginDto, apiClient } from '@tasks-management/frontend-services';
+import { useAuthStore } from '../store/authStore';
 
 interface AuthContextType {
   user: User | null;
@@ -18,50 +18,60 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isUploadingAvatar: boolean;
   setIsUploadingAvatar: (loading: boolean) => void;
+  sessionExpired: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    user,
+    loading,
+    updateUser: setUser,
+    login: storeLogin,
+    logout: storeLogout,
+    initialize,
+    sessionExpired,
+    setSessionExpired
+  } = useAuthStore();
+
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  const checkAuth = async () => {
-    if (!authService.getToken()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-    } catch {
-      // User is not authenticated or token invalid
-      authService.logout(); // Ensure token is cleared if invalid
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    apiClient.onUnauthorized = () => {
+      setSessionExpired(true);
+    };
+    return () => {
+      apiClient.onUnauthorized = undefined;
+    };
+  }, [setSessionExpired]);
+
+  useEffect(() => {
+    if (sessionExpired && user) {
+      const wantToSignIn = window.confirm(
+        'Session Expired: Your security session has ended. To continue syncing your tasks, please sign in again.'
+      );
+      if (wantToSignIn) {
+        setSessionExpired(false);
+        storeLogout();
+      }
+    }
+  }, [sessionExpired, user, storeLogout, setSessionExpired]);
 
   const login = async (credentials: LoginDto) => {
-    const response = await authService.login(credentials);
-    setUser(response.user);
+    await storeLogin(credentials);
   };
 
   const logout = async () => {
-    authService.logout();
-    setUser(null);
+    await storeLogout();
   };
 
   const refreshUser = async () => {
-    await checkAuth();
+    await initialize();
   };
 
   return (
@@ -76,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isUploadingAvatar,
         setIsUploadingAvatar,
+        sessionExpired,
       }}
     >
       {children}

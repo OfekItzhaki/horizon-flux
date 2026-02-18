@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,21 @@ import {
   Platform,
   RefreshControl,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  PieChart,
+  BarChart,
+  LineChart,
+  ContributionGraph,
+} from 'react-native-chart-kit';
 import { useNavigation } from '@react-navigation/native';
-import { listsService } from '../services/lists.service';
-import { tasksService } from '../services/tasks.service';
-import { ToDoList, Task } from '../types';
+import { useAnalysisData } from '../hooks/useAnalysisData';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { useTheme } from '../context/ThemeContext';
-import { handleApiError, isAuthError } from '../utils/errorHandler';
+import { handleApiError } from '../utils/errorHandler';
 
 export default function AnalysisScreen() {
   const navigation = useNavigation();
@@ -209,45 +214,51 @@ export default function AnalysisScreen() {
       alignItems: 'center',
       backgroundColor: colors.surface,
     },
+    streakContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary + '10',
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.primary + '20',
+    },
+    streakValue: {
+      fontSize: 24,
+      fontWeight: '900',
+      color: '#f97316',
+    },
+    streakLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
   }));
 
-  const [lists, setLists] = useState<ToDoList[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    lists,
+    allTasks,
+    isLoading,
+    hasError,
+    refetchLists,
+    refetchTasks,
+    stats,
+    dailyCompletions,
+    dailyTrends,
+    currentStreak,
+  } = useAnalysisData();
+
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async (isRefresh = false) => {
-    try {
-      if (!isRefresh) {
-        setLoading(true);
-      }
-      const loadedLists = await listsService.getAll();
-      setLists(loadedLists);
-
-      const tasksPromises = loadedLists.map((list) => tasksService.getAll(list.id));
-      const tasksArrays = await Promise.all(tasksPromises);
-      setAllTasks(tasksArrays.flat());
-    } catch (error: unknown) {
-      // Silently ignore auth errors - the navigation will handle redirect to login
-      if (!isAuthError(error)) {
-        handleApiError(error, 'Unable to load analysis data. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData(true);
+    await Promise.all([refetchLists(), refetchTasks()]);
+    setRefreshing(false);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -255,63 +266,61 @@ export default function AnalysisScreen() {
     );
   }
 
-  const completedTasks = allTasks.filter((task) => task.completed);
-  const pendingTasks = allTasks.filter((task) => !task.completed);
-  const completionRate = allTasks.length > 0 ? (completedTasks.length / allTasks.length) * 100 : 0;
+  const screenWidth = Dimensions.get('window').width - 64;
 
-  // Tasks with due dates
-  const tasksWithDueDates = allTasks.filter((task) => task.dueDate);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekFromNow = new Date(today);
-  weekFromNow.setDate(weekFromNow.getDate() + 7);
-
-  const overdueTasks = tasksWithDueDates.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = new Date(task.dueDate);
-    return dueDate < today && !task.completed;
-  });
-
-  const dueTodayTasks = tasksWithDueDates.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = new Date(task.dueDate);
-    return (
-      dueDate >= today &&
-      dueDate < new Date(today.getTime() + 24 * 60 * 60 * 1000) &&
-      !task.completed
-    );
-  });
-
-  const dueThisWeekTasks = tasksWithDueDates.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = new Date(task.dueDate);
-    return dueDate >= today && dueDate < weekFromNow && !task.completed;
-  });
-
-  const tasksByList = lists.map((list) => {
-    const listTasks = allTasks.filter((task) => task.todoListId === list.id);
-    return {
-      listName: list.name,
-      total: listTasks.length,
-      completed: listTasks.filter((t) => t.completed).length,
-      pending: listTasks.filter((t) => !t.completed).length,
-    };
-  });
-
-  const tasksByType = lists.reduce(
-    (acc, list) => {
-      const type = list.type;
-      if (!acc[type]) {
-        acc[type] = { total: 0, completed: 0, pending: 0 };
-      }
-      const listTasks = allTasks.filter((task) => task.todoListId === list.id);
-      acc[type].total += listTasks.length;
-      acc[type].completed += listTasks.filter((t) => t.completed).length;
-      acc[type].pending += listTasks.filter((t) => !t.completed).length;
-      return acc;
+  const chartConfig = {
+    backgroundColor: colors.card,
+    backgroundGradientFrom: colors.card,
+    backgroundGradientTo: colors.card,
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+    labelColor: (opacity = 1) => colors.textSecondary,
+    style: {
+      borderRadius: 16,
     },
-    {} as Record<string, { total: number; completed: number; pending: number }>,
-  );
+    propsForDots: {
+      r: '6',
+      strokeWidth: '2',
+      stroke: colors.primary,
+    },
+  };
+
+  const pieData = [
+    {
+      name: 'Completed',
+      population: stats.completedTasks.length,
+      color: colors.success,
+      legendFontColor: colors.textSecondary,
+      legendFontSize: 12,
+    },
+    {
+      name: 'Pending',
+      population: stats.pendingTasks.length,
+      color: colors.primary + '40',
+      legendFontColor: colors.textSecondary,
+      legendFontSize: 12,
+    },
+  ];
+
+  const barData = {
+    labels: stats.tasksByList.slice(0, 5).map((l: any) => l.listName.substring(0, 6)),
+    datasets: [
+      {
+        data: stats.tasksByList.slice(0, 5).map((l: any) => l.total),
+      },
+    ],
+  };
+
+  const lineData = {
+    labels: dailyTrends.slice(-7).map((t: any) => t.label.split(' ')[1]), // Just the day
+    datasets: [
+      {
+        data: dailyTrends.slice(-7).map((t: any) => t.completions),
+        color: (opacity = 1) => colors.primary,
+        strokeWidth: 2,
+      },
+    ],
+  };
 
   return (
     <View style={styles.container}>
@@ -349,51 +358,154 @@ export default function AnalysisScreen() {
               <Text style={styles.statLabel}>Total Tasks</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValueGreen}>{completedTasks.length}</Text>
+              <Text style={styles.statValueGreen}>{stats.completedTasks.length}</Text>
               <Text style={styles.statLabel}>Completed</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValueBlue}>{completionRate.toFixed(0)}%</Text>
+              <Text style={styles.statValueBlue}>{stats.completionRate.toFixed(0)}%</Text>
               <Text style={styles.statLabel}>Complete</Text>
             </View>
           </View>
         </View>
 
+        {/* Daily Streak & Contribution Graph */}
+        <View style={styles.card}>
+          <View style={styles.streakContainer}>
+            <Ionicons name="flame" size={32} color="#f97316" />
+            <View style={{ marginLeft: 16 }}>
+              <Text style={styles.streakValue}>{currentStreak} Days</Text>
+              <Text style={styles.streakLabel}>Current Daily Streak</Text>
+            </View>
+          </View>
+          <Text style={[styles.cardTitle, { marginTop: 24, fontSize: 16 }]}>
+            Activity Heatmap
+          </Text>
+          <View style={{ alignItems: 'center', marginLeft: -16 }}>
+            <ContributionGraph
+              values={dailyCompletions}
+              endDate={new Date()}
+              numDays={90}
+              width={screenWidth + 32}
+              height={220}
+              chartConfig={chartConfig}
+              tooltipDataAttrs={(v: any) => ({})}
+            />
+          </View>
+        </View>
+
+        {/* Visual Charts */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Completion Status</Text>
+          <PieChart
+            data={pieData}
+            width={screenWidth}
+            height={200}
+            chartConfig={chartConfig}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            absolute
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tasks by List</Text>
+          <BarChart
+            data={barData}
+            width={screenWidth}
+            height={220}
+            yAxisLabel=""
+            yAxisSuffix=""
+            chartConfig={chartConfig}
+            verticalLabelRotation={30}
+            style={{
+              marginVertical: 8,
+              borderRadius: 16,
+            }}
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>7-Day Trend</Text>
+          <LineChart
+            data={lineData}
+            width={screenWidth}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            style={{
+              marginVertical: 8,
+              borderRadius: 16,
+            }}
+          />
+        </View>
+
         {/* Due Date Statistics */}
-        {tasksWithDueDates.length > 0 && (
+        {stats.tasksWithDueDates.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Due Date Overview</Text>
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: colors.error }]}>
-                  {overdueTasks.length}
+                  {stats.overdueTasks.length}
                 </Text>
                 <Text style={styles.statLabel}>Overdue</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: colors.warning }]}>
-                  {dueTodayTasks.length}
+                  {stats.dueTodayTasks.length}
                 </Text>
                 <Text style={styles.statLabel}>Due Today</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: colors.warning }]}>
-                  {dueThisWeekTasks.length}
+                  {stats.dueThisWeekTasks.length}
                 </Text>
                 <Text style={styles.statLabel}>Due This Week</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statValue}>{tasksWithDueDates.length}</Text>
+                <Text style={styles.statValue}>{stats.tasksWithDueDates.length}</Text>
                 <Text style={styles.statLabel}>With Dates</Text>
               </View>
             </View>
           </View>
         )}
 
+        {/* Step Progress */}
+        {stats.totalSteps > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Steps Progress</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{stats.totalSteps}</Text>
+                <Text style={styles.statLabel}>Total Steps</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValueGreen}>{stats.completedSteps}</Text>
+                <Text style={styles.statLabel}>Completed</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValueBlue}>
+                  {stats.stepsCompletionRate.toFixed(0)}%
+                </Text>
+                <Text style={styles.statLabel}>Progress</Text>
+              </View>
+            </View>
+            <View style={[styles.progressBar, { marginTop: 16 }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${stats.stepsCompletionRate}%` },
+                ]}
+              />
+            </View>
+          </View>
+        )}
+
         {/* Tasks by List */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tasks by List</Text>
-          {tasksByList.map((item, index) => {
+          <Text style={styles.cardTitle}>Tasks by List (Detailed)</Text>
+          {stats.tasksByList.map((item: any, index: number) => {
             const progress = item.total > 0 ? (item.completed / item.total) * 100 : 0;
             return (
               <View key={index}>
@@ -409,43 +521,6 @@ export default function AnalysisScreen() {
                   <View style={styles.progressBar}>
                     <View style={[styles.progressFill, { width: `${progress}%` }]} />
                   </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Tasks by Type */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tasks by Type</Text>
-          {Object.entries(tasksByType).map(([type, stats]) => {
-            const progress = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
-            return (
-              <View key={type} style={styles.typeCard}>
-                <Text style={styles.typeTitle}>{type}</Text>
-                <View style={styles.typeRow}>
-                  <Text style={styles.typeLabel}>Total:</Text>
-                  <Text style={styles.typeValue}>{stats.total}</Text>
-                </View>
-                <View style={styles.typeRow}>
-                  <Text style={styles.typeLabel}>Completed:</Text>
-                  <Text style={[styles.typeValue, { color: colors.success }]}>
-                    {stats.completed}
-                  </Text>
-                </View>
-                <View style={styles.typeRow}>
-                  <Text style={styles.typeLabel}>Pending:</Text>
-                  <Text style={[styles.typeValue, { color: colors.error }]}>{stats.pending}</Text>
-                </View>
-                {stats.total > 0 && (
-                  <>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${progress}%` }]} />
-                    </View>
-                    <Text style={[styles.typeLabel, { marginTop: 4 }]}>
-                      {progress.toFixed(1)}% complete
-                    </Text>
-                  </>
                 )}
               </View>
             );

@@ -10,4 +10,4 @@ import { TasksModule } from '../tasks/tasks.module';
   providers: [TaskSharesService],
   exports: [TaskSharesService],
 })
-export class TaskSharesModule {}
+export class TaskSharesModule { }

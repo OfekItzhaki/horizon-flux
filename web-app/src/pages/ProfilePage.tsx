@@ -26,7 +26,6 @@ export default function ProfilePage() {
       setIsUploadingAvatar(true);
       const updatedUser = await usersService.uploadAvatar(user.id, file);
       setUser(updatedUser);
-      // No need to call refreshUser anymore as we updated state locally
     } catch {
       // console.error('Failed to upload avatar:', error);
       alert('Failed to upload profile picture');

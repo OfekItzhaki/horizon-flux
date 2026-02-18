@@ -14,14 +14,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../store/useAuthStore';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { handleApiError } from '../utils/errorHandler';
 import { useTheme } from '../context/ThemeContext';
 
 export default function LoginScreen() {
   const { login, register } = useAuth();
+  const { lastEmail } = useAuthStore();
   const { setThemeMode, isDark } = useTheme();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(lastEmail);
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLogin, setIsLogin] = useState(true);

@@ -5,6 +5,7 @@ import { ApiError } from '../types';
 export class ApiClient {
   private isRefreshing = false;
   private refreshPromise: Promise<any> | null = null;
+  public onUnauthorized?: () => void;
 
   private async request<T>(method: string, path: string, options: RequestInit = {}): Promise<T> {
     const url = getApiUrl(path);
@@ -108,6 +109,11 @@ export class ApiClient {
       this.isRefreshing = false;
       this.refreshPromise = null;
       TokenStorage.removeToken();
+
+      if (this.onUnauthorized) {
+        this.onUnauthorized();
+      }
+
       // We don't redirect here to keep the service pure,
       // but we throw so the UI can handle it
       throw refreshError;

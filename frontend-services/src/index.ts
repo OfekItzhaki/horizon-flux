@@ -13,7 +13,6 @@ export { apiClient, ApiClient } from './utils/api-client';
 
 // Export types
 export * from './types';
-export { CompletionPolicy } from './types';
 
 // Re-export i18n utilities for easier importing (Metro compatibility)
 export * from './i18n';
@@ -33,7 +32,8 @@ export {
   type FormatReminderOptions,
 } from './reminders';
 
-// Export validation, error and task utilities
+// Export validation, error, task and analysis utilities
 export * from './utils/dateTimeValidation';
 export * from './utils/error-extraction';
 export * from './utils/task-utils';
+export * from './utils/analysis-utils';

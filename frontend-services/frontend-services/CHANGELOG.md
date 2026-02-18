@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/OfekItzhaki/horizon-flux/compare/frontend-services-v1.3.3...frontend-services-v1.4.0) (2026-02-18)
+
+
+### Features
+
+* redesign shared individual tasks with per-owner cards and backend enrichment ([#89](https://github.com/OfekItzhaki/horizon-flux/issues/89)) ([191660d](https://github.com/OfekItzhaki/horizon-flux/commit/191660d584085b7683559cacc6189e15b621a31f))
+
 ## [1.3.3](https://github.com/OfekItzhaki/horizon-flux/compare/frontend-services-v1.3.2...frontend-services-v1.3.3) (2026-02-13)
 
 

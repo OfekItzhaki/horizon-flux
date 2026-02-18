@@ -5,7 +5,7 @@
   "scripts": {
     "start": "concurrently \"npm run dev:backend\" \"npm run dev:web\" \"npm run dev:mobile\"",
     "dev:backend": "npm start --prefix todo-backend",
-    "dev:web": "npm start --prefix web-app",
+    "dev:web": "npm run dev --prefix web-app",
     "dev:mobile": "npm start --prefix mobile-app",
     "prepare": "husky"
   },

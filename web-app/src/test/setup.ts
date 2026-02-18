@@ -10,6 +10,7 @@ import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { server } from './mocks/server';
+import { useAuthStore } from '../store/authStore';
 
 // Mock the TurnstileWidget component for all tests
 vi.mock('../components/TurnstileWidget', async () => {
@@ -20,6 +21,7 @@ vi.mock('../components/TurnstileWidget', async () => {
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
 afterEach(() => {
   server.resetHandlers();
+  useAuthStore.getState().reset();
   cleanup();
 });
 afterAll(() => server.close());

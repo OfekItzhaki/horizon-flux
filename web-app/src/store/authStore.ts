@@ -15,7 +15,16 @@ interface AuthState {
   logout: () => Promise<void>;
   updateUser: (user: User | null) => void;
   setSessionExpired: (expired: boolean) => void;
+  reset: () => void;
 }
+
+const initialState = {
+  user: null,
+  loading: false,
+  isAuthenticated: false,
+  sessionExpired: false,
+  lastEmail: '',
+};
 
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
@@ -72,4 +81,5 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   setSessionExpired: (expired: boolean) => set({ sessionExpired: expired }),
+  reset: () => set(initialState),
 }));

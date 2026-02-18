@@ -13,6 +13,7 @@ import { join } from 'path';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
+import * as morgan from 'morgan';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
@@ -23,7 +24,6 @@ async function bootstrap() {
   app.useLogger(logger);
 
   // Request logging
-  const morgan = require('morgan');
   app.use(morgan('dev'));
 
   // Body parsing with large limits
@@ -72,13 +72,13 @@ async function bootstrap() {
   const origin =
     isProduction && allowedOriginsEnv
       ? allowedOriginsEnv
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean)
+          .split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
       : true;
 
   app.enableCors({
-    origin: true,
+    origin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Mobile-Client', 'Accept'],

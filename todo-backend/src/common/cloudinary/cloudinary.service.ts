@@ -9,7 +9,9 @@ export class CloudinaryService {
     file: Express.Multer.File,
     folder: string = 'profile_pictures',
   ): Promise<UploadApiResponse | UploadApiErrorResponse> {
-    console.log(`[CloudinaryService] Starting upload for ${file.originalname} (${file.size} bytes)`);
+    console.log(
+      `[CloudinaryService] Starting upload for ${file.originalname} (${file.size} bytes)`,
+    );
     return new Promise((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
         {

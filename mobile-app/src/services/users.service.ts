@@ -1,4 +1,5 @@
 import { apiClient, ApiError } from '../utils/api-client';
+import { TokenStorage } from '../utils/storage';
 import { User, UpdateUserDto } from '../types';
 
 export class UsersService {
@@ -60,7 +61,9 @@ export class UsersService {
     fileType: string,
   ): Promise<User> {
     try {
-      // Create FormData for file upload
+      const url = apiClient.defaults.baseURL + `/users/${id}/upload-avatar`;
+      const token = await TokenStorage.getToken();
+
       const formData = new FormData();
       formData.append('file', {
         uri: fileUri,
@@ -68,17 +71,32 @@ export class UsersService {
         type: fileType,
       } as any);
 
-      const response = await apiClient.post<User>(`/users/${id}/upload-avatar`, formData, {
+      console.log('[UsersService] Uploading via fetch to:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
+          'X-Mobile-Client': 'true',
+          // Note: DO NOT set Content-Type, fetch will set it with boundary
         },
       });
-      return response.data;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[UsersService] Upload failed:', response.status, errorText);
+        throw new ApiError(response.status, `Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
+      console.error('[UsersService] Upload error:', error);
       if (error instanceof ApiError) {
         throw error;
       }
-      throw new ApiError(0, 'Failed to upload avatar');
+      throw new ApiError(0, 'Failed to upload avatar via network');
     }
   }
 }

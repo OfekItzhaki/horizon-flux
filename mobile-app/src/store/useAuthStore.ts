@@ -15,14 +15,26 @@ interface AuthState {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: (user: User | null) => void;
+  setSessionExpired: (expired: boolean) => void;
+  sessionExpired: boolean;
+  lastEmail: string;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  sessionExpired: false,
+  lastEmail: '',
 
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setUser: (user) => set({
+    user,
+    isAuthenticated: !!user,
+    sessionExpired: false,
+    ...(user?.email ? { lastEmail: user.email } : {})
+  }),
+
+  setSessionExpired: (expired) => set({ sessionExpired: expired }),
 
   loadUser: async () => {
     set({ isLoading: true });
@@ -67,13 +79,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (email, password, name) => {
+  register: async (email: string, password: string, name: string) => {
     await authService.register({ email, password, name });
   },
 
   logout: async () => {
     await authService.logout();
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, sessionExpired: false });
   },
 
   refreshUser: async () => {

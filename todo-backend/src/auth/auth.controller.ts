@@ -43,12 +43,17 @@ export class AuthController {
     description: 'Returns JWT access token and user data, sets refresh token cookie',
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+    @Req() request: Request,
+  ) {
+    const isMobile = request.headers['x-mobile-client'] === 'true';
     const [userValidationResult] = await Promise.all([
       this.authService.login(loginDto.email, loginDto.password),
       loginDto.captchaToken
         ? this.authService.verifyTurnstile(loginDto.captchaToken)
-        : process.env.TURNSTILE_SECRET_KEY
+        : process.env.TURNSTILE_SECRET_KEY && !isMobile
           ? Promise.reject(new BadRequestException('CAPTCHA token required'))
           : Promise.resolve(),
     ]);
@@ -131,12 +136,13 @@ export class AuthController {
   @Post('register/start')
   @ApiOperation({ summary: 'Start registration by sending OTP' })
   @ApiResponse({ status: 201, description: 'OTP sent successfully' })
-  async registerStart(@Body() dto: RegisterStartDto) {
+  async registerStart(@Body() dto: RegisterStartDto, @Req() request: Request) {
+    const isMobile = request.headers['x-mobile-client'] === 'true';
     const [result] = await Promise.all([
       this.authService.registerStart(dto.email),
       dto.captchaToken
         ? this.authService.verifyTurnstile(dto.captchaToken)
-        : process.env.TURNSTILE_SECRET_KEY
+        : process.env.TURNSTILE_SECRET_KEY && !isMobile
           ? Promise.reject(new BadRequestException('CAPTCHA token required'))
           : Promise.resolve(),
     ]);
@@ -173,13 +179,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset OTP' })
   @ApiResponse({ status: 200, description: 'OTP sent if user exists' })
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() dto: ForgotPasswordDto, @Req() request: Request) {
     // Verify CAPTCHA if token provided or if secret key is configured
+    const isMobile = request.headers['x-mobile-client'] === 'true';
     const [result] = await Promise.all([
       this.authService.forgotPassword(dto.email),
       dto.captchaToken
         ? this.authService.verifyTurnstile(dto.captchaToken)
-        : process.env.TURNSTILE_SECRET_KEY
+        : process.env.TURNSTILE_SECRET_KEY && !isMobile
           ? Promise.reject(new BadRequestException('CAPTCHA token required'))
           : Promise.resolve(),
     ]);

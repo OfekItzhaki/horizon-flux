@@ -17,11 +17,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { listsService } from '../services/lists.service';
-import { ToDoList, CreateTodoListDto } from '../types';
+import { ToDoList, CreateTodoListDto, TaskBehavior, CompletionPolicy } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { handleApiError, isAuthError } from '../utils/errorHandler';
 import { rescheduleAllReminders } from '../services/notifications.service';
+import ShareListModal from '../components/ShareListModal';
+import { sharingService } from '../services/sharing.service';
+import { useAuthStore } from '../store/useAuthStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -143,6 +146,31 @@ export default function ListsScreen() {
       textAlign: 'center',
       paddingHorizontal: 40,
       opacity: 0.7,
+    },
+    tabsContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: 'center',
+      borderRadius: 12,
+    },
+    activeTab: {
+      backgroundColor: colors.primary + '15',
+    },
+    tabText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    activeTabText: {
+      color: colors.primary,
     },
     fab: {
       position: 'absolute',
@@ -293,6 +321,13 @@ export default function ListsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingList, setEditingList] = useState<ToDoList | null>(null);
   const [editListName, setEditListName] = useState('');
+  const [taskBehavior, setTaskBehavior] = useState<TaskBehavior>(TaskBehavior.ONE_OFF);
+  const [completionPolicy, setCompletionPolicy] = useState<CompletionPolicy>(
+    CompletionPolicy.MOVE_TO_DONE,
+  );
+  const [sharingList, setSharingList] = useState<ToDoList | null>(null);
+  const [activeTab, setActiveTab] = useState<'my' | 'shared'>('my');
+  const { user } = useAuthStore();
 
   const {
     data: lists = [],
@@ -304,18 +339,30 @@ export default function ListsScreen() {
     queryFn: () => listsService.getAll(),
   });
 
+  const {
+    data: sharedLists = [],
+    isLoading: loadingShared,
+    refetch: refetchShared,
+  } = useQuery({
+    queryKey: ['shared-lists', user?.id],
+    queryFn: () => (user?.id ? sharingService.getSharedLists(user.id) : Promise.resolve([])),
+    enabled: !!user?.id,
+  });
+
   const createListMutation = useMutation({
     mutationFn: (data: CreateTodoListDto) => listsService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lists'] });
       setNewListName('');
+      setTaskBehavior(TaskBehavior.ONE_OFF);
+      setCompletionPolicy(CompletionPolicy.MOVE_TO_DONE);
       setShowAddModal(false);
     },
     onError: (error: any) => handleApiError(error, 'Failed to create list'),
   });
 
   const updateListMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<ToDoList> }) =>
       listsService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lists'] });
@@ -341,6 +388,7 @@ export default function ListsScreen() {
 
   const onRefresh = () => {
     loadLists();
+    refetchShared();
   };
 
   const handleListPress = (list: ToDoList) => {
@@ -354,6 +402,8 @@ export default function ListsScreen() {
   const handleEditList = (list: ToDoList) => {
     setEditingList(list);
     setEditListName(list.name);
+    setTaskBehavior(list.taskBehavior || TaskBehavior.ONE_OFF);
+    setCompletionPolicy(list.completionPolicy || CompletionPolicy.MOVE_TO_DONE);
     setShowAddModal(true);
   };
 
@@ -365,7 +415,11 @@ export default function ListsScreen() {
     }
     updateListMutation.mutate({
       id: editingList.id,
-      data: { name: editListName.trim() },
+      data: {
+        name: editListName.trim(),
+        taskBehavior,
+        completionPolicy,
+      },
     });
   };
 
@@ -378,7 +432,11 @@ export default function ListsScreen() {
       Alert.alert('Validation Error', 'Please enter a list name before saving.');
       return;
     }
-    createListMutation.mutate({ name: newListName.trim() });
+    createListMutation.mutate({
+      name: newListName.trim(),
+      taskBehavior,
+      completionPolicy,
+    });
   };
 
   const handleDeleteList = (list: ToDoList) => {
@@ -419,8 +477,25 @@ export default function ListsScreen() {
         </Text>
       </View>
 
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'my' && styles.activeTab]}
+          onPress={() => setActiveTab('my')}
+        >
+          <Text style={[styles.tabText, activeTab === 'my' && styles.activeTabText]}>My Lists</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'shared' && styles.activeTab]}
+          onPress={() => setActiveTab('shared')}
+        >
+          <Text style={[styles.tabText, activeTab === 'shared' && styles.activeTabText]}>
+            Shared with Me
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
-        data={lists}
+        data={activeTab === 'my' ? lists : sharedLists}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -429,6 +504,9 @@ export default function ListsScreen() {
             style={styles.listItem}
             onPress={() => handleListPress(item)}
             onLongPress={() => {
+              // Only owner can edit/delete. Shared lists are read-only for now or have special rules.
+              if (activeTab === 'shared') return;
+
               // System lists (like Finished Tasks) cannot be edited or deleted
               if (item.isSystem) {
                 Alert.alert(item.name, 'This is a system list and cannot be modified.', [
@@ -438,6 +516,7 @@ export default function ListsScreen() {
               }
               Alert.alert(item.name, 'Choose an action', [
                 { text: 'Cancel', style: 'cancel' },
+                { text: 'Share', onPress: () => setSharingList(item) },
                 { text: 'Edit', onPress: () => handleEditList(item) },
                 { text: 'Delete', style: 'destructive', onPress: () => handleDeleteList(item) },
               ]);
@@ -447,19 +526,32 @@ export default function ListsScreen() {
               <View style={styles.listInfo}>
                 <Text style={styles.listName}>{item.name}</Text>
               </View>
+              {activeTab === 'shared' && (
+                <Text style={[styles.listCount, { marginTop: 4 }]}>Shared by owner</Text>
+              )}
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyText}>No lists yet</Text>
+            <Text style={styles.emptyIcon}>
+              {activeTab === 'my' ? '📋' : '👥'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {activeTab === 'my' ? 'No lists yet' : 'No shared lists'}
+            </Text>
             <Text style={styles.emptySubtext}>
-              Tap the + button below to create your first list
+              {activeTab === 'my'
+                ? 'Tap the + button below to create your first list'
+                : 'Lists shared with you by others will appear here'}
             </Text>
           </View>
         }
-        contentContainerStyle={lists.length === 0 ? styles.emptyContainer : undefined}
+        contentContainerStyle={
+          (activeTab === 'my' ? lists.length : sharedLists.length) === 0
+            ? styles.emptyContainer
+            : undefined
+        }
       />
 
       {/* Floating Action Button */}
@@ -503,6 +595,113 @@ export default function ListsScreen() {
               autoFocus
             />
 
+            <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+              <Text style={styles.typeLabel}>Task Behavior</Text>
+              <View style={styles.typeSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.typeOption,
+                    taskBehavior === TaskBehavior.ONE_OFF && { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => {
+                    setTaskBehavior(TaskBehavior.ONE_OFF);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      taskBehavior === TaskBehavior.ONE_OFF && styles.typeOptionTextSelected,
+                    ]}
+                  >
+                    One-off
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.typeOption,
+                    taskBehavior === TaskBehavior.RECURRING && { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => {
+                    setTaskBehavior(TaskBehavior.RECURRING);
+                    setCompletionPolicy(CompletionPolicy.KEEP);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      taskBehavior === TaskBehavior.RECURRING && styles.typeOptionTextSelected,
+                    ]}
+                  >
+                    Recurring
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.typeLabel}>Completion Policy</Text>
+              <View style={styles.typeSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.typeOption,
+                    completionPolicy === CompletionPolicy.MOVE_TO_DONE && {
+                      backgroundColor: colors.primary,
+                    },
+                    taskBehavior === TaskBehavior.RECURRING && { opacity: 0.5 },
+                  ]}
+                  onPress={() => setCompletionPolicy(CompletionPolicy.MOVE_TO_DONE)}
+                  disabled={taskBehavior === TaskBehavior.RECURRING}
+                >
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      completionPolicy === CompletionPolicy.MOVE_TO_DONE &&
+                      styles.typeOptionTextSelected,
+                    ]}
+                  >
+                    Move to Done
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.typeOption,
+                    completionPolicy === CompletionPolicy.KEEP && {
+                      backgroundColor: colors.primary,
+                    },
+                  ]}
+                  onPress={() => setCompletionPolicy(CompletionPolicy.KEEP)}
+                >
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      completionPolicy === CompletionPolicy.KEEP && styles.typeOptionTextSelected,
+                    ]}
+                  >
+                    Keep Tasks
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.typeOption,
+                    completionPolicy === CompletionPolicy.AUTO_DELETE && {
+                      backgroundColor: colors.primary,
+                    },
+                    taskBehavior === TaskBehavior.RECURRING && { opacity: 0.5 },
+                  ]}
+                  onPress={() => setCompletionPolicy(CompletionPolicy.AUTO_DELETE)}
+                  disabled={taskBehavior === TaskBehavior.RECURRING}
+                >
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      completionPolicy === CompletionPolicy.AUTO_DELETE &&
+                      styles.typeOptionTextSelected,
+                    ]}
+                  >
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -532,6 +731,15 @@ export default function ListsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Share List Modal */}
+      {sharingList && (
+        <ShareListModal
+          visible={!!sharingList}
+          onClose={() => setSharingList(null)}
+          list={sharingList}
+        />
+      )}
     </View>
   );
 }

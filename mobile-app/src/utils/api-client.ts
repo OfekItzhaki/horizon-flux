@@ -25,8 +25,9 @@ const createApiClient = (): AxiosInstance => {
     baseURL: getApiUrl(''),
     headers: {
       'Content-Type': 'application/json',
+      'X-Mobile-Client': 'true',
     },
-    timeout: 30000, // 30 seconds timeout
+    timeout: 60000, // 60 seconds timeout
   });
 
   // Request interceptor: Add auth token
@@ -37,7 +38,8 @@ const createApiClient = (): AxiosInstance => {
         config.headers.Authorization = `Bearer ${token}`;
       }
       // Don't set Content-Type for FormData - let axios set it with boundary
-      if (config.data instanceof FormData) {
+      // In React Native, FormData might have _parts
+      if (config.data instanceof FormData || (config.data && typeof config.data === 'object' && '_parts' in config.data)) {
         delete config.headers['Content-Type'];
       }
       return config;
@@ -62,6 +64,16 @@ const createApiClient = (): AxiosInstance => {
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;
+
+      // LOG ERROR FOR DEBUGGING
+      console.log('[ApiClient] Request Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        code: error.code,
+        message: error.message,
+        hasResponse: !!error.response,
+        hasRequest: !!error.request,
+      });
 
       if (error.response) {
         const statusCode = error.response.status;
@@ -88,9 +100,16 @@ const createApiClient = (): AxiosInstance => {
                 await TokenStorage.setToken(newToken);
                 return newToken;
               } catch (refreshError) {
-                // Refresh failed - clear everything
+                // Refresh failed - trigger session expired state
+                try {
+                  const { useAuthStore } = await import('../store/useAuthStore');
+                  useAuthStore.getState().setSessionExpired(true);
+                } catch (e) {
+                  console.error('Failed to trigger session expired state:', e);
+                }
+
+                // Still clear tokens for security
                 await TokenStorage.removeToken();
-                await UserStorage.removeUser();
                 throw refreshError;
               } finally {
                 isRefreshing = false;

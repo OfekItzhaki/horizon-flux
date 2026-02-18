@@ -4,5 +4,5 @@ import * as Sentry from '@sentry/react-native';
 
 import App from './App';
 
-const Root = Sentry.wrap(App);
+const Root = process.env.EXPO_PUBLIC_SENTRY_DSN ? Sentry.wrap(App) : App;
 registerRootComponent(Root);

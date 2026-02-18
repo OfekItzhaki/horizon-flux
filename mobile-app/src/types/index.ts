@@ -14,7 +14,20 @@ export enum ListType {
   MONTHLY = 'MONTHLY',
   YEARLY = 'YEARLY',
   CUSTOM = 'CUSTOM',
+  DONE = 'DONE',
+  TRASH = 'TRASH',
   FINISHED = 'FINISHED', // System list for archived completed tasks
+}
+
+export enum TaskBehavior {
+  RECURRING = 'RECURRING',
+  ONE_OFF = 'ONE_OFF',
+}
+
+export enum CompletionPolicy {
+  AUTO_DELETE = 'AUTO_DELETE',
+  KEEP = 'KEEP',
+  MOVE_TO_DONE = 'MOVE_TO_DONE',
 }
 
 export interface User {
@@ -24,6 +37,7 @@ export interface User {
   profilePicture: string | null;
   emailVerified: boolean;
   notificationFrequency: NotificationFrequency;
+  trashRetentionDays: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +49,8 @@ export interface ToDoList {
   ownerId: string;
   order: number;
   isSystem: boolean; // System lists (like "Finished Tasks") cannot be deleted
+  taskBehavior: TaskBehavior;
+  completionPolicy: CompletionPolicy;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -104,14 +120,19 @@ export interface UpdateUserDto {
   profilePicture?: string;
   password?: string;
   notificationFrequency?: NotificationFrequency;
+  trashRetentionDays?: number;
 }
 
 export interface CreateTodoListDto {
   name: string;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 export interface UpdateTodoListDto {
   name?: string;
+  taskBehavior?: TaskBehavior;
+  completionPolicy?: CompletionPolicy;
 }
 
 export interface CreateTaskDto {
@@ -146,7 +167,8 @@ export interface ReorderStepsDto {
 }
 
 export interface ShareListDto {
-  sharedWithId: string;
+  email: string;
+  role?: 'VIEWER' | 'EDITOR';
 }
 
 // Reminder types (ReminderConfig, ReminderTimeframe, ReminderSpecificDate, etc.)

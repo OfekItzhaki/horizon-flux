@@ -12,6 +12,8 @@ import { join } from 'path';
 
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { json, urlencoded } from 'express';
+import morgan from 'morgan';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
@@ -20,6 +22,13 @@ async function bootstrap() {
     bufferLogs: true,
   });
   app.useLogger(logger);
+
+  // Request logging
+  app.use(morgan('dev'));
+
+  // Body parsing with large limits
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ limit: '50mb', extended: true }));
 
   // Security Headers
   app.use(
@@ -40,6 +49,7 @@ async function bootstrap() {
             'https://challenges.cloudflare.com',
             'https://api.horizon-flux.ofeklabs.dev',
             'https://*.cloudflare.com',
+            '*',
           ],
           'img-src': ["'self'", 'data:', 'https://res.cloudinary.com'],
         },
@@ -71,7 +81,7 @@ async function bootstrap() {
     origin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Mobile-Client', 'Accept'],
   });
 
   // Serve privacy policy and other static files from public root
@@ -109,7 +119,7 @@ async function bootstrap() {
   }
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`Application is running on: http://localhost:${port}`);
   logger.log(`Swagger: http://localhost:${port}/api`);
 }

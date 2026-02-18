@@ -125,12 +125,21 @@ class UsersController {
     status: 403,
     description: 'Forbidden - can only upload to own profile',
   })
-  @UseInterceptors(FileInterceptor('file'), FileUploadInterceptor)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit for mobile photos
+      },
+    }),
+    FileUploadInterceptor,
+  )
   async uploadAvatar(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: CurrentUserPayload,
   ) {
+    console.log('[UsersController] uploadAvatar triggered', { id, userId: user?.userId });
+
     if (id !== user.userId) {
       throw new BadRequestException('You can only upload to your own profile');
     }

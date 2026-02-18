@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect } from 'react';
+import { Alert } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { User } from '../types';
 
@@ -15,12 +16,41 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, loadUser, login, register, logout, refreshUser } =
-    useAuthStore();
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    loadUser,
+    login,
+    register,
+    logout,
+    refreshUser,
+    sessionExpired,
+    setSessionExpired
+  } = useAuthStore();
 
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  useEffect(() => {
+    if (sessionExpired && isAuthenticated) {
+      Alert.alert(
+        'Session Expired',
+        'Your security session has ended. To continue syncing your tasks, please sign in again.',
+        [
+          {
+            text: 'Sign In',
+            onPress: () => {
+              setSessionExpired(false);
+              logout();
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  }, [sessionExpired, isAuthenticated, logout, setSessionExpired]);
 
   return (
     <AuthContext.Provider

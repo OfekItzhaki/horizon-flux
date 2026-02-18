@@ -20,6 +20,9 @@ export class FileUploadInterceptor implements NestInterceptor {
     'image/png',
     'image/gif',
     'image/webp',
+    'image/heic',
+    'image/heif',
+    'image/heif-sequence',
   ];
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB
 

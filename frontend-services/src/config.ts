@@ -15,7 +15,7 @@ export const configure = (config: { baseURL?: string; turnstileSiteKey?: string 
 const getApiBaseUrl = (): string => {
   let url = internalBaseUrl || 'http://localhost:3000';
 
-  // In Vite/Browser, we check both process.env (if polyfilled) and import.meta.env
+  // In Vite/Browser, we check both process.env (if polyfilled) and project environment variables
   if (typeof process !== 'undefined' && (process as any).env) {
     const env = (process as any).env;
     const vUrl = env['VITE_API_URL'];

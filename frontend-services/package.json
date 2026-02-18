@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "postinstall": "node scripts/build-if-needed.js"
+    "postinstall": "node scripts/build-if-needed.cjs"
   },
   "keywords": [
     "tasks",

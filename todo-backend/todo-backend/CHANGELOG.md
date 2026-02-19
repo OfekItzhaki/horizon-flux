@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/OfekItzhaki/horizon-flux/compare/todo-backend-v0.3.2...todo-backend-v0.4.0) (2026-02-18)
+
+
+### Features
+
+* **auth:** specialized email templates and password reset UI improvements ([#87](https://github.com/OfekItzhaki/horizon-flux/issues/87)) ([9c39984](https://github.com/OfekItzhaki/horizon-flux/commit/9c39984b93454059058aba4e508e02b2e2216df8))
+* redesign shared individual tasks with per-owner cards and backend enrichment ([#89](https://github.com/OfekItzhaki/horizon-flux/issues/89)) ([191660d](https://github.com/OfekItzhaki/horizon-flux/commit/191660d584085b7683559cacc6189e15b621a31f))
+
 ## [0.3.2](https://github.com/OfekItzhaki/horizon-flux/compare/todo-backend-v0.3.1...todo-backend-v0.3.2) (2026-02-13)
 
 

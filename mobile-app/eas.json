@@ -21,6 +21,9 @@
       },
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
       }
     },
     "production": {
@@ -30,6 +33,9 @@
         "NODE_ENV": "production"
       },
       "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
         "buildType": "app-bundle"
       }
     }

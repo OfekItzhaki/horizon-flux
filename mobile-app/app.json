@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Horizon Flux",
-    "slug": "tasks-management",
-    "scheme": "tasks-management",
+    "slug": "horizon-flux",
+    "scheme": "horizon-flux",
     "version": "1.2.1",
     "description": "Organize your life with Horizon Flux by Horizon Labs - the intuitive to-do list app that helps you stay on top of your daily, weekly, monthly, and yearly tasks. Create custom lists, set reminders, track sub-tasks, and share lists with others. Available in English and Hebrew.",
     "orientation": "portrait",
@@ -16,13 +16,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tasksmanagement.app",
+      "bundleIdentifier": "com.horizonflux.app",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This app uses tracking to provide personalized reminders and improve your experience."
       }
     },
     "android": {
-      "package": "com.tasksmanagement.app",
+      "package": "com.horizonflux.app",
       "versionCode": 3,
       "usesCleartextTraffic": true,
       "adaptiveIcon": {

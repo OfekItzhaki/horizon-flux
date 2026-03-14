@@ -1,0 +1,227 @@
+declare const _default: {
+    readonly nav: {
+        readonly lists: "רשימות";
+        readonly analysis: "אנליטיקה";
+        readonly profile: "פרופיל";
+        readonly logout: "התנתקות";
+        readonly language: "שפה";
+        readonly analytics: "אנליטיקה";
+        readonly theme: {
+            readonly light: "בהיר";
+            readonly dark: "כהה";
+            readonly auto: "אוטומטי";
+        };
+        readonly trash: "סל מיחזור";
+        readonly allLists: "הרשימות שלי";
+    };
+    readonly languageNames: {
+        readonly en: "English";
+        readonly he: "עברית";
+    };
+    readonly common: {
+        readonly cancel: "ביטול";
+        readonly save: "שמירה";
+        readonly delete: "מחיקה";
+        readonly close: "סגירה";
+        readonly create: "יצירה";
+        readonly loading: "טוען...";
+        readonly unknownError: "שגיאה לא ידועה";
+        readonly errorOccurred: "אירעה שגיאה";
+        readonly retry: "נסה שוב";
+        readonly edit: "ערוך";
+    };
+    readonly login: {
+        readonly title: "התחברות ל-Horizon Tasks";
+        readonly emailPlaceholder: "כתובת אימייל";
+        readonly passwordPlaceholder: "סיסמה";
+        readonly signIn: "התחבר";
+        readonly signingIn: "מתחבר...";
+        readonly showPassword: "הצג סיסמה";
+        readonly hidePassword: "הסתר סיסמה";
+        readonly failed: "ההתחברות נכשלה. נסה שוב.";
+        readonly notVerified: "האימייל שלך עדיין לא מאומת.";
+        readonly resendVerification: "שלח שוב קישור אימות";
+        readonly verificationResent: "אימייל אימות נשלח בהצלחה!";
+        readonly verificationFailed: "שליחת אימייל אימות נכשלה.";
+    };
+    readonly auth: {
+        readonly verifyEmail: {
+            readonly title: "מאמת אימייל";
+            readonly success: "האימייל אומת בהצלחה!";
+            readonly failed: "האימות נכשל. ייתכן שהקישור פג תוקף.";
+            readonly backToLogin: "חזרה להתחברות";
+        };
+    };
+    readonly lists: {
+        readonly title: "רשימות";
+        readonly manageAccount: "נהל הגדרות חשבון";
+        readonly empty: "לא נמצאו רשימות. צור את הרשימה הראשונה שלך!";
+        readonly createFab: "צור רשימה חדשה";
+        readonly loadFailed: "טעינת הרשימות נכשלה";
+        readonly createFailed: "יצירת הרשימה נכשלה";
+        readonly done: "הושלמו";
+        readonly form: {
+            readonly nameLabel: "שם";
+            readonly typeLabel: "סוג";
+            readonly namePlaceholder: "לדוגמה: קניות";
+            readonly tip: "טיפ: רשימת \"Finished\" מנוהלת אוטומטית על ידי המערכת.";
+            readonly behaviorLabel: "התנהגות משימות";
+            readonly behaviorRecurring: "חוזרות";
+            readonly behaviorOneOff: "חד פעמיות";
+            readonly policyLabel: "מדיניות סיום";
+            readonly policyKeep: "השאר משימות";
+            readonly policyDelete: "מחק לצמיתות";
+        };
+    };
+    readonly tasks: {
+        readonly backToLists: "חזרה לרשימות";
+        readonly defaultTitle: "משימות";
+        readonly renameTitle: "לחץ כדי לשנות שם";
+        readonly deleteList: "מחק רשימה";
+        readonly deleteListConfirm: "למחוק את הרשימה \"{{name}}\"? פעולה זו תמחק את כל המשימות ברשימה.";
+        readonly createFab: "צור משימה חדשה";
+        readonly empty: "לא נמצאו משימות.";
+        readonly loadFailed: "טעינת המשימות נכשלה";
+        readonly createFailed: "יצירת המשימה נכשלה";
+        readonly deleteFailed: "מחיקת המשימה נכשלה";
+        readonly taskDeleted: "המשימה נמחקה";
+        readonly listUpdated: "הרשימה עודכנה";
+        readonly listUpdateFailed: "עדכון הרשימה נכשל";
+        readonly listDeleted: "הרשימה נמחקה";
+        readonly listDeleteFailed: "מחיקת הרשימה נכשלה";
+        readonly selectMultiple: "בחר מספר";
+        readonly deleteSelected: "מחק";
+        readonly deleteSelectedConfirm: "למחוק {{count}} משימה{{plural}}?";
+        readonly unknownList: "רשימה לא ידועה";
+        readonly oneOffTasks: "משימות חד פעמיות";
+        readonly recurringTasks: "משימות חוזרות";
+        readonly form: {
+            readonly descriptionLabel: "תיאור";
+            readonly descriptionPlaceholder: "לדוגמה: לקנות חלב";
+        };
+        readonly deleteTaskConfirm: "למחוק את המשימה \"{{description}}\"?";
+        readonly restore: "שחזור";
+        readonly restoreConfirm: "לשחזר את המשימה \"{{description}}\" לרשימה המקורית?";
+        readonly restored: "המשימה שוחזרה";
+        readonly restoreFailed: "שחזור המשימה נכשל";
+        readonly deleteForever: "מחיקה לצמיתות";
+        readonly deleteForeverConfirm: "למחוק את המשימה \"{{description}}\" לצמיתות? לא ניתן לבטל פעולה זו.";
+        readonly deletedForever: "המשימה נמחקה לצמיתות";
+        readonly deleteForeverFailed: "מחיקה לצמיתות נכשלה";
+    };
+    readonly taskDetails: {
+        readonly backToTasks: "חזרה למשימות";
+        readonly clickToEdit: "לחץ כדי לערוך";
+        readonly loadFailed: "טעינת המשימה נכשלה";
+        readonly notFound: "המשימה לא נמצאה";
+        readonly updateTaskFailed: "עדכון המשימה נכשל";
+        readonly updateStepFailed: "עדכון השלב נכשל";
+        readonly addStepFailed: "הוספת השלב נכשלה";
+        readonly deleteStepFailed: "מחיקת השלב נכשלה";
+        readonly deleteStepConfirm: "למחוק את השלב \"{{description}}\"?";
+        readonly taskUpdated: "המשימה עודכנה";
+        readonly stepUpdated: "השלב עודכן";
+        readonly stepAdded: "השלב נוסף";
+        readonly stepDeleted: "השלב נמחק";
+        readonly stepsTitle: "שלבים";
+        readonly noSteps: "אין שלבים עדיין.";
+        readonly addStepFab: "הוסף שלב";
+        readonly dueDate: "תאריך יעד";
+        readonly descriptionRequired: "תיאור נדרש";
+        readonly form: {
+            readonly descriptionLabel: "תיאור";
+            readonly descriptionPlaceholder: "לדוגמה: להתקשר לספק";
+        };
+        readonly reminders: {
+            readonly title: "תזכורות";
+            readonly add: "הוסף תזכורת";
+            readonly none: "אין תזכורות";
+            readonly everyDay: "בכל יום";
+            readonly daysBefore: "{{days}} ימים לפני";
+            readonly atTime: "בשעה {{time}}";
+            readonly location: "מיקום";
+            readonly locationPlaceholder: "הזן מקום או כתובת...";
+            readonly configure: "הגדר תזכורת";
+            readonly frequency: "תדירות";
+            readonly dateOption: "אינטרוול";
+            readonly customDate: "בחר תאריך";
+            readonly dayOfWeek: "יום בשבוע";
+            readonly enableAlarm: "התראת Push";
+            readonly alarmDesc: "הפעל התראה חזקה בזמן שנקבע";
+        };
+    };
+    readonly profile: {
+        readonly title: "פרופיל";
+        readonly notAuthenticated: "לא מחובר.";
+        readonly email: "אימייל";
+        readonly name: "שם";
+        readonly emailVerified: "אימות אימייל";
+        readonly yes: "כן";
+        readonly no: "לא";
+        readonly memberSince: "חבר מאז";
+        readonly about: "אודות";
+        readonly version: "גרסה";
+        readonly credits: "קרדיטים";
+        readonly creditsValue: "OfekLabs";
+        readonly sourceCode: "קוד מקור";
+        readonly openRepo: "פתח מאגר";
+        readonly proAccount: "חשבון Pro";
+        readonly profilePicture: "תמונת פרופיל";
+        readonly trashRetention: {
+            readonly title: "שמירת פריטים בסל המיחזור";
+            readonly description: "בחר כמה זמן פריטים יישארו בסל המיחזור לפני שיימחקו לצמיתות.";
+            readonly days: "{{count}} ימים";
+            readonly updateSuccess: "הגדרת שמירת הפריטים עודכנה";
+            readonly updateFailed: "עדכון הגדרת שמירת הפריטים נכשל";
+        };
+    };
+    readonly footer: {
+        readonly allRightsReserved: "כל הזכויות שמורות.";
+    };
+    readonly analysis: {
+        readonly title: "אנליטיקה";
+        readonly totalLists: "סך הכל רשימות";
+        readonly totalTasks: "סך הכל משימות";
+        readonly completed: "הושלמו";
+        readonly completionRate: "שיעור השלמה";
+        readonly completionStatus: "סטטוס השלמה";
+        readonly pending: "ממתינות";
+        readonly dailyStreak: "רצף יומי";
+        readonly dailyActivity: "פעילות יומית";
+        readonly tasksByListChart: "משימות לפי רשימה";
+        readonly completionTrends: "מגמות השלמה";
+        readonly dueDateOverview: "סקירת תאריכי יעד";
+        readonly overdue: "באיחור";
+        readonly dueToday: "להיום";
+        readonly dueThisWeek: "השבוע";
+        readonly withDueDates: "עם תאריך יעד";
+        readonly stepsProgress: "התקדמות שלבים";
+        readonly tasksWithSteps: "משימות עם שלבים";
+        readonly stepsCompleted: "שלבים שהושלמו";
+        readonly stepsCompletion: "השלמת שלבים";
+        readonly loadListsFailed: "טעינת הרשימות נכשלה";
+        readonly loadTasksFailed: "טעינת המשימות נכשלה";
+        readonly retryLists: "נסה שוב טעינת רשימות";
+        readonly retryTasks: "נסה שוב טעינת משימות";
+        readonly insightsDescription: "תובנות וסטטיסטיקות";
+    };
+    readonly sharing: {
+        readonly title: "שיתוף רשימה";
+        readonly shareWith: "שתף עם";
+        readonly emailPlaceholder: "הזן אימייל של המשתמש...";
+        readonly role: "תפקיד";
+        readonly roles: {
+            readonly VIEWER: "צופה";
+            readonly EDITOR: "עורך";
+        };
+        readonly shareButton: "שתף";
+        readonly sharedWith: "משותף עם";
+        readonly noShares: "הרשימה לא משותפת עם אף אחד עדיין";
+        readonly unshare: "בטל שיתוף";
+        readonly shareFailed: "שיתוף הרשימה נכשל";
+        readonly unshareFailed: "ביטול השיתוף נכשל";
+        readonly unshareConfirm: "להפסיק לשתף עם {{email}}?";
+        readonly alreadyShared: "הרשימה כבר משותפת עם משתמש זה";
+    };
+};
+export default _default;

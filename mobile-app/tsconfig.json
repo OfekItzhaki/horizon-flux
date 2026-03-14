@@ -1,6 +1,11 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "paths": {
+      "@tasks-management/frontend-services": [
+        "../horizon-auth-platform/packages/auth-sdk/dist/index.d.ts"
+      ]
+    }
   }
 }

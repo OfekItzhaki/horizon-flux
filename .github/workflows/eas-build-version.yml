@@ -87,6 +87,10 @@ jobs:
           git commit -m "chore: bump mobile app version to $NEW_VERSION (${{ github.event.inputs.version_type }})" || true
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Install dependencies
+        working-directory: mobile-app
+        run: npm install --ignore-scripts
+
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:

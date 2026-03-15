@@ -1,80 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
-import { handleApiError } from '../utils/errorHandler';
 import { useTheme } from '../context/ThemeContext';
 import { authService } from '../services/auth.service';
 
+type Mode = 'login' | 'register' | 'forgot';
+type RegStep = 1 | 2 | 3; // 1=email, 2=otp, 3=password
+type ResetStep = 1 | 2 | 3; // 1=email, 2=otp, 3=new password
+
 export default function LoginScreen() {
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const { setThemeMode, isDark } = useTheme();
+
+  const [mode, setMode] = useState<Mode>('login');
+  const [regStep, setRegStep] = useState<RegStep>(1);
+  const [resetStep, setResetStep] = useState<ResetStep>(1);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [name, setName] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showResendVerification, setShowResendVerification] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
+
+  // tokens from OTP steps
+  const [regToken, setRegToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
+
+  // resend cooldown
+  const [resendCooldown, setResendCooldown] = useState(0);
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   const styles = useThemedStyles((colors) => ({
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    container: {
-      flex: 1,
-    },
-    scrollContent: {
-      flexGrow: 1,
-      justifyContent: 'center',
-      padding: 24,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      paddingHorizontal: 24,
-      paddingTop: 16,
-      zIndex: 10,
-    },
-    themeButton: {
-      padding: 10,
-      borderRadius: 20,
-      backgroundColor: colors.cardGlass,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    title: {
-      fontSize: 36,
-      fontWeight: 'bold',
-      marginBottom: 48,
-      textAlign: 'center',
-      color: colors.primary,
-    },
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1 },
+    header: { flexDirection: 'row' as const, justifyContent: 'flex-end' as const, paddingHorizontal: 24, paddingTop: 16, zIndex: 10 },
+    themeButton: { padding: 10, borderRadius: 20, backgroundColor: colors.cardGlass },
+    scrollContent: { flexGrow: 1, justifyContent: 'center' as const, padding: 24 },
+    title: { fontSize: 32, fontWeight: '900' as const, marginBottom: 8, textAlign: 'center' as const, color: colors.primary },
+    subtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' as const, marginBottom: 32 },
     input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 16,
-      fontSize: 16,
+      borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16,
+      marginBottom: 14, fontSize: 16, backgroundColor: colors.cardGlass, color: colors.text,
+    },
+    otpInput: {
+      borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16,
+      marginBottom: 14, fontSize: 24, backgroundColor: colors.cardGlass, color: colors.text,
+      textAlign: 'center' as const, letterSpacing: 12, fontWeight: '700' as const,
+    },
+    passwordRow: {
+      flexDirection: 'row' as const, alignItems: 'center' as const,
+      borderWidth: 1, borderColor: colors.border, borderRadius: 16,
+      marginBottom: 14, backgroundColor: colors.cardGlass,
+    },
+    passwordInput: { flex: 1, padding: 16, fontSize: 16, color: color
       backgroundColor: colors.cardGlass,
       color: colors.text,
       shadowColor: colors.shadow,

@@ -98,6 +98,84 @@ export class AuthService {
       throw new ApiError(0, 'Failed to resend verification email');
     }
   }
+
+  // ── OTP-based registration ──────────────────────────────────────────────
+
+  async registerStart(email: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/register/start', { email });
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(0, 'Failed to start registration');
+    }
+  }
+
+  async registerVerify(email: string, otp: string): Promise<{ registrationToken: string }> {
+    try {
+      const response = await apiClient.post<{ registrationToken: string }>(
+        '/auth/register/verify',
+        { email, otp },
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(0, 'Invalid OTP');
+    }
+  }
+
+  async registerFinish(data: {
+    registrationToken: string;
+    password: string;
+    passwordConfirm: string;
+    name?: string;
+  }): Promise<void> {
+    try {
+      const response = await apiClient.post<LoginResponse>('/auth/register/finish', data);
+      await TokenStorage.setToken(response.data.accessToken);
+      await UserStorage.setUser(response.data.user);
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(0, 'Registration failed');
+    }
+  }
+
+  // ── Forgot password ─────────────────────────────────────────────────────
+
+  async forgotPassword(email: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/forgot-password', { email });
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(0, 'Failed to initiate password reset');
+    }
+  }
+
+  async verifyResetOtp(email: string, otp: string): Promise<{ resetToken: string }> {
+    try {
+      const response = await apiClient.post<{ resetToken: string }>(
+        '/auth/verify-reset-otp',
+        { email, otp },
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(0, 'Invalid reset code');
+    }
+  }
+
+  async resetPassword(data: {
+    email: string;
+    token: string;
+    password: string;
+    passwordConfirm: string;
+  }): Promise<void> {
+    try {
+      await apiClient.post('/auth/reset-password', data);
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(0, 'Password reset failed');
+    }
+  }
 }
 
 export const authService = new AuthService();

@@ -59,3 +59,6 @@ instructions/
 # Ignore experimental local easignore
 .easignore
 mobile-app/.easignore
+
+# Separate project with its own git repo
+horizon-auth-platform/

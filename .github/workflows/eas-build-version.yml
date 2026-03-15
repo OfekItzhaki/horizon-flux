@@ -84,8 +84,7 @@ jobs:
         run: |
           git add mobile-app/package.json mobile-app/app.json
           NEW_VERSION=$(node -p "require('./mobile-app/package.json').version")
-          git commit -m "chore: bump mobile app version to $NEW_VERSION (${{ github.event.inputs.version_type }})" || exit 0
-          git push origin HEAD:${{ github.ref_name }}
+          git commit -m "chore: bump mobile app version to $NEW_VERSION (${{ github.event.inputs.version_type }})" || true
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Setup EAS

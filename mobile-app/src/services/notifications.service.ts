@@ -4,9 +4,10 @@ import {
   type ReminderConfig,
   ReminderTimeframe,
   ReminderSpecificDate,
-  convertBackendToReminders,
 } from '@tasks-management/frontend-services';
 import Constants from 'expo-constants';
+import { apiClient, ApiError } from '../utils/api-client';
+import { remindersService } from './reminders.service';
 
 // Track if notification handler has been configured
 let notificationHandlerConfigured = false;
@@ -66,6 +67,84 @@ async function setupNotificationChannel(): Promise<void> {
     }
   } catch (error) {
     console.error('Error setting up notification channel:', error);
+  }
+}
+
+/**
+ * Set up Android notification channels:
+ * - "Task Reminders" (HIGH importance) for reminder notifications
+ * - "Daily Tasks" (LOW importance) for daily summary notifications
+ *
+ * No-op on iOS or in Expo Go.
+ * Requirements: 2.6, 2.7
+ */
+export async function setupAndroidChannels(): Promise<void> {
+  if (isExpoGo()) {
+    if (__DEV__) {
+      console.log('[NotificationService] Skipping Android channel setup — running in Expo Go');
+    }
+    return;
+  }
+
+  if (Platform.OS !== 'android') {
+    return;
+  }
+
+  try {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Task Reminders',
+      description: 'Notifications for task reminders',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      vibrationPattern: [0, 250, 250, 250],
+      enableVibrate: true,
+    });
+
+    await Notifications.setNotificationChannelAsync('daily-tasks', {
+      name: 'Daily Tasks',
+      description: 'Persistent notification showing all tasks for today',
+      importance: Notifications.AndroidImportance.LOW,
+      enableVibrate: false,
+      showBadge: false,
+    });
+
+    if (__DEV__) {
+      console.log('[NotificationService] Android notification channels configured');
+    }
+  } catch (error) {
+    console.error('[NotificationService] Error setting up Android channels:', error);
+  }
+}
+
+/**
+ * Register the device's Expo push token with the backend.
+ * Calls POST /me/push-token with { token, platform }.
+ *
+ * No-op in Expo Go.
+ * Requirements: 1.3
+ */
+export async function registerPushToken(token: string): Promise<void> {
+  if (isExpoGo()) {
+    if (__DEV__) {
+      console.log('[NotificationService] Skipping push token registration — running in Expo Go');
+    }
+    return;
+  }
+
+  try {
+    await apiClient.post('/me/push-token', {
+      token,
+      platform: Platform.OS as 'ios' | 'android',
+    });
+
+    if (__DEV__) {
+      console.log('[NotificationService] Push token registered successfully');
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(0, 'Failed to register push token');
   }
 }
 
@@ -757,9 +836,14 @@ export async function scheduleDailyTasksNotificationUpdate(): Promise<void> {
 
 /**
  * Reschedule all reminders for all tasks (call on app startup)
- * This ensures notifications are scheduled even after app restart
+ * This ensures notifications are scheduled even after app restart.
+ *
+ * Fetches active reminders from GET /reminders/range, cancels stale scheduled
+ * notifications, and schedules the active ones.
+ *
+ * Requirements: 2.4, 2.5
  */
-export async function rescheduleAllReminders(): Promise<void> {
+export async function rescheduleAllReminders(userId?: string): Promise<void> {
   // Skip in Expo Go
   if (isExpoGo()) {
     if (__DEV__) {
@@ -769,39 +853,74 @@ export async function rescheduleAllReminders(): Promise<void> {
   }
 
   try {
-    const { tasksService } = await import('./tasks.service');
+    // Fetch active reminders from the backend for the next 365 days
+    const startDate = new Date().toISOString().split('T')[0];
+    const endDateObj = new Date();
+    endDateObj.setFullYear(endDateObj.getFullYear() + 1);
+    const endDate = endDateObj.toISOString().split('T')[0];
 
-    // Get all tasks
-    const allTasks = await tasksService.getAll();
+    const activeReminders = await remindersService.getByRange(startDate, endDate);
+
     if (__DEV__) {
-      console.log(`Rescheduling reminders for ${allTasks.length} tasks`);
+      console.log(`[NotificationService] Fetched ${activeReminders.length} active reminders from backend`);
+    }
+
+    // Get all currently scheduled notifications
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+
+    // Build a set of taskIds that have active reminders
+    const activeTaskIds = new Set(activeReminders.map((r) => r.taskId));
+
+    // Cancel stale notifications (scheduled for tasks that no longer have active reminders)
+    for (const notification of scheduledNotifications) {
+      const taskId = notification.content.data?.taskId as string | undefined;
+      if (taskId && !activeTaskIds.has(taskId)) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        if (__DEV__) {
+          console.log(`[NotificationService] Cancelled stale notification for task ${taskId}`);
+        }
+      }
+    }
+
+    // Schedule notifications for active reminders
+    // Group reminders by taskId so we can use scheduleTaskReminders
+    const remindersByTask = new Map<string, typeof activeReminders>();
+    for (const reminder of activeReminders) {
+      const existing = remindersByTask.get(reminder.taskId) ?? [];
+      existing.push(reminder);
+      remindersByTask.set(reminder.taskId, existing);
     }
 
     let scheduledCount = 0;
+    for (const [taskId, reminders] of remindersByTask) {
+      const firstReminder = reminders[0];
+      if (!firstReminder) continue;
 
-    for (const task of allTasks) {
-      if (!task.dueDate && !task.specificDayOfWeek && !task.reminderConfig) {
-        // Skip tasks without any reminders
-        continue;
-      }
+      // Convert backend reminder notifications to ReminderConfig format
+      // Each ReminderNotification has taskId, taskDescription, dueDate, reminderDate, message, title
+      // We need to build ReminderConfig objects from the reminderDate
+      const reminderConfigs: ReminderConfig[] = reminders.map((r) => {
+        const reminderDate = new Date(r.reminderDate);
+        return {
+          id: `${r.taskId}-${r.reminderDate}`,
+          timeframe: ReminderTimeframe.SPECIFIC_DATE,
+          customDate: r.reminderDate,
+          time: `${reminderDate.getHours().toString().padStart(2, '0')}:${reminderDate.getMinutes().toString().padStart(2, '0')}`,
+          hasAlarm: true,
+        } as ReminderConfig;
+      });
 
-      // Convert backend reminders to ReminderConfig format (includes reminderConfig)
-      const reminders = convertBackendToReminders(
-        task.reminderDaysBefore,
-        task.specificDayOfWeek,
-        task.dueDate || undefined,
-        task.reminderConfig,
+      await scheduleTaskReminders(
+        taskId,
+        firstReminder.taskDescription,
+        reminderConfigs,
+        firstReminder.dueDate || null,
       );
-
-      // Schedule all reminders for this task
-      if (reminders.length > 0) {
-        await scheduleTaskReminders(task.id, task.description, reminders, task.dueDate || null);
-        scheduledCount += reminders.length;
-      }
+      scheduledCount += reminderConfigs.length;
     }
 
     if (__DEV__) {
-      console.log(`Rescheduled ${scheduledCount} reminders across ${allTasks.length} tasks`);
+      console.log(`[NotificationService] Rescheduled ${scheduledCount} reminders for ${remindersByTask.size} tasks`);
     }
 
     // Also update daily tasks notification

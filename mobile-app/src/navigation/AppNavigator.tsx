@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../hooks/useNotifications';
 
 // ... screens imports ...
 
@@ -26,12 +27,14 @@ const linking: LinkingOptions<RootStackParamList> = {
       },
       Tasks: 'tasks/:listId',
       TaskDetails: 'task-details/:taskId',
+      VerifyEmail: 'verify-email/:token',
     },
   },
 };
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import ListsScreen from '../screens/ListsScreen';
 import TasksScreen from '../screens/TasksScreen';
 import TaskDetailsScreen from '../screens/TaskDetailsScreen';
@@ -45,6 +48,7 @@ export type RootStackParamList = {
   Main: undefined;
   Tasks: { listId: string; listName: string; listType: ListType };
   TaskDetails: { taskId: string };
+  VerifyEmail: { token?: string };
 };
 
 export type MainTabParamList = {
@@ -59,6 +63,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabs() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  useNotifications();
 
   return (
     <Tab.Navigator
@@ -144,7 +149,10 @@ export default function AppNavigator() {
             />
           </>
         ) : (
-          <Stack.Screen name="Auth" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Auth" component={LoginScreen} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

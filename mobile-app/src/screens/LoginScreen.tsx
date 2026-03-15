@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { handleApiError } from '../utils/errorHandler';
 import { useTheme } from '../context/ThemeContext';
+import { authService } from '../services/auth.service';
 
 export default function LoginScreen() {
   const { login, register } = useAuth();
@@ -27,6 +28,8 @@ export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const styles = useThemedStyles((colors) => ({
     safeArea: {
@@ -139,12 +142,34 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+    setShowResendVerification(false);
     try {
       await login(email, password);
     } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message.toLowerCase() : '';
+      if (msg.includes('verif') || msg.includes('not verified')) {
+        setShowResendVerification(true);
+      }
       handleApiError(error, 'Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address first.');
+      return;
+    }
+    setResendLoading(true);
+    try {
+      await authService.resendVerification(email);
+      Alert.alert('Email Sent', 'Verification email sent. Please check your inbox.');
+      setShowResendVerification(false);
+    } catch (error: unknown) {
+      handleApiError(error, 'Failed to resend verification email. Please try again.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -256,6 +281,22 @@ export default function LoginScreen() {
               {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
             </Text>
           </TouchableOpacity>
+
+          {isLogin && showResendVerification && (
+            <TouchableOpacity
+              style={[styles.switchButton, { marginTop: 12 }]}
+              onPress={handleResendVerification}
+              disabled={resendLoading}
+            >
+              {resendLoading ? (
+                <ActivityIndicator size="small" color="#6366f1" />
+              ) : (
+                <Text style={[styles.switchText, { color: '#f59e0b' }]}>
+                  Resend verification email
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

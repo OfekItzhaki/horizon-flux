@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,6 +23,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { handleApiError, isAuthError } from '../utils/errorHandler';
 import { rescheduleAllReminders } from '../services/notifications.service';
+import { ShareListModal } from '../components/ShareListModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -286,6 +288,10 @@ export default function ListsScreen() {
       fontWeight: '800',
       letterSpacing: 0.3,
     },
+    shareButton: {
+      padding: 8,
+      alignSelf: 'flex-end',
+    },
   }));
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -293,6 +299,8 @@ export default function ListsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingList, setEditingList] = useState<ToDoList | null>(null);
   const [editListName, setEditListName] = useState('');
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const {
     data: lists = [],
@@ -447,6 +455,19 @@ export default function ListsScreen() {
               <View style={styles.listInfo}>
                 <Text style={styles.listName}>{item.name}</Text>
               </View>
+              {!item.isSystem && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedListId(item.id);
+                    setShowShareModal(true);
+                  }}
+                  style={styles.shareButton}
+                  accessibilityLabel={`Share ${item.name}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="share-social-outline" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
           </TouchableOpacity>
         )}
@@ -532,6 +553,15 @@ export default function ListsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Share List Modal */}
+      {selectedListId && (
+        <ShareListModal
+          listId={selectedListId}
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </View>
   );
 }

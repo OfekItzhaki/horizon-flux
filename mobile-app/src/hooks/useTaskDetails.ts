@@ -15,6 +15,7 @@ import {
 } from '../services/notifications.service';
 import { ReminderTimesStorage } from '../utils/storage';
 import { handleApiError, isAuthError, showErrorAlert } from '../utils/errorHandler';
+import { useQueuedMutation } from './useQueuedMutation';
 
 export function useTaskDetails(taskId: string) {
   const [task, setTask] = useState<Task | null>(null);
@@ -29,6 +30,36 @@ export function useTaskDetails(taskId: string) {
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
   const [editReminders, setEditReminders] = useState<ReminderConfig[]>([]);
+
+  // useQueuedMutation for task field updates (Requirement 7.6)
+  const toggleTaskMutation = useQueuedMutation<Task, Error, { completed: boolean }>({
+    mutationKey: ['updateTask', taskId, 'toggle'],
+    mutationFn: ({ completed }) => tasksService.update(taskId, { completed }),
+    onMutate: ({ completed }) => {
+      setTask((prev) => (prev ? { ...prev, completed } : prev));
+      return undefined;
+    },
+    onError: (_error, _variables, _context) => {
+      // Rollback is handled in handleToggleTask via the previous value captured in closure
+    },
+  });
+
+  const saveEditMutation = useQueuedMutation<Task, Error, UpdateTaskDto>({
+    mutationKey: ['updateTask', taskId, 'saveEdit'],
+    mutationFn: (updateData) => tasksService.update(taskId, updateData),
+  });
+
+  const updateReminderAlarmMutation = useQueuedMutation<Task, Error, UpdateTaskDto>({
+    mutationKey: ['updateTask', taskId, 'reminderAlarm'],
+    mutationFn: (updateData) => tasksService.update(taskId, updateData),
+    onMutate: (updateData) => {
+      setTask((prev) => (prev ? { ...prev, ...updateData } : prev));
+      return undefined;
+    },
+    onError: () => {
+      // Rollback handled in handleToggleReminderAlarm by reloading task data
+    },
+  });
 
   const loadTaskData = useCallback(async () => {
     try {
@@ -76,9 +107,8 @@ export function useTaskDetails(taskId: string) {
     if (!task) return;
     const currentCompleted = Boolean(task.completed);
     const newCompleted = !currentCompleted;
-    setTask((prev) => (prev ? { ...prev, completed: newCompleted } : prev));
     try {
-      await tasksService.update(taskId, { completed: newCompleted });
+      await toggleTaskMutation.mutateAsync({ completed: newCompleted });
     } catch (error: unknown) {
       setTask((prev) => (prev ? { ...prev, completed: currentCompleted } : prev));
       handleApiError(error, 'Unable to toggle task completion.');
@@ -114,7 +144,7 @@ export function useTaskDetails(taskId: string) {
         reminderData.specificDayOfWeek !== undefined ? reminderData.specificDayOfWeek : null;
       updateData.reminderConfig = reminderData.reminderConfig || null;
 
-      const updatedTask = await tasksService.update(taskId, updateData);
+      const updatedTask = await saveEditMutation.mutateAsync(updateData);
 
       // Store reminder times
       const reminderTimes: Record<string, string> = {};
@@ -277,7 +307,7 @@ export function useTaskDetails(taskId: string) {
         );
         const reminderData = convertRemindersToBackend(updatedReminders, task.dueDate || undefined);
 
-        await tasksService.update(taskId, {
+        await updateReminderAlarmMutation.mutateAsync({
           reminderConfig: reminderData.reminderConfig || null,
           reminderDaysBefore: reminderData.reminderDaysBefore || [],
           specificDayOfWeek: reminderData.specificDayOfWeek ?? null,

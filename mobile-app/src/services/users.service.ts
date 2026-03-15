@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { apiClient, ApiError } from '../utils/api-client';
 import { User, UpdateUserDto } from '../types';
 
@@ -47,6 +48,23 @@ export class UsersService {
         throw error;
       }
       throw new ApiError(0, 'Failed to update user');
+    }
+  }
+
+  /**
+   * Register a push token for the current user
+   */
+  async registerPushToken(token: string): Promise<void> {
+    try {
+      await apiClient.post('/me/push-token', {
+        token,
+        platform: Platform.OS,
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(0, 'Failed to register push token');
     }
   }
 

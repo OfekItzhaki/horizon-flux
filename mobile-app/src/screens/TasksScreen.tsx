@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -37,7 +37,10 @@ import { handleApiError, isAuthError, showErrorAlert } from '../utils/errorHandl
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { createTasksStyles } from './styles/TasksScreen.styles';
-import { TaskListItem } from '../components/task/TaskListItem';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
+import { SortableTaskItem } from '../components/common/SortableTaskItem';
+import { usePagination } from '../hooks/usePagination';
+import { useQueuedMutation } from '../hooks/useQueuedMutation';
 
 type TasksScreenRouteProp = RouteProp<RootStackParamList, 'Tasks'>;
 
@@ -50,14 +53,11 @@ export default function TasksScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createTasksStyles);
 
-  // Helper to check if a task has repeating reminders (based on task properties, not list type)
-  const isRepeatingTask = (task: Task): boolean => {
-    // Task has weekly reminder if specificDayOfWeek is set
-    return task.specificDayOfWeek !== null && task.specificDayOfWeek !== undefined;
-  };
   // Check if this is the archived list
   const isArchivedList = listType === ListType.FINISHED;
   const queryClient = useQueryClient();
+  const flatListRef = useRef<FlatList<Task>>(null);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
@@ -81,7 +81,9 @@ export default function TasksScreen() {
       data.map((task: Task) => ({ ...task, completed: Boolean(task.completed) })),
   });
 
-  const toggleTaskMutation = useMutation({
+  // useQueuedMutation for task completion toggle (Requirement 7.5)
+  const toggleTaskMutation = useQueuedMutation<Task, any, Task, any>({
+    mutationKey: ['toggleTask', listId],
     mutationFn: (task: Task) => tasksService.update(task.id, { completed: !task.completed }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', listId] });
@@ -118,7 +120,6 @@ export default function TasksScreen() {
       socketInstance = await getSocket();
       socketInstance.emit('enter-list', { listId });
 
-      // Listen for presence updates (just log for now, can be used for UI)
       socketInstance.on('presence-update', (data: any) => {
         if (__DEV__) console.log('Presence update:', data);
       });
@@ -176,12 +177,36 @@ export default function TasksScreen() {
     return result;
   }, [allTasks, searchQuery, sortBy]);
 
+  // Pagination — default page size 25 (Requirement 8.3)
+  // usePagination resets to page 1 whenever filteredAndSortedTasks reference changes,
+  // which happens on search query or sort option change (Requirements 8.6, 8.7)
+  const { page: pagedTasks, currentPage, totalPages, nextPage, prevPage, hasNext, hasPrev } =
+    usePagination(filteredAndSortedTasks, 25);
+
+  // Scroll to top when page changes (Requirement 8.4)
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [currentPage]);
+
   const onRefresh = () => {
     loadTasks();
   };
 
   const toggleTask = (task: Task) => {
     toggleTaskMutation.mutate(task);
+  };
+
+  // Drag-to-reorder handler (Requirements 10.3, 10.4)
+  const handleDragEnd = async (task: Task, newOrder: number) => {
+    const previousTasks = allTasks;
+    try {
+      await tasksService.update(task.id, { order: newOrder });
+      queryClient.invalidateQueries({ queryKey: ['tasks', listId] });
+    } catch (error: any) {
+      // Revert to pre-drag order by re-fetching (Requirement 10.4)
+      queryClient.setQueryData(['tasks', listId], previousTasks);
+      Alert.alert('Reorder Failed', 'Could not save the new task order. Please try again.');
+    }
   };
 
   const handleAddTask = async () => {
@@ -260,9 +285,7 @@ export default function TasksScreen() {
                 style: 'destructive',
                 onPress: async () => {
                   try {
-                    // Cancel all notifications for this task
                     await cancelAllTaskNotifications(task.id);
-                    // Clean up client-side storage
                     await ReminderTimesStorage.removeTimesForTask(task.id);
                     await ReminderAlarmsStorage.removeAlarmsForTask(task.id);
                     await tasksService.permanentDelete(task.id);
@@ -331,19 +354,19 @@ export default function TasksScreen() {
         </View>
       </View>
 
+      {/* Task list — shows current page of tasks */}
       <FlatList
-        data={filteredAndSortedTasks}
+        ref={flatListRef}
+        data={pagedTasks}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
-          <TaskListItem
+          <SortableTaskItem
             task={item}
             onPress={() => navigation.navigate('TaskDetails', { taskId: item.id })}
-            onLongPress={() =>
-              isArchivedList ? handleArchivedTaskOptions(item) : handleDeleteTask(item)
-            }
             onToggle={() => toggleTask(item)}
+            onDragEnd={(newOrder) => handleDragEnd(item, newOrder)}
           />
         )}
         ListEmptyComponent={
@@ -353,32 +376,47 @@ export default function TasksScreen() {
             <Text style={styles.emptySubtext}>Tap the + button below to add your first task</Text>
           </View>
         }
+        ListFooterComponent={
+          totalPages > 1 ? (
+            <View style={localStyles.paginationContainer}>
+              <TouchableOpacity
+                style={[localStyles.pageButton, !hasPrev && localStyles.pageButtonDisabled]}
+                onPress={prevPage}
+                disabled={!hasPrev}
+                accessibilityLabel="Previous page"
+              >
+                <Text style={[localStyles.pageButtonText, !hasPrev && localStyles.pageButtonTextDisabled]}>
+                  Previous
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={[localStyles.pageInfo, { color: colors.text }]}>
+                Page {currentPage} of {totalPages}
+              </Text>
+
+              <TouchableOpacity
+                style={[localStyles.pageButton, !hasNext && localStyles.pageButtonDisabled]}
+                onPress={nextPage}
+                disabled={!hasNext}
+                accessibilityLabel="Next page"
+              >
+                <Text style={[localStyles.pageButtonText, !hasNext && localStyles.pageButtonTextDisabled]}>
+                  Next
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
         contentContainerStyle={
-          filteredAndSortedTasks.length === 0 ? styles.emptyContainer : styles.listContentContainer
+          pagedTasks.length === 0 ? styles.emptyContainer : styles.listContentContainer
         }
       />
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
+      {/* FloatingActionButton replaces the inline add-task trigger (Requirement 9.4) */}
+      <FloatingActionButton
         onPress={() => setShowAddModal(true)}
-        activeOpacity={0.8}
-      >
-        <LinearGradient
-          colors={['#6366f1', '#a855f7']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: 24,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Text style={styles.fabText}>+</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+        ariaLabel="Add new task"
+      />
 
       {/* Add Task Modal */}
       <Modal
@@ -493,3 +531,35 @@ export default function TasksScreen() {
     </View>
   );
 }
+
+const localStyles = StyleSheet.create({
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 80, // space for FAB
+  },
+  pageButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#6366f1',
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#d1d5db',
+  },
+  pageButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#9ca3af',
+  },
+  pageInfo: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});

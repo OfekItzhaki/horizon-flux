@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  RefreshControl,
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { listsService } from '../services/lists.service';
-import { tasksService } from '../services/tasks.service';
-import { ToDoList, Task } from '../types';
+import { useAnalysisData } from '../hooks/useAnalysisData';
 import { useThemedStyles } from '../utils/useThemedStyles';
 import { useTheme } from '../context/ThemeContext';
-import { handleApiError, isAuthError } from '../utils/errorHandler';
 
 export default function AnalysisScreen() {
   const navigation = useNavigation();
@@ -174,144 +170,132 @@ export default function AnalysisScreen() {
       backgroundColor: colors.primary,
       borderRadius: 4,
     },
-    typeCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 8,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    typeTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 12,
-      textTransform: 'capitalize',
-    },
-    typeRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    typeLabel: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-    typeValue: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-    },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: colors.surface,
     },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.error,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    retryButton: {
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: '#fff',
+      fontWeight: '600',
+      fontSize: 16,
+    },
+    skeletonBlock: {
+      backgroundColor: colors.border,
+      borderRadius: 8,
+      marginBottom: 12,
+    },
+    trendRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      height: 60,
+      gap: 2,
+      marginTop: 8,
+    },
+    trendBar: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      borderRadius: 2,
+      minHeight: 2,
+    },
   }));
 
-  const [lists, setLists] = useState<ToDoList[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    heatmapData,
+    streak,
+    trendData,
+    tasksByList,
+    dueDateOverview,
+    stepsProgress,
+    loading,
+    error,
+    retry,
+  } = useAnalysisData();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // ── Header (always rendered) ───────────────────────────────────────────────
+  const header = (
+    <View style={styles.headerContainer}>
+      <LinearGradient
+        colors={[colors.primary, '#a855f7']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      />
+      <View style={styles.headerTop}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={20} color={colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Task Analysis</Text>
+        <View style={{ width: 40 }} />
+      </View>
+    </View>
+  );
 
-  const loadData = async (isRefresh = false) => {
-    try {
-      if (!isRefresh) {
-        setLoading(true);
-      }
-      const loadedLists = await listsService.getAll();
-      setLists(loadedLists);
-
-      const tasksPromises = loadedLists.map((list) => tasksService.getAll(list.id));
-      const tasksArrays = await Promise.all(tasksPromises);
-      setAllTasks(tasksArrays.flat());
-    } catch (error: unknown) {
-      // Silently ignore auth errors - the navigation will handle redirect to login
-      if (!isAuthError(error)) {
-        handleApiError(error, 'Unable to load analysis data. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData(true);
-  };
-
+  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.container}>
+        {header}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          {/* Skeleton placeholders */}
+          <View style={{ width: '90%', marginTop: 24 }}>
+            <View style={[styles.skeletonBlock, { height: 100 }]} />
+            <View style={[styles.skeletonBlock, { height: 80 }]} />
+            <View style={[styles.skeletonBlock, { height: 120 }]} />
+            <View style={[styles.skeletonBlock, { height: 80 }]} />
+          </View>
+        </View>
       </View>
     );
   }
 
-  const completedTasks = allTasks.filter((task) => task.completed);
-  const pendingTasks = allTasks.filter((task) => !task.completed);
-  const completionRate = allTasks.length > 0 ? (completedTasks.length / allTasks.length) * 100 : 0;
-
-  // Tasks with due dates
-  const tasksWithDueDates = allTasks.filter((task) => task.dueDate);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekFromNow = new Date(today);
-  weekFromNow.setDate(weekFromNow.getDate() + 7);
-
-  const overdueTasks = tasksWithDueDates.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = new Date(task.dueDate);
-    return dueDate < today && !task.completed;
-  });
-
-  const dueTodayTasks = tasksWithDueDates.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = new Date(task.dueDate);
+  // ── Error state ────────────────────────────────────────────────────────────
+  if (error) {
     return (
-      dueDate >= today &&
-      dueDate < new Date(today.getTime() + 24 * 60 * 60 * 1000) &&
-      !task.completed
+      <View style={styles.container}>
+        {header}
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            {error.message || 'Unable to load analysis data.'}
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={retry} testID="retry-button">
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
-  });
+  }
 
-  const dueThisWeekTasks = tasksWithDueDates.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = new Date(task.dueDate);
-    return dueDate >= today && dueDate < weekFromNow && !task.completed;
-  });
+  // ── Derived display values ─────────────────────────────────────────────────
+  const totalTasks = tasksByList.reduce((sum, l) => sum + l.completed + l.pending, 0);
+  const totalCompleted = tasksByList.reduce((sum, l) => sum + l.completed, 0);
+  const completionRate = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
 
-  const tasksByList = lists.map((list) => {
-    const listTasks = allTasks.filter((task) => task.todoListId === list.id);
-    return {
-      listName: list.name,
-      total: listTasks.length,
-      completed: listTasks.filter((t) => t.completed).length,
-      pending: listTasks.filter((t) => !t.completed).length,
-    };
-  });
+  const maxTrend = Math.max(...trendData.map((d) => d.count), 1);
 
-  const tasksByType = lists.reduce(
-    (acc, list) => {
-      const type = list.type;
-      if (!acc[type]) {
-        acc[type] = { total: 0, completed: 0, pending: 0 };
-      }
-      const listTasks = allTasks.filter((task) => task.todoListId === list.id);
-      acc[type].total += listTasks.length;
-      acc[type].completed += listTasks.filter((t) => t.completed).length;
-      acc[type].pending += listTasks.filter((t) => !t.completed).length;
-      return acc;
-    },
-    {} as Record<string, { total: number; completed: number; pending: number }>,
-  );
+  // ── Heatmap: count active days in the 90-day window ───────────────────────
+  const activeDays = Object.values(heatmapData).filter((v) => v > 0).length;
 
   return (
     <View style={styles.container}>
@@ -319,37 +303,22 @@ export default function AnalysisScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={[colors.primary, '#a855f7']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}
-          />
-          <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Task Analysis</Text>
-            <View style={{ width: 40 }} />
-          </View>
-        </View>
+        {header}
 
         {/* Overview Stats */}
         <View style={styles.card}>
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{lists.length}</Text>
+              <Text style={styles.statValue}>{tasksByList.length}</Text>
               <Text style={styles.statLabel}>Lists</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{allTasks.length}</Text>
+              <Text style={styles.statValue}>{totalTasks}</Text>
               <Text style={styles.statLabel}>Total Tasks</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValueGreen}>{completedTasks.length}</Text>
+              <Text style={styles.statValueGreen}>{totalCompleted}</Text>
               <Text style={styles.statLabel}>Completed</Text>
             </View>
             <View style={styles.statCard}>
@@ -359,31 +328,66 @@ export default function AnalysisScreen() {
           </View>
         </View>
 
-        {/* Due Date Statistics */}
-        {tasksWithDueDates.length > 0 && (
+        {/* Streak Counter */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Completion Streak</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { fontSize: 48, color: colors.primary }]}>
+                {streak}
+              </Text>
+              <Text style={styles.statLabel}>
+                {streak === 1 ? 'day streak' : 'day streak'}
+              </Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValueBlue}>{activeDays}</Text>
+              <Text style={styles.statLabel}>Active Days (90d)</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Completion Trend (last 30 days) */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Completion Trend (30 days)</Text>
+          <View style={styles.trendRow}>
+            {trendData.map((d) => (
+              <View
+                key={d.date}
+                style={[
+                  styles.trendBar,
+                  { height: `${Math.max((d.count / maxTrend) * 100, 3)}%` },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Due Date Overview */}
+        {dueDateOverview.withDueDate > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Due Date Overview</Text>
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: colors.error }]}>
-                  {overdueTasks.length}
+                  {dueDateOverview.overdue}
                 </Text>
                 <Text style={styles.statLabel}>Overdue</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: colors.warning }]}>
-                  {dueTodayTasks.length}
+                  {dueDateOverview.dueToday}
                 </Text>
                 <Text style={styles.statLabel}>Due Today</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: colors.warning }]}>
-                  {dueThisWeekTasks.length}
+                  {dueDateOverview.dueThisWeek}
                 </Text>
                 <Text style={styles.statLabel}>Due This Week</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statValue}>{tasksWithDueDates.length}</Text>
+                <Text style={styles.statValue}>{dueDateOverview.withDueDate}</Text>
                 <Text style={styles.statLabel}>With Dates</Text>
               </View>
             </View>
@@ -394,18 +398,19 @@ export default function AnalysisScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Tasks by List</Text>
           {tasksByList.map((item, index) => {
-            const progress = item.total > 0 ? (item.completed / item.total) * 100 : 0;
+            const total = item.completed + item.pending;
+            const progress = total > 0 ? (item.completed / total) * 100 : 0;
             return (
               <View key={index}>
                 <View style={styles.listRow}>
                   <Text style={styles.listName}>{item.listName}</Text>
                   <View style={styles.listStats}>
-                    <Text style={styles.listStat}>{item.total} total</Text>
+                    <Text style={styles.listStat}>{total} total</Text>
                     <Text style={styles.listStatGreen}>{item.completed} ✓</Text>
                     <Text style={styles.listStatRed}>{item.pending} ⏳</Text>
                   </View>
                 </View>
-                {item.total > 0 && (
+                {total > 0 && (
                   <View style={styles.progressBar}>
                     <View style={[styles.progressFill, { width: `${progress}%` }]} />
                   </View>
@@ -415,42 +420,38 @@ export default function AnalysisScreen() {
           })}
         </View>
 
-        {/* Tasks by Type */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tasks by Type</Text>
-          {Object.entries(tasksByType).map(([type, stats]) => {
-            const progress = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
-            return (
-              <View key={type} style={styles.typeCard}>
-                <Text style={styles.typeTitle}>{type}</Text>
-                <View style={styles.typeRow}>
-                  <Text style={styles.typeLabel}>Total:</Text>
-                  <Text style={styles.typeValue}>{stats.total}</Text>
-                </View>
-                <View style={styles.typeRow}>
-                  <Text style={styles.typeLabel}>Completed:</Text>
-                  <Text style={[styles.typeValue, { color: colors.success }]}>
-                    {stats.completed}
-                  </Text>
-                </View>
-                <View style={styles.typeRow}>
-                  <Text style={styles.typeLabel}>Pending:</Text>
-                  <Text style={[styles.typeValue, { color: colors.error }]}>{stats.pending}</Text>
-                </View>
-                {stats.total > 0 && (
-                  <>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${progress}%` }]} />
-                    </View>
-                    <Text style={[styles.typeLabel, { marginTop: 4 }]}>
-                      {progress.toFixed(1)}% complete
-                    </Text>
-                  </>
-                )}
+        {/* Steps Progress */}
+        {stepsProgress.tasksWithSteps > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Steps Progress</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{stepsProgress.tasksWithSteps}</Text>
+                <Text style={styles.statLabel}>Tasks with Steps</Text>
               </View>
-            );
-          })}
-        </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValueGreen}>{stepsProgress.completedSteps}</Text>
+                <Text style={styles.statLabel}>Completed Steps</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValueBlue}>{stepsProgress.totalSteps}</Text>
+                <Text style={styles.statLabel}>Total Steps</Text>
+              </View>
+            </View>
+            {stepsProgress.totalSteps > 0 && (
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${(stepsProgress.completedSteps / stepsProgress.totalSteps) * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );

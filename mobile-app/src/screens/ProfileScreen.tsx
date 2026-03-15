@@ -37,6 +37,9 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [frequencyError, setFrequencyError] = useState<string | null>(null);
+  const [frequencyUpdating, setFrequencyUpdating] = useState(false);
+  const [optimisticFrequency, setOptimisticFrequency] = useState<NotificationFrequency | null>(null);
 
   const styles = useThemedStyles((colors) => ({
     container: {
@@ -418,14 +421,19 @@ export default function ProfileScreen() {
 
   const handleFrequencyChange = async (frequency: NotificationFrequency) => {
     if (!user) return;
+    const previous = user.notificationFrequency;
+    setFrequencyError(null);
+    setFrequencyUpdating(true);
+    setOptimisticFrequency(frequency);
     try {
-      setRefreshing(true);
       await usersService.update(user.id, { notificationFrequency: frequency });
       await refreshUser();
+      setOptimisticFrequency(null);
     } catch (error) {
-      handleApiError(error, 'Failed to update notification frequency');
+      setOptimisticFrequency(previous);
+      setFrequencyError('Failed to update notification preference. Please try again.');
     } finally {
-      setRefreshing(false);
+      setFrequencyUpdating(false);
     }
   };
 
@@ -584,41 +592,50 @@ export default function ProfileScreen() {
                 NotificationFrequency.NONE,
                 NotificationFrequency.DAILY,
                 NotificationFrequency.WEEKLY,
-              ].map((freq) => (
-                <TouchableOpacity
-                  key={freq}
-                  onPress={() => handleFrequencyChange(freq)}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    backgroundColor:
-                      user.notificationFrequency === freq ? colors.primary : colors.surface,
-                    borderWidth: 1,
-                    borderColor:
-                      user.notificationFrequency === freq ? colors.primary : colors.border,
-                  }}
-                >
-                  <Text
+              ].map((freq) => {
+                const activeFreq = optimisticFrequency ?? user.notificationFrequency;
+                return (
+                  <TouchableOpacity
+                    key={freq}
+                    onPress={() => handleFrequencyChange(freq)}
+                    disabled={frequencyUpdating}
                     style={{
-                      color: user.notificationFrequency === freq ? '#fff' : colors.text,
-                      fontWeight: 'bold',
-                      fontSize: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: activeFreq === freq ? colors.primary : colors.surface,
+                      borderWidth: 1,
+                      borderColor: activeFreq === freq ? colors.primary : colors.border,
+                      opacity: frequencyUpdating ? 0.6 : 1,
                     }}
                   >
-                    {freq.charAt(0) + freq.slice(1).toLowerCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={{
+                        color: activeFreq === freq ? '#fff' : colors.text,
+                        fontWeight: 'bold',
+                        fontSize: 12,
+                      }}
+                    >
+                      {freq.charAt(0) + freq.slice(1).toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <Text
-              style={[
-                styles.profileValue,
-                { fontSize: 12, marginTop: 8, color: colors.textSecondary },
-              ]}
-            >
-              Choose how often you want to receive email updates about your tasks.
-            </Text>
+            {frequencyError ? (
+              <Text style={{ fontSize: 12, marginTop: 6, color: colors.error }}>
+                {frequencyError}
+              </Text>
+            ) : (
+              <Text
+                style={[
+                  styles.profileValue,
+                  { fontSize: 12, marginTop: 8, color: colors.textSecondary },
+                ]}
+              >
+                Choose how often you want to receive email updates about your tasks.
+              </Text>
+            )}
           </View>
 
           {/* Member Since */}

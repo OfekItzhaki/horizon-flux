@@ -129,6 +129,7 @@ export interface UpdateTaskDto {
   reminderDaysBefore?: number[];
   specificDayOfWeek?: number | null;
   reminderConfig?: any;
+  order?: number;
 }
 
 export interface CreateStepDto {

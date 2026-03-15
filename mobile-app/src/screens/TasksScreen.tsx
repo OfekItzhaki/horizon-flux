@@ -68,6 +68,10 @@ export default function TasksScreen() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Bulk mode state
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+
   // Fetch tasks with TanStack Query
   const {
     data: allTasks = [],
@@ -110,6 +114,27 @@ export default function TasksScreen() {
       queryClient.invalidateQueries({ queryKey: ['tasks', listId] });
     },
     onError: (error: any) => handleApiError(error, 'Failed to delete task'),
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: ({ ids, data }: { ids: string[]; data: { completed: boolean } }) =>
+      tasksService.bulkUpdate(ids, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', listId] });
+      setIsBulkMode(false);
+      setSelectedTasks(new Set());
+    },
+    onError: (error: any) => handleApiError(error, 'Failed to update tasks'),
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => tasksService.bulkDelete(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', listId] });
+      setIsBulkMode(false);
+      setSelectedTasks(new Set());
+    },
+    onError: (error: any) => handleApiError(error, 'Failed to delete tasks'),
   });
 
   // Real-time Presence: Join/Leave room
@@ -256,6 +281,43 @@ export default function TasksScreen() {
     ]);
   };
 
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTasks.size === filteredAndSortedTasks.length) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(filteredAndSortedTasks.map((t) => t.id)));
+    }
+  };
+
+  const handleBulkComplete = () => {
+    bulkUpdateMutation.mutate({ ids: Array.from(selectedTasks), data: { completed: true } });
+  };
+
+  const handleBulkIncomplete = () => {
+    bulkUpdateMutation.mutate({ ids: Array.from(selectedTasks), data: { completed: false } });
+  };
+
+  const handleBulkDelete = () => {
+    const ids = Array.from(selectedTasks);
+    Alert.alert(
+      'Delete Tasks',
+      `Delete ${ids.length} selected task${ids.length !== 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => bulkDeleteMutation.mutate(ids) },
+      ],
+    );
+  };
+
   const handleArchivedTaskOptions = (task: Task) => {
     Alert.alert('Archived Task', `What would you like to do with "${task.description}"?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -329,7 +391,20 @@ export default function TasksScreen() {
               {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''}
             </Text>
           </View>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            style={[
+              localStyles.bulkToggle,
+              isBulkMode && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => {
+              setIsBulkMode(!isBulkMode);
+              setSelectedTasks(new Set());
+            }}
+          >
+            <Text style={[localStyles.bulkToggleText, isBulkMode && { color: '#fff' }]}>
+              {isBulkMode ? 'Cancel' : 'Select'}
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.searchSortRow}>
           <TextInput
@@ -354,6 +429,41 @@ export default function TasksScreen() {
         </View>
       </View>
 
+      {/* Bulk actions bar */}
+      {isBulkMode && (
+        <View style={[localStyles.bulkBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity onPress={toggleSelectAll} style={localStyles.bulkBarBtn}>
+            <Text style={[localStyles.bulkBarBtnText, { color: colors.primary }]}>
+              {selectedTasks.size === filteredAndSortedTasks.length ? 'Deselect All' : 'Select All'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[localStyles.bulkBarCount, { color: colors.textSecondary }]}>
+            {selectedTasks.size} selected
+          </Text>
+          <TouchableOpacity
+            onPress={handleBulkComplete}
+            disabled={selectedTasks.size === 0}
+            style={[localStyles.bulkBarBtn, selectedTasks.size === 0 && { opacity: 0.4 }]}
+          >
+            <Text style={[localStyles.bulkBarBtnText, { color: '#10b981' }]}>✓ Complete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleBulkIncomplete}
+            disabled={selectedTasks.size === 0}
+            style={[localStyles.bulkBarBtn, selectedTasks.size === 0 && { opacity: 0.4 }]}
+          >
+            <Text style={[localStyles.bulkBarBtnText, { color: colors.textSecondary }]}>↩ Undo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleBulkDelete}
+            disabled={selectedTasks.size === 0}
+            style={[localStyles.bulkBarBtn, selectedTasks.size === 0 && { opacity: 0.4 }]}
+          >
+            <Text style={[localStyles.bulkBarBtnText, { color: colors.error }]}>🗑 Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Task list — shows current page of tasks */}
       <FlatList
         ref={flatListRef}
@@ -362,12 +472,33 @@ export default function TasksScreen() {
         showsVerticalScrollIndicator={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
-          <SortableTaskItem
-            task={item}
-            onPress={() => navigation.navigate('TaskDetails', { taskId: item.id })}
-            onToggle={() => toggleTask(item)}
-            onDragEnd={(newOrder) => handleDragEnd(item, newOrder)}
-          />
+          isBulkMode ? (
+            <TouchableOpacity
+              onPress={() => toggleTaskSelection(item.id)}
+              style={[
+                localStyles.bulkItem,
+                selectedTasks.has(item.id) && { backgroundColor: colors.primary + '18' },
+              ]}
+            >
+              <View style={[
+                localStyles.checkbox,
+                { borderColor: colors.primary },
+                selectedTasks.has(item.id) && { backgroundColor: colors.primary },
+              ]}>
+                {selectedTasks.has(item.id) && <Text style={{ color: '#fff', fontSize: 12 }}>✓</Text>}
+              </View>
+              <Text style={[localStyles.bulkItemText, { color: colors.text }, item.completed && { textDecorationLine: 'line-through', color: colors.textSecondary }]}>
+                {item.description}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <SortableTaskItem
+              task={item}
+              onPress={() => navigation.navigate('TaskDetails', { taskId: item.id })}
+              onToggle={() => toggleTask(item)}
+              onDragEnd={(newOrder) => handleDragEnd(item, newOrder)}
+            />
+          )
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -539,7 +670,7 @@ const localStyles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 80, // space for FAB
+    marginBottom: 80,
   },
   pageButton: {
     paddingHorizontal: 16,
@@ -561,5 +692,57 @@ const localStyles = StyleSheet.create({
   pageInfo: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  bulkToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99,102,241,0.12)',
+  },
+  bulkToggleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6366f1',
+  },
+  bulkBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  bulkBarBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  bulkBarBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  bulkBarCount: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  bulkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulkItemText: {
+    fontSize: 15,
+    flex: 1,
   },
 });

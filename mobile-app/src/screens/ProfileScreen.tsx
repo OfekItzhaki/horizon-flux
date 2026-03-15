@@ -40,6 +40,8 @@ export default function ProfileScreen() {
   const [frequencyError, setFrequencyError] = useState<string | null>(null);
   const [frequencyUpdating, setFrequencyUpdating] = useState(false);
   const [optimisticFrequency, setOptimisticFrequency] = useState<NotificationFrequency | null>(null);
+  const [retentionUpdating, setRetentionUpdating] = useState(false);
+  const [optimisticRetention, setOptimisticRetention] = useState<number | null>(null);
 
   const styles = useThemedStyles((colors) => ({
     container: {
@@ -437,6 +439,23 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleTrashRetentionChange = async (days: number) => {
+    if (!user) return;
+    const previous = user.trashRetentionDays;
+    setRetentionUpdating(true);
+    setOptimisticRetention(days);
+    try {
+      await usersService.update(user.id, { trashRetentionDays: days });
+      await refreshUser();
+      setOptimisticRetention(null);
+    } catch {
+      setOptimisticRetention(previous);
+      Alert.alert('Error', 'Failed to update trash retention. Please try again.');
+    } finally {
+      setRetentionUpdating(false);
+    }
+  };
+
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const handleOpenRepo = () => {
     Linking.openURL('https://github.com/OfekItzhaki/TasksManagement').catch(() => {
@@ -636,6 +655,47 @@ export default function ProfileScreen() {
                 Choose how often you want to receive email updates about your tasks.
               </Text>
             )}
+          </View>
+
+          {/* Trash Retention */}
+          <View style={styles.profileSection}>
+            <Text style={styles.profileLabel}>Trash Retention (Days)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[7, 14, 30, 60, 90].map((days) => {
+                  const activeDays = optimisticRetention ?? user.trashRetentionDays ?? 30;
+                  return (
+                    <TouchableOpacity
+                      key={days}
+                      onPress={() => handleTrashRetentionChange(days)}
+                      disabled={retentionUpdating}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        backgroundColor: activeDays === days ? colors.primary : colors.surface,
+                        borderWidth: 1,
+                        borderColor: activeDays === days ? colors.primary : colors.border,
+                        opacity: retentionUpdating ? 0.6 : 1,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: activeDays === days ? '#fff' : colors.text,
+                          fontWeight: 'bold',
+                          fontSize: 12,
+                        }}
+                      >
+                        {days}d
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            <Text style={[styles.profileValue, { fontSize: 12, marginTop: 8, color: colors.textSecondary }]}>
+              Items in trash will be permanently deleted after this many days.
+            </Text>
           </View>
 
           {/* Member Since */}

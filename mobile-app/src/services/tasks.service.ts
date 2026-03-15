@@ -122,6 +122,34 @@ export class TasksService {
       throw new ApiError(0, 'Failed to permanently delete task');
     }
   }
+
+  /**
+   * Bulk update multiple tasks
+   */
+  async bulkUpdate(ids: string[], data: UpdateTaskDto): Promise<void> {
+    try {
+      await apiClient.patch('/tasks/bulk', { ids, ...data });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(0, 'Failed to bulk update tasks');
+    }
+  }
+
+  /**
+   * Bulk delete multiple tasks
+   */
+  async bulkDelete(ids: string[]): Promise<void> {
+    try {
+      await apiClient.delete('/tasks/bulk', { data: { ids } });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(0, 'Failed to bulk delete tasks');
+    }
+  }
 }
 
 export const tasksService = new TasksService();

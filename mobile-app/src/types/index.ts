@@ -24,6 +24,7 @@ export interface User {
   profilePicture: string | null;
   emailVerified: boolean;
   notificationFrequency: NotificationFrequency;
+  trashRetentionDays: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -104,6 +105,7 @@ export interface UpdateUserDto {
   profilePicture?: string;
   password?: string;
   notificationFrequency?: NotificationFrequency;
+  trashRetentionDays?: number;
 }
 
 export interface CreateTodoListDto {
